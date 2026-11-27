@@ -5,7 +5,8 @@ import { Icon, TitleMark } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
-import { CopyStack, Text, type TextTone } from '@/components/ui/typography';
+import { CopyStack, Text } from '@/components/ui/typography';
+import { type TextTone } from '@/components/ui/text-role';
 import { CircleAlert, Info, TriangleAlert, type IconGlyph } from '@/lib/icons';
 
 import { PageFrame } from './page-frame';
@@ -82,7 +83,7 @@ export function NoticePage({ heading, ...notice }: NoticeContent) {
 export function NoticeScreen(notice: NoticeContent) {
   useDocumentTitle(notice.tone === 'loading' ? undefined : notice.heading);
   return (
-    <Stack gap="none" pad={{ top: 'flow-gap' }} className="min-w-0">
+    <Stack gap="none" pad={{ top: 'flow-gap' }} box="shrink">
       <NoticeBlock {...notice} />
     </Stack>
   );

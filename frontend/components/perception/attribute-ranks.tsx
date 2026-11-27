@@ -5,12 +5,12 @@ import { IconButton } from '@/components/ui/button';
 import { Section, SectionToolbar } from '@/components/ui/section';
 import { InfoHint } from '@/components/ui/info-hint';
 import { SegmentedControl } from '@/components/ui/tabs';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
+import { RankBarList } from '@/components/ui/polarity-bars';
 import { Maximize2, Minimize2 } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { rankCategories, type Polarity } from '@/lib/visibility/perception';
-import { cn } from '@/lib/utils';
 
 type Category = PerceptionResponse['entities'][number]['categories'][number];
 
@@ -24,8 +24,6 @@ const ORDER_LABEL: Record<Polarity, string> = {
   negative: 'Most negative',
   positive: 'Most positive',
 };
-
-const DOT: Record<Polarity, string> = { negative: 'bg-negative', positive: 'bg-positive' };
 
 export function AttributeRanks({ categories }: Readonly<{ categories: readonly Category[] }>) {
   const [requested, setOrder] = useUrlState('rank', ORDER_CODEC, { history: 'replace' });
@@ -51,29 +49,17 @@ export function AttributeRanks({ categories }: Readonly<{ categories: readonly C
         />
         <InfoHint label="About attributes">Labelled points per category</InfoHint>
         <span className="flex-1" />
-        <span className={textRole('caption', 'text-ink-2')}>Points</span>
+        <Text variant="caption">Points</Text>
       </SectionToolbar>
-      <ol className="grid gap-1">
-        {shown.map((category) => (
-          <li
-            key={category.category}
-            className="grid h-8 grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-3"
-          >
-            <span className="min-w-0">
-              <span
-                className="bg-raised-2 rounded-mark flex h-7 min-w-max items-center gap-2 px-2.5"
-                style={{ width: `${Math.max((category[order] / most) * 100, 8)}%` }}
-              >
-                <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', DOT[order])} />
-                <span className={textRole('body', 'whitespace-nowrap')}>{category.category}</span>
-              </span>
-            </span>
-            <span className={textRole('body', 'text-right tabular-nums')}>
-              {formatCount(category[order])}
-            </span>
-          </li>
-        ))}
-      </ol>
+      <RankBarList
+        polarity={order}
+        rows={shown.map((category) => ({
+          key: category.category,
+          label: category.category,
+          value: formatCount(category[order]),
+          percent: Math.max((category[order] / most) * 100, 8),
+        }))}
+      />
       {ranked.length > SHOWN ? (
         <span className="flex justify-center">
           <IconButton

@@ -1,6 +1,6 @@
 import { SearchX } from '@/lib/icons';
 import type { DataTableState } from '@/components/ui/data-table';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 
 export type FanoutSummary = Readonly<{
   distinctQueries: number | null;
@@ -23,11 +23,11 @@ export function SearchScopeNote({
   if (!search || matched == null) return null;
   const noun = matched === 1 ? 'search' : 'searches';
   return (
-    <span className={textRole('body', 'text-ink-2')}>
+    <Text variant="body" tone="ink-2">
       {matched === 0
         ? 'No searches match in this run set'
         : `${matched} matching ${noun} in this run set`}
-    </span>
+    </Text>
   );
 }
 

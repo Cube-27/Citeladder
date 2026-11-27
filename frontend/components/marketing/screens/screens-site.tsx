@@ -1,7 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { EngineMark } from '@/components/ui/engine-mark';
 import { ICONS, Info, type IconGlyph } from '@/lib/icons';
-import { cn } from '@/lib/utils';
 
 import {
   BOTS,
@@ -13,15 +12,15 @@ import {
 } from './demo-data';
 import { Vignette, VignetteRows, fourRows } from './screen-vignette';
 
-const SEVERITY_ICON: Readonly<Record<Severity, Readonly<{ icon: IconGlyph; tone: string }>>> = {
-  High: { icon: ICONS.danger, tone: 'text-negative' },
-  Medium: { icon: ICONS.warning, tone: 'text-warning' },
-  Low: { icon: Info, tone: 'text-ink-2' },
+const SEVERITY_ICON: Readonly<Record<Severity, IconGlyph>> = {
+  High: ICONS.danger,
+  Medium: ICONS.warning,
+  Low: Info,
 };
 
 function SeverityIcon({ severity }: Readonly<{ severity: Severity }>) {
-  const { icon: Icon, tone } = SEVERITY_ICON[severity];
-  return <Icon className={cn('size-5', tone)} aria-hidden />;
+  const Icon = SEVERITY_ICON[severity];
+  return <Icon className="size-5" data-severity={severity} aria-hidden />;
 }
 
 export function ScreenSiteHealth() {

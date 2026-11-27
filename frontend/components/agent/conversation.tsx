@@ -75,14 +75,15 @@ export function Conversation({
       <ReplyAnnouncement key={detail.chat.id} detail={detail} />
       <ContextUsed context={detail.context} />
       {renderOutput ? <DocumentList outputs={detail.outputs} /> : null}
-      <Stack as="ol" gap="workspace" aria-label="Messages" className="grid-cols-1">
+      <Stack as="ol" gap="workspace" aria-label="Messages" shrinkTrack>
         {items.map((item) =>
           item.kind === 'message' ? (
             <Stack
               as="li"
               gap="workspace"
               key={item.message.id}
-              className="min-w-0 grid-cols-1"
+              box="shrink"
+              shrinkTrack
               data-render-when-visible={older(
                 item.message.id,
                 Boolean(renderOutput) && byMessage.has(item.message.id),
@@ -115,7 +116,8 @@ export function Conversation({
               as="li"
               gap="workspace"
               key={item.request?.id ?? item.failures[0].id}
-              className="min-w-0 grid-cols-1"
+              box="shrink"
+              shrinkTrack
               data-render-when-visible={older(itemKey(item))}
             >
               {item.request ? (

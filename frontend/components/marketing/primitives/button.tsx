@@ -24,10 +24,10 @@ function buttonLinkAttributes({ variant = 'primary', className }: VisualProps) {
   return {
     'data-marketing-cta': '',
     'data-button-variant': shared,
+    'data-button-look': variant === 'ghost' || variant === 'nav' ? undefined : 'cta',
     className: cn(
       buttonClasses(shared),
       '[&_svg]:size-4 [&_svg]:shrink-0',
-      variant !== 'ghost' && variant !== 'nav' && 'marketing-cta-button',
       variant === 'soft' && 'marketing-soft-button',
       className,
     ),

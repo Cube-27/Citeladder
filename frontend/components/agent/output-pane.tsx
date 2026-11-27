@@ -66,12 +66,7 @@ export function OutputPane({
   );
   return (
     <DraftSheet as="div" {...revisionDraft(revision)}>
-      <Stack
-        as="section"
-        gap="compact"
-        aria-labelledby={headingId}
-        className="min-w-0 content-start"
-      >
+      <Stack as="section" gap="compact" aria-labelledby={headingId} box="shrink" content="start">
         <UnsavedChangesGuard when={unsaved} />
         <Stack as="header" gap="tight">
           <Text as="h2" variant="heading" box="shrink" id={headingId}>

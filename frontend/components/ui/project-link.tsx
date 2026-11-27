@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { ComponentProps } from 'react';
 
-import { toneClass, type TextTone } from '@/components/ui/typography';
+import { LINK_LOOK, type LinkLook } from '@/components/ui/link-look';
+import { TEXT_TONE_CLASS, type TextTone } from '@/components/ui/text-role';
 import { isAppRoute } from '@/lib/navigation/app-route';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { cn } from '@/lib/utils';
@@ -10,14 +11,8 @@ type ProjectLinkProps = Omit<ComponentProps<typeof Link>, 'to'> & {
   href: string;
   projectId?: string | null;
   tone?: TextTone;
-  look?: 'plain' | 'row-title';
+  look?: LinkLook;
 };
-
-const LOOK = {
-  plain: undefined,
-  'row-title':
-    'focus-ring-inset text-label text-ink self-start no-underline before:absolute before:inset-0',
-} as const;
 
 export function ProjectLink({
   href,
@@ -28,7 +23,7 @@ export function ProjectLink({
   ...props
 }: Readonly<ProjectLinkProps>) {
   const projectHref = useProjectHref();
-  const classes = cn(LOOK[look], toneClass(tone), className);
+  const classes = cn(LINK_LOOK[look], tone && TEXT_TONE_CLASS[tone], className);
   if (!isAppRoute(href)) return <span className={classes}>{props.children}</span>;
   return <Link to={projectHref(href, projectId)} {...props} className={classes} />;
 }

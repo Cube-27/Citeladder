@@ -3,7 +3,7 @@ import { useInsertionEffect, useRef, type ReactNode } from 'react';
 
 import { AlertTriangle, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
-import { Button, CLOSE_BUTTON, IconButton } from './button';
+import { Button, IconButton } from './button';
 import { Icon } from './icon';
 import { SurfaceContext } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
@@ -142,10 +142,10 @@ export function Dialog({
           onCloseAutoFocus={returnFocus}
           className={cn(
             SHEET_FACE,
-            'dialog-panel z-modal fixed left-1/2 flex w-[calc(100vw-3rem)] -translate-x-1/2 flex-col overflow-hidden',
+            'dialog-panel z-modal fixed left-1/2 flex w-dialog-fit -translate-x-1/2 flex-col overflow-hidden',
             answer
-              ? 'max-w-answer top-16 h-full max-h-[calc(100dvh-8rem)]'
-              : 'top-[12dvh] max-h-[calc(88dvh-1.5rem)]',
+              ? 'max-w-answer top-16 h-full max-h-dialog-max'
+              : 'top-dialog-top max-h-dialog-top-max',
             !answer && overlayWidth(danger || width === 'answer' ? 'narrow' : width),
           )}
         >
@@ -157,7 +157,8 @@ export function Dialog({
                 label="Close dialog"
                 tooltip={false}
                 variant="secondary"
-                className={cn(CLOSE_BUTTON, 'absolute top-6 right-6')}
+                shape="close"
+                className="absolute top-6 right-6"
               />
             </DialogPrimitive.Close>
           )}
@@ -176,7 +177,7 @@ function DialogBody({ children, footer }: Readonly<{ children?: ReactNode; foote
         <div
           data-dialog-body=""
           className={cn(
-            'text-ink flex min-h-0 flex-1 flex-col gap-panel-inset overflow-auto overscroll-contain px-panel-inset [--spacing-panel-inset:var(--spacing-modal)]',
+            'text-ink flex min-h-0 flex-1 flex-col gap-panel-inset overflow-auto overscroll-contain px-panel-inset panel-inset-modal',
             footer ? 'pb-0' : 'pb-panel-inset',
           )}
         >
@@ -204,7 +205,7 @@ function overlayWidth(width: 'narrow' | 'wide' | 'prose'): string {
     case 'wide':
       return 'max-w-form';
     case 'prose':
-      return 'max-w-[var(--container-prose)]';
+      return 'max-w-prose';
     default: {
       const unhandled: never = width;
       return unhandled;

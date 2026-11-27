@@ -101,7 +101,7 @@ export function SearchableSelect({
         value={text}
         disabled={disabled}
         placeholder={placeholder}
-        className={cn('pe-9', renderLeading && selected && 'pl-10')}
+        room={renderLeading && selected ? 'both' : 'end'}
         onFocus={() => {
           setOpen(true);
           setQuery('');
@@ -147,7 +147,7 @@ export function SearchableSelect({
           data-open="true"
           className={cn(
             MENU_PANEL,
-            'absolute mt-1 max-h-74 w-full min-w-60 overflow-auto [--popup-origin:top]',
+            'absolute mt-1 max-h-74 w-full min-w-60 overflow-auto popup-from-top',
           )}
         >
           {filtered.map((option, index) => (

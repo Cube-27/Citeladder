@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { chartFill, chartPath, chartStroke } from '@/components/ui/chart';
+import { chartPath } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 
 import type { Change } from './demo-data';
@@ -106,7 +106,7 @@ export function VignetteBar({ share }: Readonly<{ share: number }>) {
   const width = Math.min(1, Math.max(0, share)) * 100;
   return (
     <span aria-hidden className="cl-vig-bar">
-      <span className={chartFill(1)} style={{ width: `${width}%` }} />
+      <span className="cl-vig-series-fill" style={{ '--vig-share': `${width}%` }} />
     </span>
   );
 }
@@ -140,7 +140,7 @@ export function VignetteChart({
       <div className="cl-vig-plot" aria-hidden>
         <div className="cl-vig-yaxis">
           {ticks.map((tick) => (
-            <span key={tick} style={{ top: `${y(tick)}%` }}>
+            <span key={tick} style={{ '--vig-y': `${y(tick)}%` }}>
               {format(tick)}
             </span>
           ))}
@@ -159,12 +159,12 @@ export function VignetteChart({
                 x2={PLOT}
                 y1={y(tick)}
                 y2={y(tick)}
-                className="stroke-chart-grid"
+                className="cl-vig-gridline"
                 strokeWidth={1}
                 vectorEffect="non-scaling-stroke"
               />
             ))}
-            <path d={area} className={chartFill(1)} fillOpacity={0.12} />
+            <path d={area} className="cl-vig-series-fill" fillOpacity={0.12} />
             <path
               d={line}
               fill="none"
@@ -172,13 +172,13 @@ export function VignetteChart({
               strokeLinecap="round"
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
-              className={chartStroke(1)}
+              className="cl-vig-series-stroke"
             />
           </svg>
           {last ? (
             <span
-              className={cn('cl-vig-dot', chartFill(1))}
-              style={{ left: `${last[0]}%`, top: `${last[1]}%` }}
+              className="cl-vig-dot cl-vig-series-fill"
+              style={{ '--vig-x': `${last[0]}%`, '--vig-y': `${last[1]}%` }}
             />
           ) : null}
         </div>

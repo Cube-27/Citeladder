@@ -11,20 +11,20 @@ import {
   X,
 } from '@/lib/icons';
 
-import { Art, Card, Chips, Line, Pill } from './art-parts';
+import { Art, type ArtPlace, Card, Chips, Line, Pill, Placed } from './art-parts';
 
 export function ArtSiteHealth() {
   return (
     <Art>
-      <Card className="absolute top-[12%] left-[8%] w-[34%] items-center">
-        <svg aria-hidden focusable="false" viewBox="0 0 100 100" className="w-4/5">
+      <Card at={{ top: 12, left: 8, width: 34 }} align="center">
+        <svg aria-hidden focusable="false" viewBox="0 0 100 100" className="cl-art-gauge">
           <circle
             cx="50"
             cy="50"
             r="40"
             fill="none"
             strokeWidth="11"
-            className="stroke-accent-wash"
+            className="cl-art-stroke-wash"
           />
           <circle
             cx="50"
@@ -35,7 +35,7 @@ export function ArtSiteHealth() {
             strokeLinecap="round"
             strokeDasharray="206 252"
             transform="rotate(-90 50 50)"
-            className="stroke-accent"
+            className="cl-art-stroke"
           />
           <text
             x="50"
@@ -43,13 +43,13 @@ export function ArtSiteHealth() {
             textAnchor="middle"
             fontSize="27"
             fontWeight="500"
-            className="fill-ink"
+            className="cl-art-fill-ink"
           >
             82
           </text>
         </svg>
       </Card>
-      <Card className="absolute top-[22%] right-[-4%] w-[52%]">
+      <Card at={{ top: 22, right: -4, width: 52 }}>
         {[true, true, false, true].map((passed, index) => (
           <div key={index} className="cl-art-row">
             {passed ? (
@@ -57,11 +57,11 @@ export function ArtSiteHealth() {
             ) : (
               <X aria-hidden className="cl-art-icon" />
             )}
-            <Line className={passed ? 'w-3/5' : 'w-4/5'} tone={passed ? 'soft' : 'strong'} />
+            <Line width={passed ? 60 : 80} tone={passed ? 'soft' : 'strong'} />
           </div>
         ))}
       </Card>
-      <Pill ring className="absolute top-[72%] left-[14%]">
+      <Pill ring at={{ top: 72, left: 14 }}>
         <ShieldCheck aria-hidden />
         Site health
       </Pill>
@@ -72,10 +72,10 @@ export function ArtSiteHealth() {
 export function ArtDemand() {
   return (
     <Art>
-      <Card className="absolute top-[18%] left-[14%] h-[64%] w-[72%]">
+      <Card at={{ top: 18, left: 14, height: 64, width: 72 }}>
         <div className="cl-art-row">
-          <Line className="w-1/4" tone="strong" />
-          <Line className="w-2/5" />
+          <Line width={25} tone="strong" />
+          <Line width={40} />
         </div>
         <svg
           aria-hidden
@@ -84,7 +84,7 @@ export function ArtDemand() {
           preserveAspectRatio="none"
           className="min-h-0 w-full flex-1 overflow-visible"
         >
-          <path d="M0 80V62L40 56 80 60 120 38 160 30 200 8V80Z" className="fill-accent-wash" />
+          <path d="M0 80V62L40 56 80 60 120 38 160 30 200 8V80Z" className="cl-art-fill-wash" />
           <path
             d="M0 62L40 56 80 60 120 38 160 30 200 8"
             fill="none"
@@ -92,37 +92,37 @@ export function ArtDemand() {
             strokeLinecap="round"
             strokeLinejoin="round"
             vectorEffect="non-scaling-stroke"
-            className="stroke-accent"
+            className="cl-art-stroke"
           />
         </svg>
       </Card>
-      <Pill ring className="absolute top-[9%] right-[6%]">
+      <Pill ring at={{ top: 9, right: 6 }}>
         <TrendingUp aria-hidden />
         Emerging query
       </Pill>
-      <Chips count={2} className="top-[88%] right-[20%] left-[20%]" />
+      <Chips count={2} at={{ top: 88, right: 20, left: 20 }} />
     </Art>
   );
 }
 
-const VOLUMES = ['w-[38%]', 'w-[26%]', 'w-[18%]', 'w-[10%]'] as const;
+const VOLUMES = [38, 26, 18, 10] as const;
 
 export function ArtKeywords() {
   return (
     <Art>
-      <Pill ring className="absolute top-[10%] left-[14%] w-[72%]">
+      <Pill ring at={{ top: 10, left: 14, width: 72 }}>
         <Search aria-hidden />
-        <Line className="w-1/2" tone="strong" />
+        <Line width={50} tone="strong" />
       </Pill>
-      <Card className="absolute top-[34%] left-[20%] w-[60%]">
+      <Card at={{ top: 34, left: 20, width: 60 }}>
         {VOLUMES.map((volume, index) => (
           <div key={volume} className="cl-art-row justify-between">
-            <Line className={index % 2 === 0 ? 'w-2/5' : 'w-1/3'} />
-            <Line className={volume} tone="strong" />
+            <Line width={index % 2 === 0 ? 40 : 100 / 3} />
+            <Line width={volume} tone="strong" />
           </div>
         ))}
       </Card>
-      <Chips count={4} className="top-[86%] right-[-8%] left-[-8%]" />
+      <Chips count={4} at={{ top: 86, right: -8, left: -8 }} />
     </Art>
   );
 }
@@ -130,26 +130,26 @@ export function ArtKeywords() {
 export function ArtContent() {
   return (
     <Art>
-      <Card className="absolute top-[9%] left-[10%] w-[52%]">
-        <Line className="w-3/5" tone="strong" />
-        <Line className="w-full" />
-        <Line className="w-full" tone="wash" />
-        <Line className="w-full" />
-        <Line className="w-4/5" />
-        <Line className="w-full" />
-        <Line className="w-1/2" />
+      <Card at={{ top: 9, left: 10, width: 52 }}>
+        <Line width={60} tone="strong" />
+        <Line width={100} />
+        <Line width={100} tone="wash" />
+        <Line width={100} />
+        <Line width={80} />
+        <Line width={100} />
+        <Line width={50} />
       </Card>
-      <Pill ring className="absolute top-[30%] right-[5%]">
+      <Pill ring at={{ top: 30, right: 5 }}>
         <Pencil aria-hidden />
         Improve page
       </Pill>
-      <Card ghost className="absolute top-[56%] right-[-3%] w-[46%]">
+      <Card ghost at={{ top: 56, right: -3, width: 46 }}>
         <div className="cl-art-row">
           <Sparkles aria-hidden className="cl-art-icon" />
-          <Line className="w-3/5" tone="strong" />
+          <Line width={60} tone="strong" />
         </div>
-        <Line className="w-full" />
-        <Line className="w-2/3" />
+        <Line width={100} />
+        <Line width={200 / 3} />
       </Card>
     </Art>
   );
@@ -158,20 +158,20 @@ export function ArtContent() {
 export function ArtAgent() {
   return (
     <Art>
-      <div className="cl-art-bubble absolute top-[10%] right-[8%] w-[46%]">
-        <Line className="w-full" />
-        <Line className="w-3/5" />
-      </div>
-      <Card className="absolute top-[40%] left-[8%] w-[62%]">
+      <Placed kind="bubble" at={{ top: 10, right: 8, width: 46 }}>
+        <Line width={100} />
+        <Line width={60} />
+      </Placed>
+      <Card at={{ top: 40, left: 8, width: 62 }}>
         <div className="cl-art-row">
           <Bot aria-hidden className="cl-art-icon" />
-          <Line className="w-2/5" tone="strong" />
+          <Line width={40} tone="strong" />
         </div>
-        <Line className="w-full" />
-        <Line className="w-full" />
-        <Line className="w-3/4" />
+        <Line width={100} />
+        <Line width={100} />
+        <Line width={75} />
       </Card>
-      <Pill ring className="absolute top-[80%] right-[10%]">
+      <Pill ring at={{ top: 80, right: 10 }}>
         <Sparkles aria-hidden />
         Draft brief
       </Pill>
@@ -179,11 +179,11 @@ export function ArtAgent() {
   );
 }
 
-const CLIENTS: readonly Readonly<{ engine: EngineKey; place: string }>[] = [
-  { engine: 'claude', place: 'top-[10%] left-[14%]' },
-  { engine: 'chatgpt', place: 'top-[10%] right-[14%]' },
-  { engine: 'gemini', place: 'bottom-[10%] left-[14%]' },
-  { engine: 'google', place: 'bottom-[10%] right-[14%]' },
+const CLIENTS: readonly Readonly<{ engine: EngineKey; at: ArtPlace }>[] = [
+  { engine: 'claude', at: { top: 10, left: 14 } },
+  { engine: 'chatgpt', at: { top: 10, right: 14 } },
+  { engine: 'gemini', at: { bottom: 10, left: 14 } },
+  { engine: 'google', at: { bottom: 10, right: 14 } },
 ];
 
 export function ArtMcp() {
@@ -194,7 +194,7 @@ export function ArtMcp() {
         focusable="false"
         viewBox="0 0 300 200"
         preserveAspectRatio="none"
-        className="stroke-accent absolute inset-0 size-full opacity-60"
+        className="cl-art-trace"
       >
         {['M62 42L150 100', 'M238 42L150 100', 'M62 158L150 100', 'M238 158L150 100'].map((d) => (
           <path
@@ -208,11 +208,11 @@ export function ArtMcp() {
         ))}
       </svg>
       {CLIENTS.map((client) => (
-        <span key={client.engine} className={`cl-art-node absolute ${client.place}`}>
+        <Placed key={client.engine} kind="node" at={client.at}>
           <EngineMark engine={client.engine} />
-        </span>
+        </Placed>
       ))}
-      <Pill ring className="absolute top-1/2 left-1/2 -translate-1/2">
+      <Pill ring at={{ top: 50, left: 50 }} centre="both">
         <Plug aria-hidden />
         CiteLadder MCP
       </Pill>

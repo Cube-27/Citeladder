@@ -10,7 +10,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { StateBlock } from '@/components/ui/state-block';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { ICONS } from '@/lib/icons';
 import type { McpConnection } from '@citeladder/contracts/mcp';
@@ -46,11 +46,10 @@ function ConnectionRow({
       <TableCell>
         <div className="grid min-w-0">
           <ClampText tooltip={connection.client_name}>
-            {connection.client_name}{' '}
-            <span className={textRole('caption')}>· name not verified</span>
+            {connection.client_name} <Text variant="caption">· name not verified</Text>
           </ClampText>
           {detail ? (
-            <ClampText tooltip={detail} className={textRole('caption')}>
+            <ClampText tooltip={detail} text="caption">
               {detail}
             </ClampText>
           ) : null}
@@ -63,7 +62,9 @@ function ConnectionRow({
         {connection.last_used_at ? (
           <DisplayTime value={connection.last_used_at} dateOnly />
         ) : (
-          <span className="text-ink-2">Not used yet</span>
+          <Text variant="body" tone="ink-2">
+            Not used yet
+          </Text>
         )}
       </TableCell>
       <TableActionsCell>

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
-import { EngineMark, engineMarkKey } from '@/components/ui/engine-mark';
+import { EngineBrandMark } from '@/components/ui/engine-mark';
 import { Icon } from '@/components/ui/icon';
 import type { EvidenceSubject } from '@/components/runs/answer-dialog';
 import { useAnswerDialog } from '@/components/runs/answer-link';
@@ -12,7 +12,7 @@ import { readErrorProps } from '@/components/ui/notice';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import type {
   VisibilityEvidenceResponse,
@@ -27,7 +27,11 @@ import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
 import { EVIDENCE_LIMIT } from '@/lib/visibility/use-visibility-dashboard';
 
 function ObservedNone() {
-  return <span className={textRole('caption', 'tabular-nums')}>0</span>;
+  return (
+    <Text variant="caption" numeric>
+      0
+    </Text>
+  );
 }
 
 const MAX_CHIPS = 3;
@@ -107,11 +111,6 @@ function promptsState(
   };
 }
 
-function EngineLogo({ engine }: Readonly<{ engine: string }>) {
-  const key = engineMarkKey(engine);
-  return key ? <EngineMark engine={key} brand className="shrink-0" /> : null;
-}
-
 function PromptRow({
   item,
   onOpenAnswer,
@@ -124,7 +123,7 @@ function PromptRow({
     <TableRow>
       <TableCell>
         <Inline as="span">
-          <EngineLogo engine={item.logical_engine} />
+          <EngineBrandMark placement="row" engine={item.logical_engine} />
           <TableCellLines
             primary={item.prompt_text || 'Untitled prompt'}
             secondary={engines.label(item.logical_engine)}
@@ -208,7 +207,9 @@ function ChipRow({ children, overflow }: Readonly<{ children: ReactNode; overflo
     <Inline as="span" gap="tight">
       {children}
       {overflow > 0 ? (
-        <span className={textRole('caption', 'text-ink-2 tabular-nums')}>+{overflow}</span>
+        <Text variant="caption" numeric>
+          +{overflow}
+        </Text>
       ) : null}
     </Inline>
   );

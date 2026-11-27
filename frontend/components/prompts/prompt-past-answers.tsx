@@ -16,7 +16,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { runsQueries, type PromptAnswerParams } from '@/lib/api/runs';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
@@ -199,10 +199,10 @@ export function BrandsNamed({
                 placement="inline"
               />
               {brand === lead ? (
-                <strong className={textRole('emphasis', 'text-ink truncate')}>
+                <Text as="strong" variant="label" wrap="truncate">
                   {brand.name}
                   <span className="sr-only">, named first</span>
-                </strong>
+                </Text>
               ) : null}
             </Inline>
           </span>

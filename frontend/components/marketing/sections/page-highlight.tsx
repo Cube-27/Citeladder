@@ -6,7 +6,15 @@ import './page-highlight.css';
 
 export type HighlightStat = Readonly<{ label: string; value: string; sub?: ReactNode }>;
 
-function statColumns(count: number): 1 | 2 | 3 | 4 | 6 {
+const STAT_COLUMNS = {
+  1: 'cl-page-hl-stats--1',
+  2: 'cl-page-hl-stats--2',
+  3: 'cl-page-hl-stats--3',
+  4: 'cl-page-hl-stats--4',
+  6: 'cl-page-hl-stats--6',
+} as const;
+
+function statColumns(count: number): keyof typeof STAT_COLUMNS {
   if (count <= 1) return 1;
   if (count === 2) return 2;
   if (count === 3) return 3;
@@ -39,10 +47,10 @@ export function PageHighlight({
           {body && <p className="cl-page-hl-text">{body}</p>}
         </div>
         {stats.length > 0 && (
-          <dl className={cn('cl-page-hl-stats', `cl-page-hl-stats--${statColumns(stats.length)}`)}>
+          <dl className={cn('cl-page-hl-stats', STAT_COLUMNS[statColumns(stats.length)])}>
             {stats.map((stat) => (
               <div key={stat.label} className="cl-page-hl-stat">
-                <dt className="text-kicker text-ink-2">{stat.label}</dt>
+                <dt className="cl-kicker">{stat.label}</dt>
                 <dd className="cl-page-hl-value">{stat.value}</dd>
                 {stat.sub && <dd className="cl-page-hl-sub">{stat.sub}</dd>}
               </div>

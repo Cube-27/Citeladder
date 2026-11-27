@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils';
 import { Breadcrumbs, type Crumb } from '../chrome/breadcrumbs';
 import './heroes.css';
 
+const HERO_SIZE = { lg: 'cl-phero--lg', '2xl': 'cl-phero--2xl' } as const;
+
 export function PageHero({
   crumbs,
   title,
@@ -26,7 +28,7 @@ export function PageHero({
 }>) {
   return (
     <section
-      className={cn('cl-phero', `cl-phero--${size}`, children && 'cl-phero--split')}
+      className={cn('cl-phero', HERO_SIZE[size], children && 'cl-phero--split')}
       data-cta-placement="hero"
     >
       <div className="cl-container">

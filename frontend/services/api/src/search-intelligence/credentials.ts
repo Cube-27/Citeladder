@@ -74,7 +74,7 @@ export async function reviewConnection(
 export async function runConnection(db: Database, run: Run) {
   const connectionId = run.connection_id;
   if (!connectionId) return undefined;
-  return db
+  return await db
     .selectFrom('provider_connections as c')
     .innerJoin('workspaces as w', 'w.id', 'c.workspace_id')
     .selectAll('c')

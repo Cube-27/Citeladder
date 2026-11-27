@@ -3,11 +3,7 @@ import type { MouseEventHandler, ReactNode } from 'react';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SectionBleed } from '@/components/ui/section';
-import { textRole } from '@/components/ui/typography';
 import { ChevronRight } from '@/lib/icons';
-import { cn } from '@/lib/utils';
-
-const FACT = 'w-24 shrink-0 truncate';
 
 export function LinkRows({
   label,
@@ -40,18 +36,16 @@ export function LinkRow({
   return (
     <li className="hover:overlay-hover px-panel-inset relative flex h-10 items-center gap-3">
       {tick ? <span className="z-raised relative flex shrink-0">{tick}</span> : null}
-      <ProjectLink
-        href={href}
-        onClick={onClick}
-        className="focus-ring rounded-mark min-w-0 flex-1 truncate before:absolute before:inset-x-0 before:inset-y-0"
-      >
+      <ProjectLink href={href} onClick={onClick} look="list-row">
         {name}
       </ProjectLink>
-      <span className={textRole('caption', cn('text-ink-2 phone:hidden', FACT))}>{facts[0]}</span>
-      <span className={textRole('caption', cn('text-ink-2 flex tabular-nums', FACT))}>
+      <span className="text-caption text-ink-2 phone:hidden w-24 shrink-0 truncate">
+        {facts[0]}
+      </span>
+      <span className="text-caption text-ink-2 flex w-24 shrink-0 truncate tabular-nums">
         {facts[1]}
       </span>
-      <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
+      <Icon icon={ChevronRight} tone="ink-2" />
     </li>
   );
 }

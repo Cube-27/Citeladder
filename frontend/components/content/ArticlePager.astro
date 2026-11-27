@@ -39,26 +39,26 @@ const { previous, next, label = 'Adjacent articles' } = Astro.props;
   .cl-pager {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 48px;
+    column-gap: var(--site-space-12);
     max-width: var(--container-prose);
-    border-top: 1px solid var(--color-rule);
+    border-top: var(--site-rule) solid var(--color-rule);
   }
   .cl-pager-link {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
-    padding: 24px 0;
+    gap: var(--site-space-2);
+    padding: var(--site-space-6) 0;
     text-decoration: none;
   }
   .cl-pager-dir :global(svg) {
     transition: transform var(--transition-duration-fast) var(--ease-standard);
   }
   .cl-pager-link:hover .cl-pager-dir :global(svg) {
-    transform: translateX(-4px);
+    transform: translateX(calc(-1 * var(--site-space-1)));
   }
   .cl-pager-link--next:hover .cl-pager-dir :global(svg) {
-    transform: translateX(4px);
+    transform: translateX(var(--site-space-1));
   }
   @media (prefers-reduced-motion: reduce) {
     .cl-pager-link:hover .cl-pager-dir :global(svg) {
@@ -73,7 +73,7 @@ const { previous, next, label = 'Adjacent articles' } = Astro.props;
   .cl-pager-dir {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: var(--site-space-1);
     color: var(--text-color-ink-2);
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
@@ -82,12 +82,12 @@ const { previous, next, label = 'Adjacent articles' } = Astro.props;
     color: var(--text-color-ink);
     font-size: var(--text-heading);
     line-height: var(--text-heading--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     text-wrap: balance;
   }
   .cl-pager-link:hover .cl-pager-title {
     text-decoration: underline;
-    text-underline-offset: 3px;
+    text-underline-offset: var(--site-underline-offset);
   }
   @media (max-width: 767px) {
     .cl-pager {
@@ -97,7 +97,7 @@ const { previous, next, label = 'Adjacent articles' } = Astro.props;
       grid-column: auto;
     }
     .cl-pager-link + .cl-pager-link {
-      border-top: 1px solid var(--color-rule);
+      border-top: var(--site-rule) solid var(--color-rule);
     }
   }
 </style>

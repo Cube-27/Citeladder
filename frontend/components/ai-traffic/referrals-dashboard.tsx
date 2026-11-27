@@ -29,6 +29,7 @@ import {
   SectionTitle,
   TitledSection,
 } from '@/components/ui/section';
+import { Text } from '@/components/ui/typography';
 
 const REFERRAL_VIEWS = [
   { value: 'overview', label: 'Overview' },
@@ -87,7 +88,7 @@ function TrendCard({
 }>) {
   return (
     <Section>
-      <SectionHeader actions={<span className="text-caption text-ink-2">{badge}</span>}>
+      <SectionHeader actions={<Text variant="caption">{badge}</Text>}>
         <SectionTitle>{title}</SectionTitle>
       </SectionHeader>
       <AreaChart

@@ -5,7 +5,7 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { Inline } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { leadingSources } from '@/lib/prompts/filter';
 
 import { NO_ANSWERS } from './prompt-figures';
@@ -35,10 +35,10 @@ export function CitedDomainMarks({
         </Tooltip>
       ))}
       {more > 0 ? (
-        <span className={textRole('caption', 'text-ink-2 tabular-nums')}>
+        <Text variant="caption" numeric>
           +{more}
           <span className="sr-only"> more</span>
-        </span>
+        </Text>
       ) : null}
     </Inline>
   );

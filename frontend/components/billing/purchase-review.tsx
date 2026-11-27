@@ -4,7 +4,7 @@ import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { SettingRows, SettingsGroup } from '@/components/ui/setting-row';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
 import { X } from '@/lib/icons';
 import type { BillingCatalog } from '@/lib/api/billing';
@@ -68,7 +68,7 @@ export function PurchaseReview({
           currencyMinorUnits={catalog.currency_minor_units}
         />
         {upgradedPlan?.base_price ? (
-          <p className={textRole('body', 'text-ink-2')}>
+          <Text as="p" variant="body" tone="ink-2">
             Then renews at {formatMoney(upgradedPlan.base_price, catalog.currency_minor_units)} a
             month before tax
             {renewsOn ? (
@@ -79,7 +79,7 @@ export function PurchaseReview({
               ' from your next renewal'
             )}
             .
-          </p>
+          </Text>
         ) : null}
         <CheckoutConsent recurring={prepared.kind === 'base'} />
       </SettingRows>

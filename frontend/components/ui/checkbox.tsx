@@ -23,9 +23,7 @@ export type CheckboxProps = AccessibleCheckbox & {
 };
 
 const CHECK_BOX =
-  'check-box press [--press:0.92] isolate focus-ring bg-panel border-control-line text-on-primary data-[state=checked]:border-primary data-[state=indeterminate]:border-primary hit-area grid size-4 shrink-0 place-items-center rounded-mark border disabled:cursor-not-allowed';
-
-const CHECK_DRAW = 'stroke-dashoffset 150ms linear 15ms';
+  'check-box press press-check isolate focus-ring bg-panel border-control-line text-on-primary data-[state=checked]:border-primary data-[state=indeterminate]:border-primary hit-area grid size-4 shrink-0 place-items-center rounded-mark border disabled:cursor-not-allowed';
 
 function CheckMark({ on }: Readonly<{ on: boolean }>) {
   return (
@@ -42,7 +40,8 @@ function CheckMark({ on }: Readonly<{ on: boolean }>) {
       <path
         pathLength={1}
         strokeDasharray={1}
-        style={{ strokeDashoffset: on ? 0 : 1, transition: CHECK_DRAW }}
+        data-drawn={on || undefined}
+        className="check-draw"
         d="M5 12l5 5l10 -10"
       />
     </svg>
@@ -84,7 +83,7 @@ function Box({
     >
       <CheckboxPrimitive.Indicator forceMount className="grid place-items-center">
         {checked === 'indeterminate' ? (
-          <Minus className="size-3 [stroke-width:3]" aria-hidden />
+          <Minus className="size-3 stroke-3" aria-hidden />
         ) : (
           <CheckMark on={checked === true} />
         )}
@@ -137,9 +136,7 @@ export function Checkbox({
         className,
       )}
     >
-      <span className={cn(CHECK_TARGET, '-my-0.5 [--target-hit:var(--spacing-target)]')}>
-        {box}
-      </span>
+      <span className={cn(CHECK_TARGET, '-my-0.5 target-hit-fine')}>{box}</span>
       <span className="flex min-w-0 flex-col">
         <span className="text-body text-ink">{label}</span>
         {description != null ? <span className="text-body text-ink-2">{description}</span> : null}

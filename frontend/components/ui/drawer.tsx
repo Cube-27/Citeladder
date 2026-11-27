@@ -1,7 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import type { ReactNode, RefObject } from 'react';
 
-import { CLOSE_BUTTON, IconButton } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/button';
 import { SCRIM, useReturnFocus } from '@/components/ui/dialog';
 import { X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -10,9 +10,6 @@ import { SHEET_FACE } from '@/components/ui/slip';
 
 const DRAWER_PANE =
   'grid min-h-0 flex-1 grid-cols-1 content-start gap-panel-inset overflow-x-hidden overflow-y-auto overscroll-contain p-panel-inset';
-
-export const DRAWER_SPLIT =
-  'phone:grid-cols-1 phone:grid-rows-[auto_minmax(0,1fr)] grid min-h-0 flex-1 grid-cols-[11.5rem_minmax(0,1fr)]';
 
 export function DrawerNav({ children }: Readonly<{ children: ReactNode }>) {
   return (
@@ -78,7 +75,8 @@ export function Drawer({
         label={closeLabel}
         tooltip={false}
         variant="secondary"
-        className={cn(CLOSE_BUTTON, 'shrink-0')}
+        shape="close"
+        className="shrink-0"
       />
     </DialogPrimitive.Close>
   );
@@ -99,7 +97,7 @@ export function Drawer({
           data-side={side}
           className={cn(
             SHEET_FACE,
-            'drawer-panel z-modal fixed inset-y-2 flex w-[calc(100vw-1rem)] flex-col overflow-hidden',
+            'drawer-panel z-modal fixed inset-y-2 flex w-drawer-fit flex-col overflow-hidden',
             side === 'left' ? 'left-2 max-w-68' : 'right-2',
             side === 'right' && DRAWER_WIDTH[width],
           )}
@@ -114,7 +112,7 @@ export function Drawer({
           />
           <div
             className={cn(
-              'flex min-h-0 flex-1 flex-col [--spacing-panel-inset:var(--spacing-modal)]',
+              'flex min-h-0 flex-1 flex-col panel-inset-modal',
               body === 'dock' ? 'overflow-hidden' : DRAWER_PANE,
             )}
           >

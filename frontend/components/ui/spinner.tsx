@@ -1,4 +1,4 @@
-import { toneClass, type TextTone } from '@/components/ui/typography';
+import { TEXT_TONE_CLASS, type TextTone } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 export function Spinner({
@@ -20,7 +20,7 @@ export function Spinner({
       data-live-rung=""
       className={cn(
         'inline-flex shrink-0 items-center gap-2 align-middle',
-        toneClass(tone),
+        tone && TEXT_TONE_CLASS[tone],
         className,
       )}
     >

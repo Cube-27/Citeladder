@@ -42,14 +42,7 @@ function renderPanel(
   const run = { ...BASE_AUDIT, ...audit };
   render(
     <>
-      <RunActions
-        audit={run}
-        onCancel={onCancel}
-        cancelPending={false}
-        onExport={vi.fn()}
-        exporting={null}
-        {...props}
-      />
+      <RunActions audit={run} onCancel={onCancel} cancelPending={false} {...props} />
       <ProgressPanel audit={run} />
     </>,
   );

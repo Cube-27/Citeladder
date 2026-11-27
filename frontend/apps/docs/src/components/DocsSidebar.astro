@@ -36,7 +36,7 @@ const sections: Section[] = inApi
   {
     inApi && (
       <a
-        class:list={['cl-docs-side-title text-kicker text-ink-2', { 'is-active': current(API_ENDPOINTS_HREF) }]}
+        class:list={['cl-docs-side-title cl-kicker', { 'is-active': current(API_ENDPOINTS_HREF) }]}
         href={API_ENDPOINTS_HREF}
         aria-current={current(API_ENDPOINTS_HREF) ? 'page' : undefined}
       >
@@ -48,7 +48,7 @@ const sections: Section[] = inApi
     sections.map((section) => (
       <details class="cl-docs-side-group" open={section.open}>
         <summary class="cl-docs-side-head">
-          <span class={section.eyebrow ? 'text-kicker text-ink-2' : 'cl-docs-side-label'}>
+          <span class={section.eyebrow ? 'cl-kicker' : 'cl-docs-side-label'}>
             {section.label}
           </span>
           <ChevronDown className="cl-docs-side-caret size-3.5" aria-hidden />
@@ -76,20 +76,20 @@ const sections: Section[] = inApi
   .cl-docs-side {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: var(--site-space-5);
     width: 100%;
   }
   .cl-docs-side-group > .cl-doc-list {
-    margin-top: 4px;
+    margin-top: var(--site-space-1);
   }
   .cl-docs-side-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: var(--site-space-2);
     height: var(--spacing-control-sm);
-    padding: 0 12px;
-    border-radius: var(--radius-sm);
+    padding: 0 var(--site-space-3);
+    border-radius: var(--radius-inner);
     list-style: none;
     transition: background-color var(--transition-duration-fast) var(--ease-standard);
   }
@@ -110,14 +110,14 @@ const sections: Section[] = inApi
     color: var(--text-color-ink-2);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
   .cl-docs-side-title {
     display: flex;
     align-items: center;
     height: var(--spacing-control-sm);
-    padding: 0 12px;
-    border-radius: var(--radius-sm);
+    padding: 0 var(--site-space-3);
+    border-radius: var(--radius-inner);
     color: var(--text-color-ink-2);
     text-decoration: none;
   }
@@ -128,7 +128,7 @@ const sections: Section[] = inApi
   .cl-docs-side-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--site-space-2);
   }
   .cl-docs-side-text {
     flex: 1;

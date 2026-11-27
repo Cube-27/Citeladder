@@ -1,8 +1,10 @@
+import { cn } from '@/lib/utils';
 import { useContext, useId, type ComponentProps, type ReactNode, type RefObject } from 'react';
 
 import { BusyRung } from '@/components/ui/rung-meter';
 import {
   DataTableColumns,
+  type ColumnAttributes,
   type DataTableColumn,
   type DataTableSelection,
 } from '@/components/ui/data-table-columns';
@@ -15,11 +17,11 @@ import {
 } from '@/components/ui/data-table-body';
 import { TableToolbar, type TableToolbarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
-import { Section, SectionBleed, SectionHeader, SectionToolbar } from '@/components/ui/section';
+import { Section, SectionBleed, SectionHeader } from '@/components/ui/section';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { TEXT_ROLE_CLASS } from '@/components/ui/text-role';
 import { StateBlock } from '@/components/ui/state-block';
 import {
   SectionTitleRoleContext,
@@ -28,6 +30,7 @@ import {
 } from '@/components/ui/state-heading-level';
 
 import './data-table.css';
+import './generated/data-table-positions.css';
 
 export type { DataTableColumn, DataTableSelection, DataTableState };
 
@@ -69,7 +72,7 @@ export function DataTable({
   const headingId = useId();
   const level = useContext(StateHeadingLevelContext);
   const parts = dataTableParts({ title, label, headingId, columns, selection });
-  const { frameRef, probe, scope, shown, shownKeys } = useFittedColumns({
+  const { frameRef, probe, layout, shown, shownKeys } = useFittedColumns({
     columns,
     selection: Boolean(selection),
   });
@@ -89,12 +92,8 @@ export function DataTable({
         level={level}
         description={description}
         actions={actions}
+        toolbar={toolbar}
       />
-      {toolbar ? (
-        <SectionToolbar>
-          <TableToolbar {...toolbar} />
-        </SectionToolbar>
-      ) : null}
       <HeldFootprint
         state={replacing}
         level={stateLevel(title, level)}
@@ -106,7 +105,7 @@ export function DataTable({
           naming={parts.naming}
           pinned={parts.pinned}
           frameRef={frameRef}
-          scope={scope}
+          layout={layout}
           probe={probe}
           foot={<DataTableFoot footer={footer} pager={paging.pager} />}
         >
@@ -155,7 +154,7 @@ function HeldFootprint({
     <SectionBleed>
       <div className="grid min-w-0">
         <div className="px-panel-inset col-start-1 row-start-1 min-w-0 py-3">{block}</div>
-        <div inert className="col-start-1 row-start-1 min-w-0" style={{ visibility: 'hidden' }}>
+        <div inert className="invisible col-start-1 row-start-1 min-w-0">
           {children}
         </div>
       </div>
@@ -219,7 +218,7 @@ function DataTableFrame({
   naming,
   pinned,
   frameRef,
-  scope,
+  layout,
   probe,
   foot,
   children,
@@ -228,7 +227,7 @@ function DataTableFrame({
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
   pinned: 1 | 2;
   frameRef: RefObject<HTMLDivElement | null>;
-  scope: string;
+  layout: Readonly<{ attributes: ColumnAttributes; share: string }>;
   probe: ReactNode;
   foot: ReactNode;
   children: ReactNode;
@@ -238,7 +237,8 @@ function DataTableFrame({
     <div
       ref={frameRef}
       data-data-table-frame=""
-      data-table-scope={scope}
+      {...layout.attributes}
+      style={{ '--data-table-share': layout.share }}
       data-pinned={pinned}
       className="relative isolate min-w-0"
     >
@@ -298,26 +298,43 @@ function pagingLayout(
   return reserveRows || hasMorePages(pager) ? { pager, pageSize } : {};
 }
 
+function joinActions(first: ReactNode, second: ReactNode): ReactNode {
+  if (!first || !second) return first || second;
+  return (
+    <>
+      {first}
+      {second}
+    </>
+  );
+}
+
+const hasControls = ({ view, lead, search, filters, status }: TableToolbarProps) =>
+  Boolean(view || lead || search || filters?.length || status !== undefined);
+
 function DataTableHeader({
   title,
   headingId,
   level,
   description,
   actions,
+  toolbar,
 }: Readonly<{
   title?: string;
   headingId: string;
   level: HeadingLevel;
   description?: ReactNode;
   actions?: ReactNode;
+  toolbar?: TableToolbarProps;
 }>) {
   const role = useContext(SectionTitleRoleContext);
-  if (!title && !description && !actions) return null;
+  const allActions = joinActions(toolbar?.actions, actions);
+  const named = Boolean(title || description);
+  if (!named && !allActions && !toolbar) return null;
   const Heading = level === 3 ? 'h3' : 'h2';
-  return (
-    <SectionHeader data-data-table-header="" actions={actions}>
+  const heading = named ? (
+    <>
       {title ? (
-        <Heading id={headingId} className={textRole(role, 'min-w-0 truncate')}>
+        <Heading id={headingId} className={cn(TEXT_ROLE_CLASS[role], 'min-w-0 truncate')}>
           {title}
         </Heading>
       ) : null}
@@ -326,6 +343,20 @@ function DataTableHeader({
           {description}
         </p>
       ) : null}
-    </SectionHeader>
+    </>
+  ) : null;
+  if (!toolbar || !hasControls(toolbar))
+    return (
+      <SectionHeader data-data-table-header="" actions={allActions}>
+        {heading}
+      </SectionHeader>
+    );
+  return (
+    <div data-data-table-header="" className="flex min-w-0 flex-wrap items-center gap-4">
+      {named ? <div className="grid max-w-full min-w-0 gap-1">{heading}</div> : null}
+      <div className="flex max-w-full min-w-0 grow">
+        <TableToolbar {...toolbar} actions={allActions} />
+      </div>
+    </div>
   );
 }

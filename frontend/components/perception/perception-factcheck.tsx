@@ -13,7 +13,7 @@ import { humanizeApiError } from '@/lib/api/errors';
 import { Inline } from '@/components/ui/layout';
 import { SectionHeader } from '@/components/ui/section';
 import { ProjectLink } from '@/components/ui/project-link';
-import { textRole } from '@/components/ui/typography';
+import { Text } from '@/components/ui/typography';
 import { AnalysisRead } from '@/components/visibility/selection-gate';
 import { AccuracyView } from '@/components/visibility/visibility-accuracy';
 import type { useAccuracy, useFactViews } from '@/lib/visibility/use-accuracy';
@@ -58,9 +58,9 @@ function FactCheckingLede({
     <SectionHeader
       actions={<FactActions claims={data.score.coverage.claims > 0} exporting={exporting} />}
     >
-      <h2 className={textRole('heading')}>
+      <Text as="h2" variant="heading">
         {contradictedHeadline(data.score.coverage.contradicted)}
-      </h2>
+      </Text>
     </SectionHeader>
   );
 }

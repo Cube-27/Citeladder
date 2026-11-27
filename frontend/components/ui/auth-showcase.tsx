@@ -1,7 +1,7 @@
-import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 
 import { Icon } from '@/components/ui/icon';
-import { textRole } from '@/components/ui/typography';
+
 import { Pause, Play } from '@/lib/icons';
 import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
 import { cn } from '@/lib/utils';
@@ -57,16 +57,12 @@ const PLACEMENT: Readonly<Record<SlideId, Readonly<{ main: Place; accent: Place 
 
 const ADVANCE_MS = 7000;
 
-const STAGE: CSSProperties = { aspectRatio: '5 / 3' };
-
-const MONO: CSSProperties = { filter: 'saturate(0)' };
-
 const THEMES = [
   { theme: 'light', suffix: '' },
   { theme: 'dark', suffix: '-dark' },
 ] as const;
-const SHOWN: CSSProperties = { opacity: 1 };
-const HIDDEN: CSSProperties = { opacity: 0 };
+
+const percentOf = (value: number | undefined) => (value === undefined ? undefined : `${value}%`);
 
 function ShotPicture({
   shot,
@@ -74,11 +70,20 @@ function ShotPicture({
   upcoming,
   over,
 }: Readonly<{ shot: Shot; place: Place; upcoming: boolean; over: boolean }>) {
-  const style = Object.fromEntries(
-    Object.entries(place).map(([edge, percent]) => [edge, `${percent}%`]),
-  );
   return (
-    <div className={cn('absolute', over && 'z-raised')} style={style}>
+    <div
+      className={cn(
+        'absolute top-place-top right-place-right bottom-place-bottom left-place-left w-place-width',
+        over && 'z-raised',
+      )}
+      style={{
+        '--place-top': percentOf(place.top),
+        '--place-right': percentOf(place.right),
+        '--place-bottom': percentOf(place.bottom),
+        '--place-left': percentOf(place.left),
+        '--place-width': `${place.width}%`,
+      }}
+    >
       {THEMES.map(({ theme, suffix }) => (
         <picture key={theme} data-theme-art={theme} className="block">
           <source type="image/avif" srcSet={`/auth/${shot.file}${suffix}.avif`} />
@@ -90,8 +95,7 @@ function ShotPicture({
             loading="lazy"
             decoding="async"
             fetchPriority={upcoming ? 'low' : 'auto'}
-            className="rounded-card block h-auto w-full"
-            style={MONO}
+            className="rounded-card block h-auto w-full saturate-0"
           />
         </picture>
       ))}
@@ -201,7 +205,7 @@ export function AuthShowcase() {
   return (
     <aside
       ref={root}
-      className="desktop:grid bg-page rounded-card gap-page-top px-gutter sticky top-2 my-2 me-2 hidden h-[calc(100dvh-1rem)] min-h-0 content-center overflow-hidden"
+      className="desktop:grid bg-page rounded-card gap-page-top px-gutter h-showcase-fill sticky top-2 my-2 me-2 hidden min-h-0 content-center overflow-hidden"
       aria-label="CiteLadder features"
       aria-roledescription="carousel"
     >
@@ -213,15 +217,14 @@ export function AuthShowcase() {
               key={slide.id}
               className={cn(
                 'col-start-1 row-start-1 grid justify-items-center gap-page-top transition-opacity duration-open motion-reduce:transition-none',
-                current ? 'visible' : 'invisible',
+                current ? 'visible opacity-100' : 'invisible opacity-0',
               )}
-              style={current ? SHOWN : HIDDEN}
               aria-roledescription="slide"
               aria-label={`${index + 1} of ${count}: ${slide.name}`}
               aria-hidden={!current}
               inert={!current}
             >
-              <div className="max-w-narrow relative w-full" style={STAGE}>
+              <div className="max-w-narrow relative aspect-5/3 w-full">
                 {seen.has(index) ? (
                   <>
                     <ShotPicture
@@ -240,7 +243,7 @@ export function AuthShowcase() {
                 ) : null}
               </div>
               <div className="max-w-narrow grid gap-2 text-center">
-                <p className={textRole('body', 'text-ink-2 text-balance')}>{slide.line}</p>
+                <p className="text-body text-ink-2 text-balance">{slide.line}</p>
               </div>
             </section>
           );
