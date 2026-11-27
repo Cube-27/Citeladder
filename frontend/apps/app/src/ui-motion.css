@@ -1,4 +1,5 @@
 :root {
+  --ease-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --panel-duration: 250ms;
   --pop-exit-duration: 96ms;
   --sweep-duration: 2s;
@@ -134,7 +135,7 @@
   animation: popup-in var(--transition-duration-fast) var(--ease-standard) both;
 }
 .dialog-panel[data-state='open'] {
-  animation: popup-in var(--panel-duration) cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: popup-in var(--panel-duration) var(--ease-quad) both;
 }
 :is(.dialog-overlay, .dialog-panel)[data-state='closed'] {
   animation: popup-out var(--pop-exit-duration) var(--ease-standard) both;
@@ -184,7 +185,7 @@
     opacity: 0;
     overflow-y: clip;
     transition:
-      block-size var(--transition-duration-open) cubic-bezier(0.25, 0.46, 0.45, 0.94),
+      block-size var(--transition-duration-open) var(--ease-quad),
       opacity var(--transition-duration-open) var(--ease-standard),
       content-visibility var(--transition-duration-open) allow-discrete;
   }
