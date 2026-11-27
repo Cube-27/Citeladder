@@ -25,7 +25,7 @@ import {
   statusLabel,
   type ChecksRun,
 } from '@/lib/site-health/status';
-import { scoreBand, type ScoreBand } from '@/lib/score-band';
+import { scoreTone } from '@/components/ui/score-gauge';
 import { Text } from '@/components/ui/typography';
 
 function LinkedFromLine({ page }: Readonly<{ page: PageSummary }>) {
@@ -201,14 +201,15 @@ function MeasurementValue({
   state,
 }: Readonly<{ score: number | null; checks: ChecksRun | null; state: string }>) {
   if (score === null) return measurementStateValue(state, checks);
-  return <Text {...SCORE_LOOK[scoreBand(Math.round(score))]}>{printed(formatScore(score))}</Text>;
+  const tone = scoreTone(score);
+  return tone === 'positive' ? (
+    <Text variant="body">{printed(formatScore(score))}</Text>
+  ) : (
+    <Text variant="label" tone={tone}>
+      {printed(formatScore(score))}
+    </Text>
+  );
 }
-
-const SCORE_LOOK = {
-  low: { variant: 'label', tone: 'negative' },
-  mid: { variant: 'label', tone: 'warning' },
-  high: { variant: 'body', tone: 'ink' },
-} as const satisfies Record<ScoreBand, Pick<ComponentProps<typeof Text>, 'variant' | 'tone'>>;
 
 function measurementStateValue(state: string, checks: ChecksRun | null) {
   const run = checksRunLabel(checks);

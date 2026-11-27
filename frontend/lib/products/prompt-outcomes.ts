@@ -64,7 +64,9 @@ function engineCells(runs: readonly ProductRun[]): ReadonlyMap<string, PromptEng
   return cells;
 }
 
-export function productPromptOutcomes(detail: Detail): ProductPromptOutcomes {
+export function productPromptOutcomes(
+  detail: Pick<Detail, 'answers' | 'prompts' | 'answer_total'>,
+): ProductPromptOutcomes {
   const byPrompt = groupBy(detail.answers, (run) => run.prompt_text);
   const engines = [...groupBy(detail.answers, (run) => run.engine)]
     .map(([engine, runs]) => engineOutcome(engine, runs))

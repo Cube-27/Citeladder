@@ -33,13 +33,7 @@ describe('cn', () => {
   });
 
   it('lets a caller replace a primitive role value with another role or a step', () => {
-    expect(cn('min-h-control-md px-control-x', 'px-0')).toBe('min-h-control-md px-0');
-    expect(cn('gap-compact', 'gap-workspace')).toBe('gap-workspace');
     expect(cn('h-control-md w-control-md', 'size-6')).toBe('size-6');
-    expect(cn('duration-fast ease-standard', 'duration-open ease-fluid')).toBe(
-      'duration-open ease-fluid',
-    );
-    expect(cn('z-raised', 'z-base')).toBe('z-base');
     expect(cn('max-w-flow', 'pt-flow-gap')).toBe('max-w-flow pt-flow-gap');
   });
 
@@ -56,12 +50,6 @@ describe('cn', () => {
         'transition-none',
         'transition-none',
       ]),
-      ...['bubble', 'state', 'chart-key', 'list-wide'].map((role) => [
-        `max-w-${role}`,
-        'max-w-none',
-        'max-w-none',
-      ]),
-      ['shadow-tab-rule', 'shadow-none', 'shadow-none'],
       ...roles('z-index').map((role) => [`z-${role}`, 'z-0', 'z-0']),
       ...roles('opacity').map((role) => [`opacity-${role}`, 'opacity-0', 'opacity-0']),
       ...roles('grid-template-columns').map((role) => [

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { TextLink } from '@/components/ui/text-link';
+import { TEXT_TONE_CLASS, type TextTone } from '@/components/ui/text-role';
 import { Tooltip } from '@/components/ui/tooltip';
 
 import { humanizeApiError } from '@/lib/api/errors';
@@ -13,24 +14,12 @@ import { cn } from '@/lib/utils';
 
 export type NoticeTone = 'info' | 'positive' | 'warning' | 'negative';
 
-const TONE: Record<NoticeTone, { glyph: IconGlyph; ink: string; word: string }> = {
-  info: { glyph: Info, ink: 'text-info', word: 'Note' },
-  positive: {
-    glyph: CircleCheck,
-    ink: 'text-positive',
-    word: 'Done',
-  },
-  warning: {
-    glyph: TriangleAlert,
-    ink: 'text-warning',
-    word: 'Warning',
-  },
-  negative: {
-    glyph: CircleAlert,
-    ink: 'text-negative',
-    word: 'Error',
-  },
-};
+export const NOTICE_TONE = {
+  info: { glyph: Info, tone: 'info', word: 'Note' },
+  positive: { glyph: CircleCheck, tone: 'positive', word: 'Done' },
+  warning: { glyph: TriangleAlert, tone: 'warning', word: 'Warning' },
+  negative: { glyph: CircleAlert, tone: 'negative', word: 'Error' },
+} as const satisfies Record<NoticeTone, { glyph: IconGlyph; tone: TextTone; word: string }>;
 
 type MessageNotice = Readonly<{
   kind?: 'message';
@@ -106,7 +95,7 @@ function MessageNoticeView({
   className,
 }: MessageNotice) {
   if (children == null && title == null) return null;
-  const style = TONE[tone];
+  const style = NOTICE_TONE[tone];
   const word = <span className="sr-only">{`${style.word}: `}</span>;
   const urgent = !standing && (tone === 'negative' || tone === 'warning');
   const Root = urgent || standing ? 'div' : 'output';
@@ -122,7 +111,10 @@ function MessageNoticeView({
         className,
       )}
     >
-      <span aria-hidden className={cn('inline-flex h-5 shrink-0 items-center', style.ink)}>
+      <span
+        aria-hidden
+        className={cn('inline-flex h-5 shrink-0 items-center', TEXT_TONE_CLASS[style.tone])}
+      >
         <style.glyph className="size-4" />
       </span>
       <div className="flex min-w-0 flex-col gap-1">
