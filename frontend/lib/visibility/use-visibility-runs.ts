@@ -122,7 +122,7 @@ export function useVisibilityRuns({
   });
   const [latestRun] = toRunOptions(auditsQuery.data?.items.slice(0, 1) ?? [], timeZone);
   const [selectedRun] = toRunOptions(selectedQuery.data ? [selectedQuery.data] : [], timeZone);
-  const measured = counts ? statusCount(counts, DASHBOARD_STATUSES) : 0;
+  const measured = auditsQuery.data?.total ?? 0;
   const activeRun = anyActive ? activeRunOf(activeQuery.data?.items[0]) : null;
   const rangeHasRuns = useRunWindow(requestScope, market, active ? window : null);
   const runSignal = `${measured}:${activeRun?.id ?? 'idle'}`;

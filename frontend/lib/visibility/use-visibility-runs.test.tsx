@@ -60,3 +60,36 @@ it('returns the run picker to the first page when the project changes', async ()
   view.rerender(<Picker projectId={NARROW} />);
   expect(await screen.findByText('3')).toBeVisible();
 });
+
+it('finds no measured runs in a market whose page is empty while other markets have runs', async () => {
+  mswServer.use(
+    http.get('/api/v1/audits', ({ request }) => {
+      const market = new URL(request.url).searchParams.get('market');
+      const audits = market === 'de' ? [] : [makeAudit(1, { status: 'completed' })];
+      return HttpResponse.json(
+        auditPage(audits, {
+          status_counts: { ...auditPage([]).status_counts, completed: 1 },
+        }),
+      );
+    }),
+  );
+  renderWithProviders(
+    <>
+      <Measured market="us" />
+      <Measured market="de" />
+    </>,
+  );
+  expect(await screen.findByText('us: true')).toBeVisible();
+  expect(await screen.findByText('de: false')).toBeVisible();
+});
+
+function Measured({ market }: Readonly<{ market: string }>) {
+  const { hasRuns, auditsQuery } = useVisibilityRuns({
+    requestScope: { workspaceId: 'w1', projectId: WIDE },
+    market,
+    selectedRunId: null,
+    window: null,
+    active: true,
+  });
+  return auditsQuery.isSuccess ? <output>{`${market}: ${hasRuns}`}</output> : null;
+}
