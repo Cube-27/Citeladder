@@ -3,9 +3,8 @@ import { useId, type ComponentProps, type ReactNode } from 'react';
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import {
-  SetupBar,
+  FlowBar,
   SetupMain,
-  SetupStepMark,
   StepBody,
   StepConnector,
   StepFootBar,
@@ -15,6 +14,7 @@ import { PageGround } from '@/components/ui/flow-frame';
 import { Icon } from '@/components/ui/icon';
 import { Columns, Inline, Stack } from '@/components/ui/layout';
 import { RungTrail } from '@/components/ui/rung-trail';
+import { StepMark, stepState } from '@/components/ui/step-mark';
 import { Section } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { Text } from '@/components/ui/typography';
@@ -36,8 +36,9 @@ export function SetupPage({
   const index = steps ? Math.max(0, Math.min(steps.length - 1, current)) : 0;
   return (
     <PageGround layout="column">
-      <SetupBar
-        stepper={steps ? <SetupStepper steps={steps} current={index} /> : <span />}
+      <FlowBar
+        sticky
+        center={steps ? <SetupStepper steps={steps} current={index} /> : undefined}
         progress={steps ? { step: index + 1, of: steps.length } : undefined}
         end={barEnd}
       />
@@ -70,7 +71,7 @@ function SetupStepper({
         {steps.map((step, index) => (
           <Inline as="li" key={step} aria-current={index === current ? 'step' : undefined}>
             {index > 0 ? <StepConnector done={index <= current} /> : null}
-            <SetupStepMark index={index} current={current} />
+            <StepMark state={stepState(index, current)} number={index + 1} />
             <Text
               variant={index === current ? 'label' : 'body'}
               tone={index > current ? 'ink-2' : 'ink'}

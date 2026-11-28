@@ -73,21 +73,3 @@ export function StepsBody({
     </section>
   );
 }
-
-export function StepsRowMark({
-  state,
-  children,
-}: Readonly<{ state: 'done' | 'current' | 'next'; children: ReactNode }>) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        'text-caption grid size-5 shrink-0 place-items-center rounded-full tabular-nums',
-        state === 'current' && 'bg-mark-ink text-on-ink font-emphasis',
-        state === 'next' && 'border-control-line text-ink-2 border',
-      )}
-    >
-      {children}
-    </span>
-  );
-}

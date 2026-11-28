@@ -1,45 +1,34 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-import { FlowLogo } from '@/components/ui/flow-logo';
+import { LogoMark } from '@/components/ui/logo-mark';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
-import { Check } from '@/lib/icons';
+import { websiteHref } from '@/lib/config/app-link';
 import { cn } from '@/lib/utils';
-import { Icon } from '@/components/ui/icon';
 
-export function FlowBar({ end }: Readonly<{ end?: ReactNode }>) {
-  return (
-    <header className="min-h-masthead gap-card px-gutter flex shrink-0 items-center justify-between">
-      <span className="inline-flex">
-        <FlowLogo />
-      </span>
-      <div className="flex items-center gap-2">
-        {end}
-        <ThemeSwitch />
-      </div>
-    </header>
-  );
-}
-
-export function FlowFooter({ children }: Readonly<{ children: ReactNode }>) {
-  return <footer className="text-caption text-ink-2 px-gutter py-4 text-center">{children}</footer>;
-}
-
-export function SetupBar({
-  stepper,
+export function FlowBar({
+  center,
   progress,
   end,
+  sticky = false,
 }: Readonly<{
-  stepper: ReactNode;
+  center?: ReactNode;
   progress?: Readonly<{ step: number; of: number }>;
   end?: ReactNode;
+  sticky?: boolean;
 }>) {
   return (
-    <header className="border-rule bg-ground z-raised sticky top-0 border-b">
+    <header
+      className={cn('shrink-0', sticky && 'border-rule bg-ground z-raised sticky top-0 border-b')}
+    >
       <div className="min-h-masthead px-gutter grid-cols-lead-body-end grid items-center gap-4">
-        <span className="inline-flex">
-          <FlowLogo />
-        </span>
-        {stepper}
+        <a
+          href={websiteHref('/')}
+          aria-label="CiteLadder home"
+          className="focus-ring text-ink rounded-control -ms-1 inline-flex justify-self-start p-1"
+        >
+          <LogoMark size={22} />
+        </a>
+        {center ?? <span />}
         <div className="flex items-center justify-end gap-2">
           {end}
           <ThemeSwitch />
@@ -57,6 +46,10 @@ export function SetupBar({
       ) : null}
     </header>
   );
+}
+
+export function FlowFooter({ children }: Readonly<{ children: ReactNode }>) {
+  return <footer className="text-caption text-ink-2 px-gutter py-4 text-center">{children}</footer>;
 }
 
 export function SetupMain({
@@ -98,29 +91,4 @@ export function StepFootBar({
 
 export function StepConnector({ done }: Readonly<{ done: boolean }>) {
   return <span aria-hidden className={cn('h-px w-10', done ? 'bg-primary' : 'bg-rule')} />;
-}
-
-const MARK = 'grid size-6 shrink-0 place-items-center rounded-full';
-
-export function SetupStepMark({ index, current }: Readonly<{ index: number; current: number }>) {
-  if (index < current) {
-    return (
-      <span aria-hidden className={cn(MARK, 'bg-primary text-on-primary')}>
-        <Icon icon={Check} size="flush" />
-      </span>
-    );
-  }
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        'text-caption',
-        MARK,
-        'border',
-        index === current ? 'border-control-line text-ink' : 'border-rule text-ink-2',
-      )}
-    >
-      {index + 1}
-    </span>
-  );
 }
