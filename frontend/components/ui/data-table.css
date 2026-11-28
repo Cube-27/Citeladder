@@ -17,6 +17,3 @@
     background-color: var(--color-table-head);
   }
 }
-.table-reserve {
-  min-height: calc(var(--spacing-table-head) + var(--reserve-rows, 0) * var(--spacing-row));
-}

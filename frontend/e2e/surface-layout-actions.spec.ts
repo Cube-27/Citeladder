@@ -310,7 +310,7 @@ async function stubActionPage(page: Page) {
 }
 
 for (const width of [1280, 1600])
-  test(`no decision, Show more or tick on an Action page moves its header, Details or dock at ${width}px`, async ({
+  test(`no decision, Show more or tick on an Action page moves its header, Details or dock row, and dock buttons fit their text at ${width}px`, async ({
     page,
   }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -329,18 +329,44 @@ for (const width of [1280, 1600])
     };
     const boxes = async () => {
       const out: Record<string, Box> = {};
-      for (const [name, part] of Object.entries(parts)) out[name] = await bandBox(part);
+      for (const [name, part] of Object.entries(parts)) {
+        const box = await bandBox(part);
+        out[name] = name === 'dock' && box ? [box[1] ?? 0, box[3] ?? 0] : box;
+      }
       return out;
     };
+    const unfitted = () =>
+      dock.locator('[data-button-variant]').evaluateAll((controls) =>
+        controls.flatMap((control) => {
+          const range = document.createRange();
+          range.selectNodeContents(control);
+          const style = getComputedStyle(control);
+          const edges = [
+            'paddingLeft',
+            'paddingRight',
+            'borderLeftWidth',
+            'borderRightWidth',
+          ] as const;
+          const frame = edges.reduce((sum, edge) => sum + Number.parseFloat(style[edge]), 0);
+          const slack =
+            control.getBoundingClientRect().width - range.getBoundingClientRect().width - frame;
+          return Math.abs(slack) > 1
+            ? [`${control.textContent?.trim()}: ${Math.round(slack)}px`]
+            : [];
+        }),
+      );
     const before = await boxes();
     const shifts: string[] = [];
+    const loose: string[] = [];
     const check = async (step: string) => {
       const after = await boxes();
       for (const [name, box] of Object.entries(before))
         if (moved(box, after[name] ?? null))
           shifts.push(`${step}: ${name} ${print(box)} -> ${print(after[name] ?? null)}`);
+      for (const control of await unfitted()) loose.push(`${step}: ${control}`);
     };
 
+    await check('Open');
     await dock.getByRole('button', { name: 'Accept' }).click();
     await expect(dock.getByRole('button', { name: 'Mark implemented' })).toBeVisible();
     await check('Accept');
@@ -355,4 +381,5 @@ for (const width of [1280, 1600])
     await check('Tick a URL');
 
     expect(shifts).toEqual([]);
+    expect(loose).toEqual([]);
   });

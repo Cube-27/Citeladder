@@ -30,7 +30,7 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
-import { TABLE_DEFAULT_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
+import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
 import { TabHeadSlotContext } from '@/components/ui/tab-head-slot';
@@ -80,7 +80,6 @@ export function DataTable({
     selection: Boolean(selection),
     scope: headingId,
   });
-  const reserve = pager !== undefined;
   const paging = pagingLayout(pager, pageSize);
   const scroll = useScrollFrame({ label: parts.regionLabel, start: false });
   const replacing = replacingState(state);
@@ -99,7 +98,7 @@ export function DataTable({
         actions={actions}
         toolbar={toolbar}
       />
-      <HeldFootprint state={replacing} level={stateLevel(title, level)} held={reserve}>
+      <ReplacedFootprint state={replacing} level={stateLevel(title, level)}>
         <DataTableFrame
           scroll={scroll}
           naming={parts.naming}
@@ -108,7 +107,6 @@ export function DataTable({
           scope={headingId}
           layout={layout}
           probe={probe}
-          reserve={reserve}
           foot={<DataTableFoot footer={footer} pager={paging.pager} />}
         >
           <DataTableColumns columns={columns} selection={selection} />
@@ -123,40 +121,27 @@ export function DataTable({
             </ShownColumnsContext>
           </DataTableBody>
         </DataTableFrame>
-      </HeldFootprint>
+      </ReplacedFootprint>
       {busy ? <BusyRung active={busy.active} label={busy.label} /> : null}
     </Section>
   );
 }
 
-function HeldFootprint({
+function ReplacedFootprint({
   state,
   level,
-  held,
   children,
 }: Readonly<{
   state: ComponentProps<typeof StateBlock> | null;
   level: HeadingLevel;
-  held: boolean;
   children: ReactNode;
 }>) {
   const block = state ? <ReplacingState state={state} level={level} /> : null;
-  if (!block || !held)
-    return (
-      <>
-        {block}
-        <SectionBleed hidden={block !== null}>{children}</SectionBleed>
-      </>
-    );
   return (
-    <SectionBleed>
-      <div className="grid min-w-0">
-        <div className="px-panel-inset col-start-1 row-start-1 min-w-0 py-3">{block}</div>
-        <div inert aria-hidden className="invisible col-start-1 row-start-1 min-w-0">
-          {children}
-        </div>
-      </div>
-    </SectionBleed>
+    <>
+      {block}
+      <SectionBleed hidden={block !== null}>{children}</SectionBleed>
+    </>
   );
 }
 
@@ -216,12 +201,10 @@ function DataTableFrame({
   scope,
   layout,
   probe,
-  reserve,
   foot,
   children,
 }: Readonly<{
   scroll: ScrollFrameState;
-  reserve: boolean;
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
   pinned: 1 | 2;
   frameRef: RefObject<HTMLDivElement | null>;
@@ -241,11 +224,7 @@ function DataTableFrame({
       className="relative isolate min-w-0"
     >
       {probe}
-      <div
-        {...scroll.frame}
-        style={reserve ? { '--reserve-rows': TABLE_DEFAULT_PAGE_SIZE } : undefined}
-        className="table-reserve relative min-w-0"
-      >
+      <div {...scroll.frame} className="relative min-w-0">
         <Table
           {...naming}
           wrapperRef={scroll.ref}

@@ -260,15 +260,19 @@ difference is a bug unless the plan lists it.
 
 **Rule:** When a primitive drops `className` from its public props, its
 implementation still accepts the `className` a Radix `Slot` parent injects at
-runtime (`DockSlot`, `TextLink asChild`, `MastheadLabelled`) and merges it
-with its own classes. Export it through a narrower function type, as `Button`
-and `Pressable` do, so screens still cannot pass one.
-**Why:** #1281 closed `Button` and `Pressable`. `Button` then overwrote the
-dock slot widths, so the Action dock resized on every decision, and
-`Pressable` let the injected class replace its whole class list under
-`TextLink asChild`.
-**Check:** `e2e/surface-layout-actions.spec.ts` holds the dock still; render
-a `Slot` parent around any newly closed primitive before merging.
+runtime (`TextLink asChild`, `MastheadLabelled`) and merges it with its own
+classes. Export it through a narrower function type, as `Button` and
+`Pressable` do, so screens still cannot pass one. Never use such a slot to give
+a button a fixed or minimum width: a button is its label plus the control
+padding, in floating bars too. A bar whose labels change keeps its row (bottom
+edge and height), not its width.
+**Why:** #1281 closed `Button` and `Pressable`; `Pressable` then let the
+injected class replace its whole class list under `TextLink asChild`. Fixed
+`DockSlot` widths held the Action dock still but padded Decline, Accept and
+Fix with extra side space (owner, 2026-11-28).
+**Check:** `e2e/surface-layout-actions.spec.ts` asserts each dock button's
+width is its content plus padding and that the dock row stays put; render a
+`Slot` parent around any newly closed primitive before merging.
 
 ### Popup exits animate, eager CSS pays for itself
 
