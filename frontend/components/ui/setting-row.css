@@ -1,0 +1,11 @@
+[data-bleed-rows][data-setting-rows='compact'] > * {
+  padding-block: calc(var(--spacing) * 2);
+}
+
+[data-setting-rows='compact'] [data-setting-row] {
+  min-height: var(--spacing-control-md);
+}
+
+[data-bleed-rows][data-setting-rows='compact'] > [data-setting-row] {
+  min-height: calc(var(--spacing-control-md) + var(--spacing) * 4);
+}

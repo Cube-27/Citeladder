@@ -25,7 +25,7 @@ export function BillingDetailsForm({ country, details, setDetails }: BillingDeta
   return (
     <>
       {addressFields.map(([key, label, autoComplete]) => (
-        <SettingField key={key} label={label}>
+        <SettingField key={key} label={label} inline="wide">
           {(field) => (
             <Input
               {...field}
@@ -38,7 +38,7 @@ export function BillingDetailsForm({ country, details, setDetails }: BillingDeta
       ))}
       {india ? (
         <>
-          <SettingField label="Billing state code">
+          <SettingField label="Billing state code" inline="wide">
             {(field) => (
               <Input
                 {...field}
@@ -49,7 +49,7 @@ export function BillingDetailsForm({ country, details, setDetails }: BillingDeta
               />
             )}
           </SettingField>
-          <SettingField label="GSTIN (optional)">
+          <SettingField label="GSTIN (optional)" inline="wide">
             {(field) => (
               <Input
                 {...field}

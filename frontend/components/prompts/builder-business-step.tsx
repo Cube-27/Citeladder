@@ -68,7 +68,7 @@ export function BuilderBusinessStep({
       <OfferingsGrid {...editor} saved={map} />
       <BusinessFacts {...editor} context={profile.business_context} />
       <SettingsGroup title="This run">
-        <SettingRows>
+        <SettingRows density="roomy">
           <SettingField label="Anything else for this run">
             {(field) => (
               <Input

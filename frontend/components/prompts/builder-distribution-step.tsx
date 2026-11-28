@@ -101,7 +101,7 @@ function PersonaChoices({
     );
   const full = selected.length >= max;
   return (
-    <SettingRows label="Personas">
+    <SettingRows density="roomy" label="Personas">
       {choices.map((persona) => {
         const checked = selected.includes(persona);
         return (
@@ -152,7 +152,7 @@ function SeedList({
     onChange({ ...settings, unticked });
   };
   return (
-    <SettingRows label="Search queries">
+    <SettingRows density="roomy" label="Search queries">
       {topics.flatMap((topic) => {
         const own = queries.filter((query) => query.topic_id === topic.id);
         if (!own.length) return [];
@@ -247,7 +247,7 @@ export function BuilderDistributionStep({
             </Text>
           }
         >
-          <SettingRows>
+          <SettingRows density="roomy">
             <CountField settings={settings} onChange={onChange} max={limits.brand_prompts_max} />
           </SettingRows>
         </SettingsGroup>
@@ -290,7 +290,7 @@ function MarketSettings({
   return (
     <>
       <SettingsGroup title="Size and share">
-        <SettingRows>
+        <SettingRows density="roomy">
           <CountField settings={settings} onChange={onChange} max={limits.generation_count_max} />
           <ShareMix settings={settings} onChange={onChange} hasCompetitors={hasCompetitors} />
         </SettingRows>
@@ -303,7 +303,7 @@ function MarketSettings({
           </Button>
         }
       >
-        <SettingRows>
+        <SettingRows density="roomy">
           <SplitBar
             label="Intent mix"
             segments={INTENT_SEGMENTS}

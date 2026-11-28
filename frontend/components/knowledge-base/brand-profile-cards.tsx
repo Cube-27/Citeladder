@@ -2,16 +2,19 @@ import { useState } from 'react';
 
 import { ProjectEditPanel } from '@/components/projects/project-edit-panel';
 import { BrandMark } from '@/components/ui/brand-mark';
-import { Button } from '@/components/ui/button';
 import { Absence } from '@/components/ui/absence';
-import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { SettingField, SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
+import {
+  SettingField,
+  SettingRow,
+  SettingRows,
+  SettingsGroup,
+  RowAction,
+} from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Pencil } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { Project } from '@citeladder/contracts';
 import { BUYER_TYPE_CHOICES, MARKET_SCOPE_CHOICES } from '@/lib/project/identity-facets';
@@ -49,7 +52,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
     <SettingsGroup title="Company facts">
       <ProfileSaveNotices form={form} />
       <SettingRows foot={<ProfileSaveFoot form={form} />}>
-        <SettingField label="Category">
+        <SettingField label="Category" inline="fill">
           {(field) => (
             <Input
               {...field}
@@ -73,7 +76,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
           disabled={saving}
           onPick={(market_scope) => form.setIdentity({ ...identity, market_scope })}
         />
-        <SettingField label="Target audience">
+        <SettingField label="Target audience" inline="fill">
           {(field) => (
             <Textarea
               {...field}
@@ -84,7 +87,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
             />
           )}
         </SettingField>
-        <SettingField label="Description">
+        <SettingField label="Description" inline="fill">
           {(field) => (
             <Textarea
               {...field}
@@ -95,7 +98,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
             />
           )}
         </SettingField>
-        <SettingField label="Positioning">
+        <SettingField label="Positioning" inline="fill">
           {(field) => (
             <Textarea
               {...field}
@@ -152,10 +155,7 @@ export function TrackedCompetitorsCard({ project }: Readonly<{ project: Project 
       title="Tracked competitors"
       action={
         mayEdit ? (
-          <Button variant="secondary" onClick={() => setEditing(true)}>
-            <Icon icon={Pencil} />
-            Edit competitors
-          </Button>
+          <RowAction kind="edit" label="Edit competitors" onClick={() => setEditing(true)} />
         ) : null
       }
     >

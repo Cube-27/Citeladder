@@ -1,11 +1,11 @@
 import { useState } from 'react';
 
-import { Pencil, Plus, Save, Trash2, X } from '@/lib/icons';
+import { Plus } from '@/lib/icons';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline } from '@/components/ui/layout';
-import { SettingField, SettingRow } from '@/components/ui/setting-row';
+import { SettingField, SettingRow, RowAction } from '@/components/ui/setting-row';
 import { Text } from '@/components/ui/typography';
 
 export function AddNameForm({
@@ -41,9 +41,9 @@ export function AddNameForm({
         void submit();
       }}
     >
-      <SettingField label={field}>
+      <SettingField label={field} inline="fill">
         {(props) => (
-          <Inline wrap>
+          <Inline wrap justify="end">
             <Input
               {...props}
               value={draft}
@@ -90,29 +90,21 @@ export function EditableNameRow({
   if (!mayEdit) return <SettingRow label={label} />;
   const actions =
     editing === null ? (
-      <Inline as="span" wrap>
-        <Button variant="secondary" aria-label={`${verb} ${name}`} onClick={() => setEditing(name)}>
-          <Icon icon={Pencil} />
-          {verb}
-        </Button>
-        <Button
-          variant="danger"
+      <Inline as="span" gap="tight">
+        <RowAction kind="edit" label={`${verb} ${name}`} onClick={() => setEditing(name)} />
+        <RowAction
+          kind="delete"
+          label={`Delete ${name}`}
           disabled={pending}
-          aria-label={`Delete ${name}`}
           onClick={() => void onDelete().catch(() => undefined)}
-        >
-          <Icon icon={Trash2} />
-          Delete
-        </Button>
+        />
       </Inline>
     ) : (
-      <Inline as="span" wrap>
-        <Button variant="quiet" onClick={() => setEditing(null)}>
-          <Icon icon={X} />
-          Cancel
-        </Button>
-        <Button
-          variant="secondary"
+      <Inline as="span" gap="tight">
+        <RowAction kind="cancel" label="Cancel" onClick={() => setEditing(null)} />
+        <RowAction
+          kind="save"
+          label="Save"
           disabled={pending || !editing.trim()}
           onClick={() => {
             const sent = editing;
@@ -121,10 +113,7 @@ export function EditableNameRow({
               () => undefined,
             );
           }}
-        >
-          <Icon icon={Save} />
-          Save
-        </Button>
+        />
       </Inline>
     );
   return <SettingRow label={label} action={actions} />;

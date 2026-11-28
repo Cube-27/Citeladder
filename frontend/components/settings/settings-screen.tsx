@@ -13,7 +13,6 @@ import { TimeZoneSetting } from '@/components/settings/time-zone-setting';
 import AccountSecurity from '@/components/settings/account-security';
 import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
 import { SettingsPage } from '@/components/templates/settings-page';
-import { Trash2 } from '@/lib/icons';
 import { projectMutations } from '@/lib/api/projects';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useSessionUser } from '@/lib/auth/session-guard';
@@ -25,8 +24,7 @@ import { SETTINGS_TABS, type SettingsTab } from '@/lib/settings/tabs';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Text } from '@/components/ui/typography';
 import { Avatar } from '@/components/ui/avatar';
-import { Icon } from '@/components/ui/icon';
-import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
+import { SettingRow, SettingRows, SettingsGroup, RowAction } from '@/components/ui/setting-row';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
 import { Notice } from '@/components/ui/notice';
@@ -89,14 +87,12 @@ function ProjectDeletionControls() {
             <SettingRow
               label={activeProject.name}
               action={
-                <Button
-                  variant="danger"
+                <RowAction
+                  kind="delete"
+                  label="Delete project"
                   onClick={() => setConfirmOpen(true)}
                   disabled={deleteMutation.isPending}
-                >
-                  <Icon icon={Trash2} />
-                  Delete project
-                </Button>
+                />
               }
             />
           </SettingRows>
