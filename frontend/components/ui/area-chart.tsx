@@ -93,6 +93,7 @@ export function AreaChart({
   yMin,
   yMax,
   yFormat = defaultFormat,
+  format = yFormat,
   legend = true,
   eventsLabel,
   eventLegend = false,
@@ -111,6 +112,7 @@ export function AreaChart({
   yMin?: number;
   yMax?: number;
   yFormat?: (value: number) => string;
+  format?: (value: number) => string;
   legend?: boolean;
   eventsLabel?: string;
   eventLegend?: boolean;
@@ -131,7 +133,7 @@ export function AreaChart({
   }));
   if (empty && lines.every((line) => lastMeasured(line.values) < 0))
     return <StateBlock kind="empty" inline message={empty} />;
-  const shown = shownWith(yFormat);
+  const shown = shownWith(format);
   const table = (
     <SeriesTable
       label={label}
@@ -145,7 +147,7 @@ export function AreaChart({
   if (only && data.length === 1 && lonePoint === 'list')
     return (
       <ChartFrame>
-        <SingleMeasurements label={label} point={only} lines={lines} format={yFormat} />
+        <SingleMeasurements label={label} point={only} lines={lines} format={format} />
         {table}
       </ChartFrame>
     );

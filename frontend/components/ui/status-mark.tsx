@@ -125,7 +125,7 @@ export type ClassificationValue = keyof typeof classificationMarks;
 export type RunStatusValue = keyof typeof runStatusMarks;
 type SeverityValue = keyof typeof severityMarks;
 
-type StatusMarkProps = {
+export type StatusMarkProps = {
   children: ReactNode;
   full?: boolean;
 } & (
