@@ -175,8 +175,13 @@
   );
   --spacing-card: 16px;
   --spacing-gutter: var(--spacing-card);
-  --spacing-page-inline: var(--spacing-page-block);
 
   --spacing-compact: 8px;
   --spacing-section: var(--spacing-card);
+}
+
+@media (min-width: 768px) {
+  :root:not([data-public-surface]) {
+    --spacing-page-inline: var(--spacing-page-block);
+  }
 }
