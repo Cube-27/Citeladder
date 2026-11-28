@@ -252,7 +252,6 @@ export function BusinessFacts({
             count={`${formatCount(draft[list.key].length)} of ${formatCount(listMax)}`}
           >
             <ValuesInput
-              variant="cell"
               separates="comma"
               label={list.label}
               items={listItems(draft[list.key], draft.suggested.includes(list.key))}
