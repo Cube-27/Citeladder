@@ -65,3 +65,10 @@
   --markdown-prose-h3: var(--text-label);
   --markdown-prose-h3--line-height: var(--text-label--line-height);
 }
+
+[data-agent-thread] {
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.5rem;
+  --text-prose: var(--text-body);
+  --text-prose--line-height: var(--text-body--line-height);
+}
