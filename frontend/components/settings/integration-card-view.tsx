@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { ConnectionRow } from '@/components/settings/integration-connection-row';
-import { Dialog } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/dialog';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   FAMILY_META,
@@ -146,32 +146,21 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
       <Button variant="danger" onClick={() => setOpen(true)}>
         Disconnect {title}
       </Button>
-      <Dialog
-        open={open}
-        onOpenChange={(next) => {
-          if (!disconnect.isPending) setOpen(next);
-        }}
-        title={`Disconnect ${title}`}
-        description={`CiteLadder's access to ${sources} is revoked and their properties stop importing.`}
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => setOpen(false)}
-              disabled={disconnect.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => disconnect.mutate(connection.id, { onSuccess: () => setOpen(false) })}
-              pending={disconnect.isPending}
-              pendingLabel="Disconnecting…"
-            >
-              Disconnect
-            </Button>
-          </>
+      <ConfirmDialog
+        request={
+          open
+            ? {
+                question: `Disconnect ${title}`,
+                body: `CiteLadder's access to ${sources} is revoked and their properties stop importing.`,
+                confirmLabel: 'Disconnect',
+                destructive: true,
+                onConfirm: () =>
+                  disconnect.mutate(connection.id, { onSuccess: () => setOpen(false) }),
+              }
+            : null
         }
+        pending={disconnect.isPending}
+        onCancel={() => setOpen(false)}
       >
         {disconnect.isError ? (
           <Notice
@@ -181,7 +170,7 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
             })}
           />
         ) : null}
-      </Dialog>
+      </ConfirmDialog>
     </>
   );
 }

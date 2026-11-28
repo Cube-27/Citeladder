@@ -2,8 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Dialog } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { WorkspacePanel } from '@/components/settings/workspace-panel';
 import { McpConnections } from '@/components/settings/mcp-connections';
@@ -22,7 +21,6 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 import { useSelectProject, workspaceDestination } from '@/lib/navigation/project-destination';
 import { SETTINGS_TABS, type SettingsTab } from '@/lib/settings/tabs';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
-import { Text } from '@/components/ui/typography';
 import { Avatar } from '@/components/ui/avatar';
 import { SettingRow, SettingRows, SettingsGroup, RowAction } from '@/components/ui/setting-row';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
@@ -100,37 +98,21 @@ function ProjectDeletionControls() {
           <StateBlock kind="empty" inline message="No project is selected." />
         )}
       </SettingsGroup>
-      <Dialog
-        open={confirmOpen}
-        onOpenChange={(open) => {
-          if (!deleteMutation.isPending) setConfirmOpen(open);
-        }}
-        title="Delete project"
-        description={activeProject ? `Delete "${activeProject.name}"?` : undefined}
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => setConfirmOpen(false)}
-              disabled={deleteMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => activeProject && deleteProject(activeProject.id)}
-              disabled={deleteMutation.isPending || !activeProject}
-            >
-              {deleteMutation.isPending ? 'Deleting…' : 'Delete project'}
-            </Button>
-          </>
+      <ConfirmDialog
+        request={
+          confirmOpen && activeProject
+            ? {
+                question: `Delete ${activeProject.name}`,
+                body: 'Deletes its prompts, topics, audits, visibility history and generated content. Cannot be undone.',
+                confirmLabel: 'Delete project',
+                destructive: true,
+                onConfirm: () => deleteProject(activeProject.id),
+              }
+            : null
         }
-      >
-        <Text as="p" variant="body" tone="ink-2">
-          Deletes its prompts, topics, audits, visibility history and generated content. Cannot be
-          undone.
-        </Text>
-      </Dialog>
+        pending={deleteMutation.isPending}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </>
   );
 }

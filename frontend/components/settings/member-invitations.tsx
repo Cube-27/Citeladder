@@ -2,8 +2,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { z } from 'zod';
 
 import { Tag } from '@/components/ui/tag';
-import { ActionButton } from '@/components/ui/actions';
-import { Button } from '@/components/ui/button';
+import { Button, IconButton } from '@/components/ui/button';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { CopyButton } from '@/components/ui/copy-button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
@@ -20,6 +19,7 @@ import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/wor
 import { ROLE_OPTIONS, ROLE_SUMMARY, roleLabel } from './member-roles';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { Text } from '@/components/ui/typography';
+import { Trash2 } from '@/lib/icons';
 
 const INVITE_FORM_ID = 'invite-member-form';
 
@@ -187,9 +187,9 @@ export function PendingInvitations({
               >
                 Resend
               </Button>
-              <ActionButton
-                action="revoke"
-                type="button"
+              <IconButton
+                icon={Trash2}
+                label={`Revoke invitation for ${invitation.email}`}
                 disabled={busy}
                 onClick={() => onRevoke(invitation)}
               />

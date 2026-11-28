@@ -29,7 +29,6 @@ export const ACTIONS = {
   connectGoogle: { label: 'Connect Google', variant: 'secondary' },
   connectCrawlLogs: { label: 'Connect crawl logs', variant: 'secondary', icon: Plug },
   copy: { label: 'Copy', variant: 'secondary', icon: Copy },
-  revoke: { label: 'Revoke', variant: 'danger' },
 } as const satisfies Record<string, ActionPreset>;
 
 type ActionName = keyof typeof ACTIONS;

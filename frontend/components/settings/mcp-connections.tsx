@@ -2,17 +2,16 @@ import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-quer
 import { useState } from 'react';
 
 import { ConnectStrip } from '@/components/mcp/connect-strip';
-import { ActionButton } from '@/components/ui/actions';
-import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/button';
 import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { Dialog } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { StateBlock } from '@/components/ui/state-block';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { Text } from '@/components/ui/typography';
 import { SettingRows, SettingsGroup } from '@/components/ui/setting-row';
-import { ICONS } from '@/lib/icons';
+import { ICONS, Trash2 } from '@/lib/icons';
 import type { McpConnection } from '@citeladder/contracts/mcp';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { mcpConnectionMutations, mcpConnectionQueries } from '@/lib/api/mcp-connections';
@@ -28,11 +27,10 @@ function connectionDetail(entry: ConnectionEntry): string | null {
   return entry.connection.requires_consent ? 'Reconnect to choose workspaces' : null;
 }
 
-function revokeTitle(entry: ConnectionEntry | null): string {
-  if (entry === null) return '';
+function revokeLabel(entry: ConnectionEntry): string {
   const name = entry.connection.client_name;
-  if (entry.kind === 'own') return `Revoke ${name}?`;
-  return `Remove ${name}'s access to this workspace for ${entry.connection.user_email ?? 'this member'}?`;
+  if (entry.kind === 'own') return `Revoke ${name}`;
+  return `Remove ${name}'s access for ${entry.connection.user_email ?? 'this member'}`;
 }
 
 function ConnectionRow({
@@ -68,21 +66,7 @@ function ConnectionRow({
         )}
       </TableCell>
       <TableActionsCell>
-        {entry.kind === 'member' ? (
-          <Button
-            variant="danger"
-            aria-label={`Remove ${connection.client_name}'s access for ${connection.user_email ?? 'this member'}`}
-            onClick={onRevoke}
-          >
-            Remove access
-          </Button>
-        ) : (
-          <ActionButton
-            action="revoke"
-            aria-label={`Revoke ${connection.client_name}`}
-            onClick={onRevoke}
-          />
-        )}
+        <IconButton icon={Trash2} label={revokeLabel(entry)} onClick={onRevoke} />
       </TableActionsCell>
     </TableRow>
   );
@@ -92,7 +76,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'connection', label: 'Connection', kind: 'identity' },
   { key: 'connected', label: 'Connected', kind: 'date', priority: 'low' },
   { key: 'used', label: 'Last used', kind: 'date' },
-  { key: 'manage', label: 'Manage', kind: 'actions', width: 'button', hideLabel: true },
+  { key: 'manage', label: 'Manage', kind: 'actions', width: 'rowActions', hideLabel: true },
 ];
 
 function connectionsState(
@@ -170,23 +154,20 @@ function RevokeDialog({
     onClose();
   };
   return (
-    <Dialog
-      open={pending !== null}
-      onOpenChange={(open) => {
-        if (!open) close();
-      }}
-      title={revokeTitle(pending)}
-      footer={
-        <Button
-          variant="danger"
-          pending={revoke.isPending}
-          onClick={() => {
-            if (pending) revoke.mutate(pending.connection.id, { onSuccess: close });
-          }}
-        >
-          {member ? 'Remove access' : 'Revoke'}
-        </Button>
+    <ConfirmDialog
+      request={
+        pending
+          ? {
+              question: revokeLabel(pending),
+              body: null,
+              confirmLabel: member ? 'Remove access' : 'Revoke',
+              destructive: true,
+              onConfirm: () => revoke.mutate(pending.connection.id, { onSuccess: close }),
+            }
+          : null
       }
+      pending={revoke.isPending}
+      onCancel={close}
     >
       {revoke.isError ? (
         <Notice
@@ -194,7 +175,7 @@ function RevokeDialog({
           notice={mutationNoticeForError(revoke.error, { action: 'revoke the connection' })}
         />
       ) : null}
-    </Dialog>
+    </ConfirmDialog>
   );
 }
 

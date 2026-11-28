@@ -235,7 +235,7 @@ function overlayWidth(width: 'narrow' | 'wide' | 'prose'): string {
 export type ConfirmRequest = {
   question: string;
   body: ReactNode;
-  confirmLabel: string;
+  confirmLabel: ReactNode;
   destructive?: boolean;
   onConfirm: () => void;
 };
@@ -244,10 +244,12 @@ export function ConfirmDialog({
   request,
   onCancel,
   pending = false,
+  children,
 }: Readonly<{
   request: ConfirmRequest | null;
   onCancel: () => void;
   pending?: boolean;
+  children?: ReactNode;
 }>) {
   return (
     <Dialog
@@ -270,6 +272,8 @@ export function ConfirmDialog({
           </Button>
         </>
       }
-    />
+    >
+      {children}
+    </Dialog>
   );
 }
