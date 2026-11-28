@@ -628,7 +628,8 @@ holds the depth rules.
   Status is the tinted pill and the only status look (owner, 2026-11-28, D4):
   `StatusMark`, 20 high, radius full, on its tone's wash, the tone's glyph
   then a caption word at 500 in `ink`; a live state draws the spinner and
-  priority its bars. `StateDot` and any second tone vocabulary fold into it.
+  priority its bars. Every status takes its colour from the one `StatusTone`
+  vocabulary; a work row's progress glyph is `ProgressGlyph` in those tones.
 - **Navigation.** Sidebar rows: 16px icon, label, 10 apart and 10 padded,
   radius 8, `ink-2` at rest and `ink` with `state-hover` on hover; a group label folds its rows and a
   folded group still shows the current row. Collapsed (⌘\ or the toggle,

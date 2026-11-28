@@ -94,7 +94,6 @@
       "frontend/components/ui/filter-bar.tsx",
       "frontend/components/ui/masthead.tsx",
       "frontend/components/ui/selection-dock.tsx",
-      "frontend/components/ui/state-dot.tsx",
       "frontend/components/ui/status-mark.tsx",
       "frontend/components/ui/work-rows.tsx",
       "frontend/components/ui/work-tree.tsx",
