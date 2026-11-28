@@ -39,6 +39,10 @@
   --color-negative-wash: var(--ramp-red-93_8);
   --color-warning: var(--ramp-amber-48_8);
   --color-warning-wash: var(--ramp-amber-95_9-h85);
+  --color-score-low: var(--ramp-red-62_6);
+  --color-score-mid: var(--ramp-orange-70_3-h39);
+  --color-score-warm: var(--ramp-amber-83);
+  --color-score-high: var(--ramp-green-64_8);
   --color-info: var(--ramp-blue-50_2);
   --color-info-wash: var(--ramp-blue-94_3);
   --color-data-other: var(--ramp-neutral-81_4);

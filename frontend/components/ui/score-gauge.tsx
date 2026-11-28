@@ -1,25 +1,37 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { Absence } from '@/components/ui/absence';
 import { StatusMark } from '@/components/ui/status-mark';
 import { scoreBand, type ScoreBand } from '@/lib/score-band';
 import { cn } from '@/lib/utils';
 
-const ARC = 'M 22 100 A 78 78 0 0 1 178 100';
-const ARC_LENGTH = Math.PI * 78;
-const ARC_WEIGHT = 18;
-const FIGURE_SIZE = 36;
+const ARC_RADIUS = 76;
+const ARC_SWEEP_DEGREES = 220;
+const ARC_TILT = (((ARC_SWEEP_DEGREES - 180) / 2) * Math.PI) / 180;
+const ARC_DROP = ARC_RADIUS * Math.sin(ARC_TILT);
+const ARC_REACH = ARC_RADIUS * Math.cos(ARC_TILT);
+const ARC = `M ${100 - ARC_REACH} ${96 + ARC_DROP} A ${ARC_RADIUS} ${ARC_RADIUS} 0 1 1 ${100 + ARC_REACH} ${96 + ARC_DROP}`;
+const ARC_LENGTH = (ARC_RADIUS * ARC_SWEEP_DEGREES * Math.PI) / 180;
+const ARC_WEIGHT = 20;
+const FIGURE_SIZE = 40;
+
+const GRADIENT_STOPS = [
+  { offset: '0%', className: '[stop-color:var(--color-score-low)]' },
+  { offset: '35%', className: '[stop-color:var(--color-score-mid)]' },
+  { offset: '65%', className: '[stop-color:var(--color-score-warm)]' },
+  { offset: '100%', className: '[stop-color:var(--color-score-high)]' },
+] as const;
 
 const BAND = {
-  low: { stroke: 'stroke-negative', tone: 'negative', label: 'Critical' },
-  mid: { stroke: 'stroke-warning', tone: 'warning', label: 'Needs work' },
-  high: { stroke: 'stroke-positive', tone: 'positive', label: 'Good' },
-} as const satisfies Record<ScoreBand, { stroke: string; tone: BarTone; label: string }>;
+  low: { tone: 'negative', label: 'Critical' },
+  mid: { tone: 'warning', label: 'Needs work' },
+  high: { tone: 'positive', label: 'Good' },
+} as const satisfies Record<ScoreBand, { tone: BarTone; label: string }>;
 
 const BAR_FILL = {
-  positive: 'bg-positive',
-  warning: 'bg-warning',
-  negative: 'bg-negative',
+  positive: 'bg-score-high',
+  warning: 'bg-score-mid',
+  negative: 'bg-score-low',
   ink: 'bg-mark-ink',
 } as const;
 
@@ -37,15 +49,30 @@ export function ScoreGauge({
   const shown = score === null ? null : clampScore(score);
   const band = shown === null ? null : BAND[scoreBand(shown)];
   const spoken = shown === null ? (absent ?? 'not measured') : `${shown} of 100`;
+  const gradientId = useId();
   return (
     <div className="flex min-w-0 flex-col items-center gap-1">
       <svg
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
         role="img"
         aria-label={`${label}: ${spoken}`}
-        viewBox="0 0 200 112"
-        className="h-28 w-50 max-w-full"
+        viewBox="0 0 200 140"
+        className="h-35 w-50 max-w-full"
       >
+        <defs>
+          <linearGradient
+            id={gradientId}
+            gradientUnits="userSpaceOnUse"
+            x1={100 - ARC_RADIUS}
+            x2={100 + ARC_RADIUS}
+            y1={0}
+            y2={0}
+          >
+            {GRADIENT_STOPS.map((stop) => (
+              <stop key={stop.offset} offset={stop.offset} className={stop.className} />
+            ))}
+          </linearGradient>
+        </defs>
         <path
           d={ARC}
           fill="none"
@@ -60,13 +87,13 @@ export function ScoreGauge({
             strokeWidth={ARC_WEIGHT}
             strokeLinecap="round"
             strokeDasharray={`${(shown / 100) * ARC_LENGTH} ${ARC_LENGTH}`}
-            className={band.stroke}
+            stroke={`url(#${gradientId})`}
           />
         ) : null}
         {shown === null ? null : (
           <text
             x={100}
-            y={98}
+            y={110}
             textAnchor="middle"
             fontSize={FIGURE_SIZE}
             fontWeight={600}
