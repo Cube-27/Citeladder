@@ -77,6 +77,7 @@ const BOX = {
   nowrap: 'whitespace-nowrap',
   block: 'block min-w-0',
   'row-center': 'flex min-w-0 items-center',
+  'fill-phone': 'phone:flex-1 min-w-0',
   cover: 'phone:flex-1 min-w-0 shrink before:absolute before:inset-x-0 before:inset-y-0',
 } as const;
 

@@ -8,7 +8,6 @@ import type { ProgressValue } from '@/components/ui/status-mark';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow, TableSelectCell } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
-import { Text } from '@/components/ui/typography';
 import { WorkRowsMore } from '@/components/ui/work-rows';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { actionTarget } from '@/lib/agent/action-title';
@@ -140,13 +139,13 @@ function ActionRow({ action, refOf }: Readonly<{ action: Action; refOf: Grouping
         onCheckedChange={() => selection.toggleRow(action.id, refOf)}
       />
       <TableCell>
-        <ClampText>
-          <TextLink href={href} text="body" underline="hover">
+        <ClampText box="cell-title">
+          <TextLink href={href} text="body" underline="hover" truncate box="fill-phone">
             {title}
-          </TextLink>{' '}
-          <Text variant="body" tone="ink-2">
+          </TextLink>
+          <ClampText box="fill-desktop" tone="ink-2">
             {caption}
-          </Text>
+          </ClampText>
         </ClampText>
       </TableCell>
       <TableCell>{scopeLabel(action)}</TableCell>
