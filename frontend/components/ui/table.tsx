@@ -286,7 +286,7 @@ export function YouTag() {
   return <Tag strong>You</Tag>;
 }
 
-export function isRowSurfaceClick(event: MouseEvent<HTMLTableRowElement>): boolean {
+function isRowSurfaceClick(event: MouseEvent<HTMLTableRowElement>): boolean {
   const row = event.currentTarget;
   if (!(event.target instanceof Element) || !row.contains(event.target)) return false;
   for (let node: Element | null = event.target; node && node !== row; node = node.parentElement)

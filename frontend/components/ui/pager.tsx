@@ -138,7 +138,7 @@ export function Pager({ range, pageSize, busy = false, className, ...steps }: Pa
   );
 }
 
-export function useTablePage(
+function useTablePage(
   total: number,
   {
     pageSize,
