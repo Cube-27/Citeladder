@@ -52,6 +52,7 @@ export function ActionUrls({
     <TitledSection region title={`URLs · ${formatCount(first.total)}`}>
       <LinkRows
         label="URLs"
+        ticked
         more={
           rest > 0 && cursor !== null && !exhausted ? (
             <WorkRowsMore onClick={showMore} disabled={extra.isFetching}>

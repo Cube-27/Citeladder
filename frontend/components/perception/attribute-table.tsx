@@ -16,7 +16,6 @@ import { Tag } from '@/components/ui/tag';
 import { Text } from '@/components/ui/typography';
 import { Inline } from '@/components/ui/layout';
 import { PolaritySplit } from '@/components/ui/polarity-bars';
-import { QuoteGrid, QuoteGridRow } from '@/components/ui/quote-grid';
 import { formatCount } from '@/lib/format';
 import { optionalStringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
@@ -123,7 +122,13 @@ function CategoryRow({
   );
 }
 
-const QUOTE_HEADS = ['Attribute', 'In the answer', 'Sentiment', 'Engine', 'Prompt'];
+const QUOTE_COLUMNS: readonly DataTableColumn[] = [
+  { key: 'attribute', label: 'Attribute', width: 'name' },
+  { key: 'quote', label: 'In the answer', width: 'reading' },
+  { key: 'sentiment', label: 'Sentiment', width: 'status' },
+  { key: 'engine', label: 'Engine', width: 'category' },
+  { key: 'prompt', label: 'Prompt', priority: 'low' },
+];
 
 function QuoteRows({
   label,
@@ -132,30 +137,34 @@ function QuoteRows({
   const span = useShownSpan(['attribute', 'negative', 'positive', 'share', 'split']);
   return (
     <TableRow>
-      <TableCell nested colSpan={span} tight>
-        <QuoteGrid heads={QUOTE_HEADS} label={`${label} quotes`}>
+      <TableCell nested colSpan={span}>
+        <DataTable label={`${label} quotes`} columns={QUOTE_COLUMNS}>
           {quotes.map(({ attribute, quote }) => (
-            <QuoteGridRow key={`${quote.execution_id}:${quote.text}`}>
-              <span>{attribute}</span>
-              <span className="text-pretty">
+            <TableRow key={`${quote.execution_id}:${quote.text}`}>
+              <TableCell wrap="normal" alignTop>
+                {attribute}
+              </TableCell>
+              <TableCell wrap="normal" alignTop>
                 <AnswerLink answer={quote} attributes>
                   “{quote.text}”
                 </AnswerLink>
-              </span>
-              <span>
+              </TableCell>
+              <TableCell alignTop>
                 <StatusMark variant="sentiment" value={quote.polarity}>
                   {quote.polarity === 'negative' ? 'Negative' : 'Positive'}
                 </StatusMark>
-              </span>
-              <EngineCell engine={quote.logical_engine} />
-              <span>
+              </TableCell>
+              <TableCell alignTop>
+                <EngineCell engine={quote.logical_engine} />
+              </TableCell>
+              <TableCell wrap="normal" alignTop>
                 <AnswerLink answer={quote} attributes text="inherit" tone="muted" underline="hover">
                   {quote.prompt}
                 </AnswerLink>
-              </span>
-            </QuoteGridRow>
+              </TableCell>
+            </TableRow>
           ))}
-        </QuoteGrid>
+        </DataTable>
       </TableCell>
     </TableRow>
   );
