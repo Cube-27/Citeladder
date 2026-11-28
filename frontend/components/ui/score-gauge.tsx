@@ -16,10 +16,10 @@ const ARC_WEIGHT = 20;
 const FIGURE_SIZE = 40;
 
 const GRADIENT_STOPS = [
-  { offset: '0%', className: '[stop-color:var(--color-score-low)]' },
-  { offset: '35%', className: '[stop-color:var(--color-score-mid)]' },
-  { offset: '65%', className: '[stop-color:var(--color-score-warm)]' },
-  { offset: '100%', className: '[stop-color:var(--color-score-high)]' },
+  { offset: '0%', color: 'var(--color-score-low)' },
+  { offset: '35%', color: 'var(--color-score-mid)' },
+  { offset: '65%', color: 'var(--color-score-warm)' },
+  { offset: '100%', color: 'var(--color-score-high)' },
 ] as const;
 
 const BAND = {
@@ -69,7 +69,7 @@ export function ScoreGauge({
             y2={0}
           >
             {GRADIENT_STOPS.map((stop) => (
-              <stop key={stop.offset} offset={stop.offset} className={stop.className} />
+              <stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
             ))}
           </linearGradient>
         </defs>
