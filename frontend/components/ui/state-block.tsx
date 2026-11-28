@@ -1,6 +1,13 @@
-import { useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
+import {
+  Children,
+  Fragment,
+  isValidElement,
+  useContext,
+  useLayoutEffect,
+  type ReactNode,
+} from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button, ButtonEmphasis } from '@/components/ui/button';
 import { usePageEmptyOfferRegister } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { Section, useOnPage } from '@/components/ui/section';
@@ -152,36 +159,39 @@ function FramedState({
   onPage,
   ...props
 }: Exclude<StateBlockProps, InlineEmpty> & Readonly<{ onPage: boolean }>) {
-  const ref = useRef<HTMLDivElement>(null);
-  usePageOffer(
-    ref,
-    onPage && (props.kind === 'empty' || props.kind === 'not_measured') && !!props.action,
-  );
+  const offers =
+    onPage && (props.kind === 'empty' || props.kind === 'not_measured') && !!props.action;
+  usePageOffer(offers);
   const framed = framedKind(props);
   return (
     <div
-      ref={ref}
       data-state-block={props.kind}
       data-state-frame={framed ? '' : undefined}
       className="min-w-0"
     >
-      <BlockBody {...props} />
+      <BlockBody {...props} offers={offers} />
     </div>
   );
 }
 
-function usePageOffer(ref: Readonly<{ current: HTMLElement | null }>, offers: boolean) {
+function usePageOffer(offers: boolean) {
   const register = usePageEmptyOfferRegister();
   useLayoutEffect(() => {
-    const node = ref.current;
-    if (!offers || !node) return;
-    node.dataset.stateOffer = '';
-    const release = register?.();
-    return () => {
-      delete node.dataset.stateOffer;
-      release?.();
-    };
-  }, [ref, offers, register]);
+    if (!offers) return;
+    return register?.();
+  }, [offers, register]);
+}
+
+function OfferedAction({ action, offers }: Readonly<{ action: ReactNode; offers: boolean }>) {
+  if (!offers) return action;
+  const group = isValidElement<{ children?: ReactNode }>(action) && action.type === Fragment;
+  const [lead, ...rest] = Children.toArray(group ? action.props.children : action);
+  return (
+    <>
+      <ButtonEmphasis value="promote">{lead}</ButtonEmphasis>
+      {rest}
+    </>
+  );
 }
 
 const isFigures = (shape: LoadingShape | undefined) => shape?.kind === 'figures';
@@ -215,7 +225,10 @@ function FilteredBody({
   );
 }
 
-function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
+function BlockBody({
+  offers,
+  ...props
+}: Exclude<StateBlockProps, InlineEmpty> & Readonly<{ offers: boolean }>) {
   const containerLevel = useContext(StateHeadingLevelContext);
   switch (props.kind) {
     case 'loading': {
@@ -243,7 +256,7 @@ function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
           icon={CircleDashed}
           heading="No measurements yet"
           description={props.description}
-          action={props.action}
+          action={props.action ? <OfferedAction action={props.action} offers={offers} /> : null}
           headingLevel={props.headingLevel ?? containerLevel}
         />
       );
@@ -253,7 +266,7 @@ function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
           icon={props.icon}
           heading={props.heading}
           description={props.description}
-          action={props.action}
+          action={props.action ? <OfferedAction action={props.action} offers={offers} /> : null}
           actionNote={props.actionNote}
           headingLevel={props.headingLevel ?? containerLevel}
         />

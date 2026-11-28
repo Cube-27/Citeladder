@@ -1,4 +1,6 @@
 import {
+  createContext,
+  useContext,
   type ComponentPropsWithRef,
   type ComponentPropsWithoutRef,
   type ReactElement,
@@ -194,18 +196,30 @@ function NativeButton({
   );
 }
 
+type ButtonEmphasisKind = 'demote' | 'promote';
+
+export const ButtonEmphasis = createContext<ButtonEmphasisKind | null>(null);
+
+function emphasised(variant: ButtonVariant, emphasis: ButtonEmphasisKind | null): ButtonVariant {
+  if (emphasis === 'demote' && variant === 'primary') return 'secondary';
+  if (emphasis === 'promote' && variant === 'secondary') return 'primary';
+  return variant;
+}
+
 type SlotClass = { className?: string };
 
 function SlotMergedButton({
   box,
   className: slotClass,
+  variant = 'secondary',
   ...props
 }: Readonly<ButtonProps & SlotClass>) {
+  const shown = emphasised(variant, useContext(ButtonEmphasis));
   const className = cn(slotClass, box && BUTTON_BOX[box]) || undefined;
   return props.asChild ? (
-    <SlottedButton {...props} className={className} />
+    <SlottedButton {...props} variant={shown} className={className} />
   ) : (
-    <NativeButton {...props} className={className} />
+    <NativeButton {...props} variant={shown} className={className} />
   );
 }
 

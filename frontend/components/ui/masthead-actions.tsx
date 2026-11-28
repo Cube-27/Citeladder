@@ -11,7 +11,7 @@ import {
 import { createPortal } from 'react-dom';
 
 import { MoreHorizontal } from '@/lib/icons';
-import { IconButton } from '@/components/ui/button';
+import { ButtonEmphasis, IconButton } from '@/components/ui/button';
 import {
   Menu,
   MenuContent,
@@ -30,8 +30,8 @@ export function MastheadPrimary({ children }: Readonly<{ children: ReactNode }>)
   const demoted = useContext(PageEmptyOffer)?.shown ?? false;
   if (slot === undefined) return children;
   const control = (
-    <span data-demoted={demoted ? '' : undefined} className="contents">
-      {children}
+    <span className="contents">
+      <ButtonEmphasis value={demoted ? 'demote' : null}>{children}</ButtonEmphasis>
     </span>
   );
   return slot ? createPortal(control, slot) : null;

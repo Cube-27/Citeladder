@@ -114,10 +114,7 @@
   background: var(--color-field-hover);
 }
 @media (hover: hover) {
-  :root:not([data-public-surface])
-    [data-button-variant='secondary']:not(
-      [data-state-offer] [data-button-variant]:first-child
-    ):hover:not(:disabled) {
+  :root:not([data-public-surface]) [data-button-variant='secondary']:hover:not(:disabled) {
     background: var(--color-field-hover);
   }
   :root:not([data-public-surface]) [data-button-variant='primary']:hover:not(:disabled) {
