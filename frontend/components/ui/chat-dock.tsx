@@ -16,8 +16,7 @@ import { LogoMark } from '@/components/ui/logo-mark';
 import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
 import { Pressable } from '@/components/ui/pressable';
 import { Tag } from '@/components/ui/tag';
-
-import { wellClasses } from '@/components/ui/slip';
+import { UserBubble } from '@/components/ui/user-bubble';
 import { ArrowDown, FileText } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
@@ -183,10 +182,10 @@ export function AgentThread({ children }: Readonly<{ children: ReactNode }>) {
 export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: ReactNode }>) {
   return (
     <div className="flex justify-end">
-      <div className={wellClasses('flex max-w-bubble min-w-0 flex-col gap-2 px-4 py-3')}>
+      <UserBubble>
         <p className="text-body text-ink wrap-anywhere whitespace-pre-wrap">{text}</p>
         {footer}
-      </div>
+      </UserBubble>
     </div>
   );
 }

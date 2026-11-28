@@ -1,7 +1,7 @@
 import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { Text } from '@/components/ui/typography';
-import { TreeBranch } from '@/components/ui/workspace';
+import { TreeBranch } from '@/components/ui/tree-branch';
 import { pageOutline, type OutlineHeading } from '@/lib/agent/page-workspace';
 
 type OutlineNode = { heading: OutlineHeading; children: OutlineNode[] };

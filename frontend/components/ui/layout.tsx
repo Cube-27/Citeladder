@@ -7,7 +7,7 @@ const STACK_GAP = {
   card: 'gap-card',
   workspace: 'gap-workspace',
   compact: 'gap-compact',
-  group: 'gap-3',
+  group: 'gap-group',
   loose: 'gap-loose',
   choices: 'gap-x-loose gap-y-item',
   'page-top': 'gap-page-top',
@@ -20,9 +20,9 @@ const PAD_TOP = {
   'flow-gap': 'pt-flow-gap',
 } as const;
 
-export type Pad = Readonly<{ top?: keyof typeof PAD_TOP }>;
+type Pad = Readonly<{ top?: keyof typeof PAD_TOP }>;
 
-export type StackGap = keyof typeof STACK_GAP;
+type StackGap = keyof typeof STACK_GAP;
 
 const STACK_ALIGN = {
   stretch: undefined,
@@ -37,6 +37,7 @@ const STACK_LIST = {
   none: undefined,
   plain: 'list-none',
   decimal: 'list-inside list-decimal',
+  disc: 'list-inside list-disc',
 } as const;
 
 const BOX = {
@@ -114,7 +115,7 @@ export function Stack({
 const INLINE_GAP = {
   workspace: 'gap-workspace',
   compact: 'gap-compact',
-  group: 'gap-3',
+  group: 'gap-group',
   loose: 'gap-loose',
   wide: 'gap-6',
   item: 'gap-item',
@@ -123,7 +124,7 @@ const INLINE_GAP = {
   meta: 'gap-x-loose gap-y-tight',
 } as const;
 
-export type InlineGap = keyof typeof INLINE_GAP;
+type InlineGap = keyof typeof INLINE_GAP;
 
 const INLINE_ALIGN = {
   center: 'items-center',
@@ -155,8 +156,8 @@ export function Inline({
   box = 'auto',
   inline = false,
   nowrap = false,
-  stackBelow,
-  showFrom,
+  stackBelowDesktop = false,
+  desktopOnly = false,
   hideEmpty = false,
   children,
   ...props
@@ -170,8 +171,8 @@ export function Inline({
     box?: Box;
     inline?: boolean;
     nowrap?: boolean;
-    stackBelow?: 'desktop';
-    showFrom?: 'desktop';
+    stackBelowDesktop?: boolean;
+    desktopOnly?: boolean;
     hideEmpty?: boolean;
   }
 >) {
@@ -189,8 +190,8 @@ export function Inline({
         BOX[box],
         inline && 'inline-flex',
         nowrap && 'whitespace-nowrap',
-        stackBelow && 'desktop:flex-row desktop:items-center flex-col items-stretch',
-        showFrom && 'desktop:flex hidden',
+        stackBelowDesktop && 'desktop:flex-row desktop:items-center flex-col items-stretch',
+        desktopOnly && 'desktop:flex hidden',
         hideEmpty && 'empty:hidden',
       )}
     >
@@ -207,7 +208,6 @@ const COLUMN_TEMPLATE = {
   'rail-panel': 'desktop:grid-cols-label-value',
   'halves-desktop': 'desktop:grid-cols-2',
   two: 'grid-cols-2',
-  record: 'column-split:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
 } as const;
 
 type ColumnTemplate = keyof typeof COLUMN_TEMPLATE;

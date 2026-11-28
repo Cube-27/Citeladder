@@ -21,7 +21,7 @@ import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Text } from '@/components/ui/typography';
-import { JumpList } from '@/components/ui/workspace';
+import { JumpList } from '@/components/ui/tree-branch';
 import { ArrowRight, Pencil, RotateCcw, Sparkles } from '@/lib/icons';
 import { scrollBehavior } from '@/lib/accessibility/use-reduced-motion';
 import { documentAnchor, latestOutput, outputPlacements } from '@/lib/agent/documents';

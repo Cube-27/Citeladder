@@ -1,24 +1,10 @@
-import { Slot } from '@radix-ui/react-slot';
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ReactElement,
-  type ReactNode,
-  type RefObject,
-} from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { MastheadOverflow, MastheadPrimarySlot } from '@/components/ui/masthead-actions';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import './masthead.css';
-
-const MASTHEAD_LABELLED = 'shrink-0 justify-start';
-
-export function MastheadLabelled({ children }: Readonly<{ children: ReactElement }>) {
-  return <Slot className={MASTHEAD_LABELLED}>{children}</Slot>;
-}
 
 export function Masthead({
   title,
@@ -59,7 +45,7 @@ export function Masthead({
         {section ? (
           <span className="text-body text-ink-2 rail:flex hidden shrink-0 items-center gap-2">
             {section.title}
-            <ChevronRight aria-hidden className="size-3" />
+            <CrumbSeparator />
           </span>
         ) : null}
         {crumb ?? (
@@ -132,4 +118,8 @@ function useIsCut(ref: RefObject<HTMLElement | null>, text: string) {
     return () => observer.disconnect();
   }, [ref, text]);
   return cut;
+}
+
+export function CrumbSeparator() {
+  return <ChevronRight aria-hidden className="text-ink-2 block size-3 shrink-0" />;
 }

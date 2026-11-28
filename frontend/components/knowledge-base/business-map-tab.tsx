@@ -11,7 +11,7 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { BusinessFacts, OfferingsGrid, SuggestionsNotice } from './business-editor';
 import { SaveFoot } from './save-foot';
 import type { BusinessDraftState } from './use-business-draft';
-import { StickySaveBar } from '@/components/ui/map-editor';
+import { EdgeFootBar } from '@/components/ui/flow-chrome';
 
 export function BusinessMapTab({
   business,
@@ -69,7 +69,7 @@ export function BusinessMapTab({
 function SaveBar({ business }: Readonly<{ business: BusinessDraftState }>) {
   const saving = business.save.isPending;
   return (
-    <StickySaveBar>
+    <EdgeFootBar surface="panel" align="end">
       {business.dirty ? (
         <Button variant="quiet" disabled={saving} onClick={business.discard}>
           Discard
@@ -81,6 +81,6 @@ function SaveBar({ business }: Readonly<{ business: BusinessDraftState }>) {
         saving={saving}
         onSave={() => void business.save.mutateAsync().catch(() => undefined)}
       />
-    </StickySaveBar>
+    </EdgeFootBar>
   );
 }

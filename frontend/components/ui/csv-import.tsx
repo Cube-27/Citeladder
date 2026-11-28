@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode, type RefObject } from 'react';
 
+import { Input } from '@/components/ui/input';
 import { StatusMark } from '@/components/ui/status-mark';
 import { READ_FAILED_MESSAGE, readCsvFileText } from '@/lib/csv/read-file-text';
 
@@ -58,7 +59,7 @@ export function CsvImportFileInput({
   return (
     <label className="grid gap-2">
       <span className="text-body text-ink-2">{label}</span>
-      <input
+      <Input
         ref={inputRef}
         type="file"
         accept={accept}
@@ -68,7 +69,6 @@ export function CsvImportFileInput({
           onSelect(file);
           event.currentTarget.value = '';
         }}
-        className="focus-ring bg-panel text-ink file:bg-well file:text-ink text-body file:text-label rounded-control file:rounded-control block w-full border border-transparent px-2 py-2 file:me-2 file:border-0 file:px-2 file:py-1"
       />
     </label>
   );

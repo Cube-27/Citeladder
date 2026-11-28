@@ -1,19 +1,20 @@
 import { Link, useLocation } from 'react-router-dom';
 
-import { SidebarModeSegment, SidebarModeTrack, SidebarRowTooltip } from '@/components/ui/sidebar';
+import { SidebarModeSegment, SidebarModeTrack } from '@/components/ui/sidebar';
+import { SidebarRowTooltip } from '@/components/ui/sidebar-tooltip';
 import { ICONS, PanelsTopLeft, type IconGlyph } from '@/lib/icons';
 import { MODE_HOMES, navigationMode, type NavigationMode } from '@/lib/navigation/app-routes';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
-import { useProjectContext } from '@/lib/project/project-context';
+import { useNavScope } from '@/lib/project/project-context';
 
-export const MODES: readonly { mode: NavigationMode; label: string; icon: IconGlyph }[] = [
+const MODES: readonly { mode: NavigationMode; label: string; icon: IconGlyph }[] = [
   { mode: 'dashboard', label: 'Dashboard', icon: PanelsTopLeft },
   { mode: 'agent', label: 'Agent', icon: ICONS.agent },
 ];
 
 export function ModeSwitch({ rail }: Readonly<{ rail: boolean }>) {
   const pathname = useLocation().pathname ?? '';
-  const { activeProjectId, activeWorkspaceId } = useProjectContext();
+  const { activeProjectId, activeWorkspaceId } = useNavScope();
   const current = navigationMode(pathname);
   return (
     <SidebarModeTrack as="nav" rail={rail} aria-label="Mode" data-segmented-track="">

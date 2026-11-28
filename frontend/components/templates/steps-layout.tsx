@@ -1,18 +1,12 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
-import {
-  RouteFill,
-  StepsBody,
-  StepsNav,
-  StepsRowMark,
-  StepsScroller,
-} from '@/components/ui/record-chrome';
+import { RouteFill, StepsBody, StepsNav, StepsScroller } from '@/components/ui/record-chrome';
 import { Pressable } from '@/components/ui/pressable';
 import { FloatingBar } from '@/components/ui/selection-dock';
 import { SidebarRowFace, SidebarRowLabel } from '@/components/ui/sidebar';
-import { ToneGlyph } from '@/components/ui/status-mark';
+import { StepMark, stepState } from '@/components/ui/step-mark';
 
-export type StepItem<T extends string> = Readonly<{ value: T; label: string }>;
+type StepItem<T extends string> = Readonly<{ value: T; label: string }>;
 
 export function StepsLayout<T extends string>({
   label,
@@ -78,9 +72,7 @@ function StepRow<T extends string>({
   const done = position < current;
   const face = (
     <>
-      <StepsRowMark state={stepState(position, current)}>
-        {done ? <ToneGlyph tone="positive" size="md" /> : position + 1}
-      </StepsRowMark>
+      <StepMark state={stepState(position, current)} number={position + 1} />
       <SidebarRowLabel muted={position > current}>{step.label}</SidebarRowLabel>
     </>
   );
@@ -103,9 +95,4 @@ function StepRow<T extends string>({
       {face}
     </SidebarRowFace>
   );
-}
-
-function stepState(position: number, current: number) {
-  if (position < current) return 'done';
-  return position === current ? 'current' : 'next';
 }

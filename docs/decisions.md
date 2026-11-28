@@ -46,6 +46,8 @@ how to add or change an entry.
   [frontend architecture](frontend-architecture.md) owns the matrix.
 - **Source files are limited by tokens (6,000), not lines**; the 500-line module
   rule is gone. Owner, 2026-11-13; [Development](DEVELOPMENT.md#source-file-size).
+- **The app has no bundle size gate**: no CSS or JS budget check. Owner,
+  2026-11-28.
 - **Source code has no comments.** Names, types, tests and owner docs carry
   the meaning; a check enforces it and allows only machine-read directives.
   Owner, 2026-11-21 (#1136).

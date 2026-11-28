@@ -12,7 +12,7 @@ const LAYOUT = {
   slips: 'grid-cols-[repeat(auto-fill,minmax(min(100%,17.5rem),1fr))]',
 } as const;
 
-export type AppGridLayout = keyof typeof LAYOUT;
+type AppGridLayout = keyof typeof LAYOUT;
 
 type GridElement = 'div' | 'ul' | 'ol' | 'dl' | 'section';
 

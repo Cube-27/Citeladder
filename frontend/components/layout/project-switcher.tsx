@@ -1,11 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
-import {
-  SidebarIdentButton,
-  SidebarMarkPlaceholder,
-  SidebarTextTooltip,
-} from '@/components/ui/sidebar';
+import { SidebarIdentButton, SidebarMarkPlaceholder } from '@/components/ui/sidebar';
+import { SidebarTextTooltip } from '@/components/ui/sidebar-tooltip';
 import { Text } from '@/components/ui/typography';
 import {
   Menu,

@@ -1,14 +1,10 @@
 import { cloneElement, type ComponentProps, type ReactElement, type ReactNode } from 'react';
 
-import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { Inline } from '@/components/ui/layout';
 import { ChevronRight, type IconGlyph } from '@/lib/icons';
 import type { Turnstile } from '@/lib/turnstile/use-turnstile';
 import { cn } from '@/lib/utils';
-
-export function AuthButton(props: Readonly<Omit<ButtonProps, 'className'>>) {
-  return <Button {...props} box="fill" />;
-}
 
 export function AuthDivider() {
   return (
@@ -26,7 +22,7 @@ export function AuthForm({
   children,
 }: Readonly<{ onSubmit: NonNullable<ComponentProps<'form'>['onSubmit']>; children: ReactNode }>) {
   return (
-    <form noValidate onSubmit={onSubmit} data-auth-form="" className="flex flex-col gap-4">
+    <form noValidate onSubmit={onSubmit} data-auth-form="" className="gap-loose flex flex-col">
       {children}
     </form>
   );
@@ -63,7 +59,11 @@ export function AuthLegal({ id, children }: Readonly<{ id?: string; children: Re
 }
 
 export function AuthActions({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="flex flex-wrap items-center gap-2">{children}</div>;
+  return (
+    <Inline gap="item" wrap>
+      {children}
+    </Inline>
+  );
 }
 
 export function AuthLinkRow({ children }: Readonly<{ children: ReactNode }>) {

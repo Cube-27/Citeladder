@@ -1,8 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { SectionStack } from '@/components/ui/section';
-
-import { RailColumns, type RailSection } from '@/components/ui/page-chrome';
+import { PageSections, RailColumns, type RailSection } from '@/components/ui/page-chrome';
 
 import { PageFrame, type PageFrameSlots } from './page-frame';
 
@@ -15,7 +13,7 @@ export function SettingsPage({
     rail?: Readonly<{ nav: ReactNode; section: RailSection }>;
     children: ReactNode;
   }>) {
-  const sections = <SectionStack>{children}</SectionStack>;
+  const sections = <PageSections>{children}</PageSections>;
   return (
     <PageFrame {...slots}>
       {rail ? (

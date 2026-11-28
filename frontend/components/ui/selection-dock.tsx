@@ -84,3 +84,9 @@ export function FloatingBar({
     </div>
   );
 }
+
+export function FloatingToolbar({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <div className={cn(POP_FACE, 'absolute end-3 top-3 z-raised flex gap-1 p-1')}>{children}</div>
+  );
+}

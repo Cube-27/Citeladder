@@ -6,7 +6,7 @@ import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { UrlText } from '@/components/ui/table';
 import { PageLink } from '@/components/site-health/page-link';
-import { TreeBranch } from '@/components/ui/workspace';
+import { TreeBranch } from '@/components/ui/tree-branch';
 import type { ArchitectureNode } from '@citeladder/contracts';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionContent, TitledSection } from '@/components/ui/section';

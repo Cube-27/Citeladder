@@ -26,6 +26,7 @@ import {
 export {
   useActiveProject,
   useActiveWorkspaceId,
+  useNavScope,
   useOptionalProjectContext,
   useProjectContext,
   useWorkspaceCapability,

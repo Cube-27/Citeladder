@@ -2,7 +2,8 @@ import { lazy } from 'react';
 import { Link } from 'react-router-dom';
 
 import { LazyIsland } from '@/components/ui/lazy-island';
-import { SidebarNavRowContent, SidebarRowFace, SidebarRowTooltip } from '@/components/ui/sidebar';
+import { SidebarNavRowContent, SidebarRowFace } from '@/components/ui/sidebar';
+import { SidebarRowTooltip } from '@/components/ui/sidebar-tooltip';
 
 import type { NavItem } from './nav-items';
 

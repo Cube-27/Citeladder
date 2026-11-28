@@ -7,7 +7,7 @@ import { Pressable } from '@/components/ui/pressable';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DraftInset } from '@/components/ui/draft-sheet';
 import { Text } from '@/components/ui/typography';
-import { PaneBlock } from '@/components/ui/workspace';
+import { PaneBlock } from '@/components/ui/pane-block';
 import {
   fieldReview,
   PAGE_FIELDS,

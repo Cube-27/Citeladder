@@ -46,7 +46,7 @@ export function ThreadPage({
     children: ReactNode;
   }>) {
   return (
-    <PageFrame {...slots} head="masthead" end="thread">
+    <PageFrame {...slots} variant="thread">
       <ThreadLayout scrollRef={scrollRef} scrollLabel={scrollLabel} composer={composer}>
         {children}
       </ThreadLayout>

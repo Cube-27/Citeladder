@@ -5,7 +5,7 @@ import { DestinationRows, useDestinations } from '@/components/layout/sidebar-na
 import { RailLink } from '@/components/layout/sidebar-rail';
 import { LazyIsland } from '@/components/ui/lazy-island';
 import { SidebarNavGroup, SidebarScrollList } from '@/components/ui/sidebar';
-import { useProjectContext } from '@/lib/project/project-context';
+import { useNavScope } from '@/lib/project/project-context';
 
 const ChatSection = lazy(() =>
   import('./agent-chat-list').then((module) => ({ default: module.ChatSection })),
@@ -16,7 +16,7 @@ const ChatsFlyout = lazy(() =>
 
 export function AgentNav() {
   const { location } = useDestinations();
-  const { activeWorkspaceId, activeProjectId } = useProjectContext();
+  const { activeWorkspaceId, activeProjectId } = useNavScope();
   return (
     <SidebarScrollList label="Agent" revealKey={location}>
       <SidebarNavGroup>
@@ -33,7 +33,7 @@ export function AgentNav() {
 
 export function AgentRail() {
   const { isActive, href } = useDestinations();
-  const { activeWorkspaceId, activeProjectId } = useProjectContext();
+  const { activeWorkspaceId, activeProjectId } = useNavScope();
   return (
     <>
       {[NEW_CHAT_ITEM, ...AGENT_NAV_ITEMS].map((item) => (

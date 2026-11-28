@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-import { SidebarTextTooltip } from '@/components/ui/sidebar';
+import { SidebarTextTooltip } from '@/components/ui/sidebar-tooltip';
 import { Spinner } from '@/components/ui/spinner';
 
 import { cn } from '@/lib/utils';

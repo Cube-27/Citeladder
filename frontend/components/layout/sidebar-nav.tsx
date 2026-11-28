@@ -5,7 +5,7 @@ import { scopedNavigationDestination } from '@/lib/navigation/project-destinatio
 import { useUrlSearch } from '@/lib/navigation/url-params';
 import { setGroupFolded, useGroupFolded } from '@/lib/navigation/sidebar-folds';
 import { useRouteIntent } from '@/lib/navigation/use-route-intent';
-import { useProjectContext } from '@/lib/project/project-context';
+import { useNavScope } from '@/lib/project/project-context';
 
 import { NavLink } from './nav-link';
 import {
@@ -20,7 +20,7 @@ import { RailGroupMenu, RailLink } from './sidebar-rail';
 export function useDestinations() {
   const { pathname = '', search = '' } = useLocation();
   const searchParams = useUrlSearch();
-  const { activeProjectId, activeWorkspaceId } = useProjectContext();
+  const { activeProjectId, activeWorkspaceId } = useNavScope();
   const isActive = (item: Pick<NavItem, 'href'>) => isNavItemActive(pathname, searchParams, item);
   const href = (item: NavItem) =>
     scopedNavigationDestination(item.href, item.scope, activeProjectId, activeWorkspaceId);

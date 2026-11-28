@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { actionsQueries } from '@/lib/api/actions';
-import { useProjectContext } from '@/lib/project/project-context';
+import { useNavScope } from '@/lib/project/project-context';
 
 type StatusCounts = Partial<Record<string, number>>;
 
@@ -10,7 +10,7 @@ export function queueCount(counts: StatusCounts): number {
 }
 
 export function useActionStatusCounts(): { counts?: StatusCounts; pending: boolean } {
-  const { activeProjectId, activeWorkspaceId } = useProjectContext();
+  const { activeProjectId, activeWorkspaceId } = useNavScope();
   const query = useQuery({
     ...actionsQueries.list({ workspaceId: activeWorkspaceId, projectId: activeProjectId ?? '' }),
     enabled: Boolean(activeWorkspaceId && activeProjectId),

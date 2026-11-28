@@ -186,19 +186,13 @@ export function SettingsScreen() {
         </TabPanel>
 
         <TabPanel value="integrations">
-          <SectionStack>
-            <IntegrationSettings />
-          </SectionStack>
+          <IntegrationSettings />
         </TabPanel>
         <TabPanel value="connections">
-          <SectionStack>
-            <McpConnections />
-          </SectionStack>
+          <McpConnections />
         </TabPanel>
         <TabPanel value="api-keys">
-          <SectionStack>
-            <ApiKeys />
-          </SectionStack>
+          <ApiKeys />
         </TabPanel>
       </SettingsPage>
     </TabsRoot>

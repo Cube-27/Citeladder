@@ -5,7 +5,7 @@ import { MEDIA } from '@/lib/breakpoints';
 const STORAGE_KEY = 'citeladder:app:sidebar-width';
 const COLLAPSED_KEY = 'citeladder:app:sidebar-collapsed';
 
-const SIDEBAR_WIDE_WIDTH = 224;
+const SIDEBAR_WIDE_WIDTH = 240;
 const SIDEBAR_COMPACT_WIDTH = 200;
 const SIDEBAR_MIN_WIDTH = SIDEBAR_COMPACT_WIDTH;
 

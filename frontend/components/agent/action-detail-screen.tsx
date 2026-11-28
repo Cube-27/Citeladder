@@ -4,13 +4,6 @@ import { useParams } from 'react-router-dom';
 
 import { ActionDock } from '@/components/agent/action-dock';
 import { ActionFacts } from '@/components/agent/action-facts';
-import {
-  StepList,
-  Labelled,
-  Prose,
-  ReadingColumn,
-  ReadingTools,
-} from '@/components/ui/reading-page';
 import { ActionUrls } from '@/components/agent/action-urls';
 import { PageDrawerHost } from '@/components/site-health/page-drawer';
 import { ContentGapWhy, contentGapMembers } from '@/components/agent/content-gap-evidence';
@@ -19,6 +12,11 @@ import { DeveloperTicketButton } from '@/components/agent/developer-ticket';
 import { NotFoundScreen } from '@/components/templates/not-found-screen';
 import { PageFrame } from '@/components/templates/page-frame';
 import { CopyButton } from '@/components/ui/copy-button';
+import { Inline, Stack } from '@/components/ui/layout';
+import { PageSections } from '@/components/ui/page-chrome';
+import { RecordBody } from '@/components/ui/record-chrome';
+import { TitledSection } from '@/components/ui/section';
+import { Text } from '@/components/ui/typography';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { listCrumbs } from '@/lib/agent/action-crumbs';
@@ -39,11 +37,7 @@ export function ActionDetailScreen() {
     ...actionsQueries.detail(workspaceId, actionId),
     enabled: Boolean(actionId),
   });
-  const fallback = (body: ReactNode) => (
-    <PageFrame>
-      <ReadingColumn>{body}</ReadingColumn>
-    </PageFrame>
-  );
+  const fallback = (body: ReactNode) => <PageFrame>{body}</PageFrame>;
   if (isNotFound(query.error)) return <NotFoundScreen />;
   if (query.isError)
     return fallback(
@@ -84,39 +78,47 @@ function ActionPage({
       title={title}
       trail={listCrumbs({ status: action.status, goal: action.goal, grouping: action.grouping })}
     >
-      <ReadingColumn>
-        <Labelled title="Overview" caption={suggested}>
-          <Prose>{brief?.overview ?? withShortTarget(action.handoff.message, action)}</Prose>
-          <ReadingTools>
-            <CopyButton value={actionPrompt(action, todo)}>Copy as prompt</CopyButton>
-            {placement ? null : <DeveloperTicketButton action={action} />}
-          </ReadingTools>
-        </Labelled>
-        <ActionFacts action={action} />
-        {gaps.length > 0 ? (
-          <Labelled title={placement ? 'Competitor evidence' : 'Why this matters'} bare>
-            <ContentGapWhy members={gaps} />
-          </Labelled>
-        ) : null}
-        {brief ? (
-          <Labelled title="Why this matters">
-            <Prose>{brief.why}</Prose>
-          </Labelled>
-        ) : null}
-        {todo.length > 0 ? (
-          <Labelled title="What to do">
-            <StepList items={todo} />
-          </Labelled>
-        ) : null}
-        <PageDrawerHost workspaceId={workspaceId}>
-          <ActionUrls action={action} workspaceId={workspaceId} ticked={ticked} onTick={tick} />
-        </PageDrawerHost>
-        {action.declaration ? (
-          <Labelled title="Implementation">
-            <DeclarationStatus declaration={action.declaration} workspaceId={workspaceId} />
-          </Labelled>
-        ) : null}
-      </ReadingColumn>
+      <RecordBody clearsBar>
+        <PageSections>
+          <TitledSection region title="Overview" description={suggested}>
+            <Stack gap="item">
+              <Text as="p" variant="body" wrap="words">
+                {brief?.overview ?? withShortTarget(action.handoff.message, action)}
+              </Text>
+              <Inline gap="item" wrap>
+                <CopyButton value={actionPrompt(action, todo)}>Copy as prompt</CopyButton>
+                {placement ? null : <DeveloperTicketButton action={action} />}
+              </Inline>
+            </Stack>
+          </TitledSection>
+          <ActionFacts action={action} />
+          {gaps.length > 0 ? (
+            <TitledSection region title={placement ? 'Competitor evidence' : 'Why this matters'}>
+              <ContentGapWhy members={gaps} />
+            </TitledSection>
+          ) : null}
+          {brief ? (
+            <TitledSection region title="Why this matters">
+              <Text as="p" variant="body" wrap="words">
+                {brief.why}
+              </Text>
+            </TitledSection>
+          ) : null}
+          {todo.length > 0 ? (
+            <TitledSection region title="What to do">
+              <StepList items={todo} />
+            </TitledSection>
+          ) : null}
+          <PageDrawerHost workspaceId={workspaceId}>
+            <ActionUrls action={action} workspaceId={workspaceId} ticked={ticked} onTick={tick} />
+          </PageDrawerHost>
+          {action.declaration ? (
+            <TitledSection region title="Implementation">
+              <DeclarationStatus declaration={action.declaration} workspaceId={workspaceId} />
+            </TitledSection>
+          ) : null}
+        </PageSections>
+      </RecordBody>
       <ActionDock
         action={action}
         workspaceId={workspaceId}
@@ -152,6 +154,18 @@ function useIssueFamilyBrief(action: ActionDetail, workspaceId: string): IssueFa
     fix: action.summary ?? action.members[0]?.remediation ?? null,
     issue: loaded,
   });
+}
+
+function StepList({ items }: Readonly<{ items: readonly string[] }>) {
+  return (
+    <Stack as="ul" gap="tight" list="disc">
+      {items.map((item) => (
+        <Text as="li" key={item} variant="body" wrap="words">
+          {item}
+        </Text>
+      ))}
+    </Stack>
+  );
 }
 
 function steps(action: ActionDetail): string[] {

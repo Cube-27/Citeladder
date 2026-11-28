@@ -1,4 +1,5 @@
-import { DetailsFacts, type DetailFact } from '@/components/ui/reading-page';
+import { FactList, type Fact } from '@/components/ui/facts';
+import { TitledSection } from '@/components/ui/section';
 import {
   ACTION_STATUS_TONE,
   Impact,
@@ -42,7 +43,7 @@ export function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
   const crawl = action.cohort?.crawl_completed_at;
   let source = sourceLabel(action);
   if (crawl) source = `${source} · crawl of ${formatDisplayDate(crawl, timeZone)}`;
-  const facts: DetailFact[] = [
+  const facts: Fact[] = [
     { label: 'Status', value: <StatusValue action={action} /> },
     { label: 'Impact', value: <Impact band={action.priority_band} /> },
   ];
@@ -63,5 +64,9 @@ export function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
       label: 'Grouping',
       value: `${ACTION_GOAL_LABEL[action.goal]} › ${ACTION_GROUPING_LABEL[action.grouping]}`,
     });
-  return <DetailsFacts facts={facts} />;
+  return (
+    <TitledSection region title="Details">
+      <FactList facts={facts} layout="ruled" />
+    </TitledSection>
+  );
 }

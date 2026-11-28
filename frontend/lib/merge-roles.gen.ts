@@ -41,6 +41,8 @@ export const MERGE_ROLES = {
     'shell-inset',
     'panel-inset',
     'band',
+    'rhythm',
+    'group',
     'flow-gap',
     'section-rail',
     'tray-inset',

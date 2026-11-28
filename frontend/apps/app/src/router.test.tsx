@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
@@ -39,6 +40,14 @@ beforeEach(() => {
   sessionRead.fails = false;
 });
 
+function renderRouter(router: ReturnType<typeof createMemoryRouter>) {
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
+}
+
 async function privateRouter() {
   const { appRoutes } = await import('./router');
   return createMemoryRouter(appRoutes, {
@@ -50,7 +59,7 @@ describe('application route recovery', () => {
   it('enters the existing product bootstrap from the app root', async () => {
     const { appRoutes } = await import('./router');
     const router = createMemoryRouter(appRoutes, { initialEntries: ['/'] });
-    render(<RouterProvider router={router} />);
+    renderRouter(router);
     expect(await screen.findByRole('button', { name: 'Finish session' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/projects');
     router.dispose();
@@ -64,7 +73,7 @@ describe('application route recovery', () => {
     const download = vi.fn(() => downloaded);
     vi.doMock('@/components/site-health/issues-screen', download);
     const router = await privateRouter();
-    render(<RouterProvider router={router} />);
+    renderRouter(router);
 
     await screen.findByRole('button', { name: 'Finish session' });
     await waitFor(() => expect(bootstrap).toHaveBeenCalledTimes(1));
@@ -96,7 +105,7 @@ describe('application route recovery', () => {
       Promise.reject(new Error('private chunk URL failed')),
     );
     const router = await privateRouter();
-    render(<RouterProvider router={router} />);
+    renderRouter(router);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Finish session' }));
     expect(await screen.findByRole('button', { name: 'Reload page' })).toBeInTheDocument();
@@ -113,7 +122,7 @@ describe('application route recovery', () => {
   it('shows a failed session read as a page with its main region, a reload and a way to Overview', async () => {
     sessionRead.fails = true;
     const router = await privateRouter();
-    render(<RouterProvider router={router} />);
+    renderRouter(router);
 
     const heading = await screen.findByRole('heading', {
       level: 1,
@@ -134,7 +143,7 @@ describe('application route recovery', () => {
   it('answers an unknown application address with a not-found screen inside the shell', async () => {
     const { appRoutes } = await import('./router');
     const router = createMemoryRouter(appRoutes, { initialEntries: ['/setting'] });
-    render(<RouterProvider router={router} />);
+    renderRouter(router);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Finish session' }));
     const heading = await screen.findByRole('heading', { level: 1, name: 'Page not found' });

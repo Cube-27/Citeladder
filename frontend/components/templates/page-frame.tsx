@@ -23,6 +23,7 @@ import {
   PageTabBand,
   PageTitle,
   PageWidthFrame,
+  type PageVariant,
   type PageWidth,
 } from '@/components/ui/page-chrome';
 import { StickyBand } from '@/components/ui/sticky-band';
@@ -53,21 +54,19 @@ export function PageFrame({
   tabs,
   filters,
   fill,
-  head = 'page',
-  end = 'page',
+  variant = 'page',
   children,
 }: PageFrameSlots &
   Readonly<{
     fill?: true;
-    head?: 'page' | 'masthead';
-    end?: 'page' | 'thread';
+    variant?: PageVariant;
     children: ReactNode;
   }>) {
   const { pathname, resolved, parents, width, headed, narrow } = usePageLayout({
     title,
     trail,
     fill,
-    head,
+    variant,
   });
   const strips = Boolean(tabs || filters);
   const [tabEnd, setTabEnd] = useState<HTMLElement | null>(null);
@@ -81,19 +80,19 @@ export function PageFrame({
             parents={parents}
             crumb={crumb}
             heading={!headed}
-            actions={head === 'masthead' || narrow ? actions : undefined}
+            actions={variant === 'thread' || narrow ? actions : undefined}
           />
           {headed ? (
             <PageHeading
               title={resolved}
               narrow={narrow}
-              actions={head === 'page' ? actions : undefined}
+              actions={variant === 'page' ? actions : undefined}
               strips={strips}
               width={width}
             />
           ) : null}
           {strips ? <PageStrips tabs={tabs} filters={filters} onTabEnd={setTabEnd} /> : null}
-          <PageBody width={width} end={end}>
+          <PageBody width={width} variant={variant}>
             {children}
           </PageBody>
         </PageWidthFrame>
@@ -146,12 +145,12 @@ function usePageLayout({
   title,
   trail,
   fill,
-  head,
+  variant,
 }: Readonly<{
   title: string | undefined;
   trail: readonly Crumb[] | undefined;
   fill: true | undefined;
-  head: 'page' | 'masthead';
+  variant: PageVariant;
 }>) {
   const pathname = useLocation().pathname ?? '';
   const resolved = useRouteTitle(title, pathname);
@@ -164,7 +163,7 @@ function usePageLayout({
     parents,
     width,
     narrow,
-    headed: head === 'page' || parents.length > 0,
+    headed: variant === 'page' || parents.length > 0,
   };
 }
 

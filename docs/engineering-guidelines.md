@@ -260,7 +260,7 @@ difference is a bug unless the plan lists it.
 
 **Rule:** When a primitive drops `className` from its public props, its
 implementation still accepts the `className` a Radix `Slot` parent injects at
-runtime (`TextLink asChild`, `MastheadLabelled`) and merges it with its own
+runtime (`TextLink asChild`, a `Tooltip` trigger) and merges it with its own
 classes. Export it through a narrower function type, as `Button` and
 `Pressable` do, so screens still cannot pass one. Never use such a slot to give
 a button a fixed or minimum width: a button is its label plus the control
@@ -274,17 +274,14 @@ Fix with extra side space (owner, 2026-11-28).
 width is its content plus padding and that the dock row stays put; render a
 `Slot` parent around any newly closed primitive before merging.
 
-### Popup exits animate, eager CSS pays for itself
+### Popup exits animate
 
 **Rule:** Radix popups (menus, popovers, tooltips, dialogs) leave with a CSS
-`animation`, never a `transition`. New eager CSS makes room by deleting dead
-CSS; the budget changes only with the owner.
+`animation`, never a `transition`.
 **Why:** Radix unmounts on close only after an animation ends, so a
-transition-only exit snapped shut (#918). The eager CSS gzip budget has
-little headroom; the button redesign (#1082) went over it twice before dead
-rules were cut.
-**Check:** The CSS budget step in CI. In review: an `exit` or closed-state rule
-under a Radix part that uses `transition` alone.
+transition-only exit snapped shut (#918).
+**Check:** In review: an `exit` or closed-state rule under a Radix part that
+uses `transition` alone.
 
 ### A boot file's import ships the whole module
 
@@ -292,10 +289,10 @@ under a Radix part that uses `transition` alone.
 `page-frame`, `first-frame`, `not-found`) imports. Split a shared module along
 that seam rather than adding to it.
 **Why:** The bundler puts every module statically reachable from the entry into
-the boot chunk whole. Design batch 6 (#1274) went 13 KB over the eager JS
-budget by putting setup, record and steps chrome next to the page chrome boot
-screens use.
-**Check:** The eager JS budget step in CI.
+the boot chunk whole. Design batch 6 (#1274) grew the boot chunk by 13 KB by
+putting setup, record and steps chrome next to the page chrome boot screens use.
+**Check:** In review: a new import in a boot file, or a lazy-only export added to
+a module a boot file imports.
 
 ### The window never scrolls in the app
 

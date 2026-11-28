@@ -1,6 +1,6 @@
 import { Fragment, type MouseEvent, type ReactNode } from 'react';
 
-import { ChevronRight } from '@/lib/icons';
+import { CrumbSeparator } from '@/components/ui/masthead';
 import { ProjectLink } from '@/components/ui/project-link';
 
 export type Crumb = Readonly<{
@@ -33,7 +33,7 @@ export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
               )}
             </li>
             <li aria-hidden className="shrink-0">
-              <ChevronRight className="text-ink-placeholder block size-3" />
+              <CrumbSeparator />
             </li>
           </Fragment>
         ))}

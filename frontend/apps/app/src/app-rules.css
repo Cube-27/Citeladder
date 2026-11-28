@@ -685,7 +685,7 @@ label {
   text-decoration-color: transparent;
 }
 [data-page-strips] {
-  border-top: calc(var(--spacing) * 3) solid transparent;
+  border-top: var(--spacing-rhythm) solid transparent;
   padding-top: 0;
   background-clip: padding-box;
 }
@@ -694,7 +694,7 @@ label {
   position: absolute;
   inset-inline: 0;
   top: calc(100% + 1px);
-  height: calc(var(--spacing) * 3);
+  height: var(--spacing-rhythm);
   background: var(--color-page);
   pointer-events: none;
 }

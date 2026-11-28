@@ -4,13 +4,13 @@ import { type ComponentProps, type ReactNode, useId, useState } from 'react';
 import { AuthSwitchLink, AuthSwitchOnly } from '@/components/auth/auth-switch';
 import { FlowBlock } from '@/components/templates/flow-page';
 import {
-  AuthButton,
   AuthDivider,
   AuthForm,
   AuthHumanCheck,
   AuthLegal,
   AuthLinkRow,
 } from '@/components/ui/auth-shell';
+import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { GlyphMark } from '@/components/ui/engine-mark';
 import { Input } from '@/components/ui/input';
@@ -125,7 +125,8 @@ function GoogleEntry({
 
   return (
     <>
-      <AuthButton
+      <Button
+        box="fill"
         variant="secondary"
         disabled={pending || !revision || unverified}
         aria-describedby={termsNoticeId}
@@ -133,7 +134,7 @@ function GoogleEntry({
       >
         <GlyphMark glyph="google" placement="text" />
         <span>{pending ? 'Starting Google sign-in…' : 'Continue with Google'}</span>
-      </AuthButton>
+      </Button>
       {notice ? <Notice tone="negative">{notice}</Notice> : null}
     </>
   );
@@ -263,14 +264,15 @@ function AuthEmailForm({
 
       {check && consent.terms?.signup ? <AuthSwitchOnly>{check}</AuthSwitchOnly> : check}
 
-      <AuthButton
+      <Button
+        box="fill"
         type="submit"
         variant="primary"
         aria-disabled={pending || consent.held || undefined}
         aria-describedby={consent.terms ? consent.noticeId : undefined}
       >
         {pending ? pendingLabel : submitLabel}
-      </AuthButton>
+      </Button>
     </AuthForm>
   );
 }

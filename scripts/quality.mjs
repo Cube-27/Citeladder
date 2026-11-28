@@ -98,11 +98,7 @@ const BUILD_INPUTS = {
     'frontend/lib/marketing-content/',
   ],
   docs: ['frontend/apps/docs/', 'frontend/scripts/prepare-docs-assets.mjs'],
-  app: [
-    'frontend/apps/app/vite.config.ts',
-    'frontend/scripts/bundle-budget.json',
-    'frontend/scripts/check-bundle-budget.mjs',
-  ],
+  app: ['frontend/apps/app/vite.config.ts'],
 };
 
 function selectedBuilds() {
@@ -209,11 +205,7 @@ function frontendChecks() {
   if (artifacts.has('docs')) {
     pnpm('Astro documentation build', ['build:docs'], QUALITY_BUILD_ENV);
   }
-  if (artifacts.has('app') && pnpm('Vite product-app build', ['build:vite'], QUALITY_BUILD_ENV)) {
-    if (pnpm('Eager bundle budget', ['check:bundle'])) {
-      process.stdout.write(readFileSync(logPathFor('Eager bundle budget'), 'utf8'));
-    }
-  }
+  if (artifacts.has('app')) pnpm('Vite product-app build', ['build:vite'], QUALITY_BUILD_ENV);
   if (artifacts.size < Object.keys(BUILD_INPUTS).length) {
     process.stdout.write('Unaffected production builds skipped; CI builds every artifact.\n');
   }

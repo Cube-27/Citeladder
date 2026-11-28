@@ -62,7 +62,7 @@ function FlowCardBody({
   );
 }
 
-function FlowHead({
+export function FlowHead({
   id,
   title,
   sub,

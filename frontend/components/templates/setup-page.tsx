@@ -1,24 +1,25 @@
 import { useId, type ComponentProps, type ReactNode } from 'react';
 
-import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import {
-  SetupBar,
+  FlowBar,
   SetupMain,
-  SetupStepMark,
   StepBody,
   StepConnector,
-  StepFootBar,
+  EdgeFootBar,
   type StepWidth,
 } from '@/components/ui/flow-chrome';
 import { PageGround } from '@/components/ui/flow-frame';
 import { Icon } from '@/components/ui/icon';
 import { Columns, Inline, Stack } from '@/components/ui/layout';
 import { RungTrail } from '@/components/ui/rung-trail';
+import { StepMark, stepState } from '@/components/ui/step-mark';
 import { Section } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { Text } from '@/components/ui/typography';
 import { ChevronLeft } from '@/lib/icons';
+
+import { FlowHead } from './flow-page';
 
 export function SetupPage({
   label,
@@ -36,8 +37,9 @@ export function SetupPage({
   const index = steps ? Math.max(0, Math.min(steps.length - 1, current)) : 0;
   return (
     <PageGround layout="column">
-      <SetupBar
-        stepper={steps ? <SetupStepper steps={steps} current={index} /> : <span />}
+      <FlowBar
+        sticky
+        center={steps ? <SetupStepper steps={steps} current={index} /> : undefined}
         progress={steps ? { step: index + 1, of: steps.length } : undefined}
         end={barEnd}
       />
@@ -66,11 +68,11 @@ function SetupStepper({
         {count}
       </Text>
       <p className="sr-only">{count}</p>
-      <Inline as="ol" gap="group" showFrom="desktop">
+      <Inline as="ol" gap="group" desktopOnly>
         {steps.map((step, index) => (
           <Inline as="li" key={step} aria-current={index === current ? 'step' : undefined}>
             {index > 0 ? <StepConnector done={index <= current} /> : null}
-            <SetupStepMark index={index} current={current} />
+            <StepMark state={stepState(index, current)} number={index + 1} />
             <Text
               variant={index === current ? 'label' : 'body'}
               tone={index > current ? 'ink-2' : 'ink'}
@@ -104,27 +106,17 @@ export function SetupStep({
 }>) {
   const generatedId = useId();
   const headingId = titleId ?? generatedId;
-  useDocumentTitle(typeof title === 'string' ? title : undefined);
   return (
     <div className="flex flex-1 flex-col">
       <StepBody width={width}>
-        <Stack as="header" gap="item">
-          <Text as="h1" variant="title" wrap="balance" id={headingId} tabIndex={-1}>
-            {title}
-          </Text>
-          {help ? (
-            <Text as="p" variant="body" tone="ink-2">
-              {help}
-            </Text>
-          ) : null}
-        </Stack>
+        <FlowHead id={headingId} title={title} sub={help} />
         <Section aria-labelledby={headingId}>{children}</Section>
       </StepBody>
       {back || next ? (
-        <StepFootBar width={width}>
+        <EdgeFootBar width={width}>
           {back ?? <span />}
           <span className="flex justify-end">{next}</span>
-        </StepFootBar>
+        </EdgeFootBar>
       ) : null}
     </div>
   );
