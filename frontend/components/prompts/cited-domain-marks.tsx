@@ -1,7 +1,7 @@
 import type { CitedDomain } from '@citeladder/contracts';
 
 import { Absence } from '@/components/ui/absence';
-import { MarkStack } from '@/components/ui/mark-stack';
+import { MarkStack, type StackedMark } from '@/components/ui/mark-stack';
 import { leadingSources } from '@/lib/prompts/filter';
 
 import { NO_ANSWERS } from './prompt-figures';
@@ -14,7 +14,7 @@ export function CitedDomainMarks({
   const { shown, more } = leadingSources(sources);
   return (
     <MarkStack
-      marks={shown.map(({ domain, citations, owned }) => ({
+      marks={shown.map(({ domain, citations, owned }): StackedMark => ({
         key: domain,
         tip: `${domain}${owned ? ' (yours)' : ''}: ${citations} ${citations === 1 ? 'citation' : 'citations'}`,
         mark: { name: domain, websiteUrl: `https://${domain}`, entity: 'site' },

@@ -9,7 +9,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { queryTableState } from '@/components/ui/state-block';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
-import { MarkStack } from '@/components/ui/mark-stack';
+import { MarkStack, type StackedMark } from '@/components/ui/mark-stack';
 import { Text } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import type {
@@ -176,7 +176,7 @@ function SourceChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) 
   if (!hosts.length) return <ObservedNone />;
   return (
     <MarkStack
-      marks={hosts.slice(0, MAX_CHIPS).map((host) => ({
+      marks={hosts.slice(0, MAX_CHIPS).map((host): StackedMark => ({
         key: host,
         tip: host,
         mark: { name: host, websiteUrl: `https://${host}`, entity: 'site' },

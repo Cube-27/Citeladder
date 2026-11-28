@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
-import type { IntegrationConnection } from '@/lib/api/integrations';
+import { integrationConnectionSchema } from '@citeladder/contracts/integrations';
 import { mswServer } from '@/test/msw-server';
 import { projectScope, renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
@@ -17,7 +17,7 @@ const CONN = '33333333-3333-4333-8333-333333333333';
 const PROJECT = '88888888-8888-4888-8888-888888888888';
 const project = makeProject({ id: PROJECT, workspace_id: WS, name: 'Example' });
 
-const connection = {
+const connection = integrationConnectionSchema.parse({
   id: CONN,
   workspace_id: WS,
   grant_id: '22222222-2222-4222-8222-222222222222',
@@ -29,7 +29,7 @@ const connection = {
   last_synced_at: null,
   created_at: '2026-07-20T00:00:00Z',
   updated_at: '2026-07-20T00:00:00Z',
-} satisfies IntegrationConnection;
+});
 
 function SettingsEntry() {
   const picker = usePropertyPicker(connection);
