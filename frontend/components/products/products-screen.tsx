@@ -16,7 +16,7 @@ import { Columns3, PackageOpen } from '@/lib/icons';
 import { commerceQueries } from '@/lib/api/commerce';
 import { promptsQueries } from '@/lib/api/prompts';
 import { downloadCsv } from '@/lib/csv/download';
-import { todayIso } from '@/lib/format';
+import { todayIso } from '@/lib/iso-day';
 import { useCatalogProjection } from '@/lib/products/use-catalog-projection';
 import { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 import {

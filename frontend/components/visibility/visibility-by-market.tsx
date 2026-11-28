@@ -33,10 +33,11 @@ function marketsState(
   query: UseQueryResult<VisibilityMarkets>,
   markets: ProjectMarkets,
 ): DataTableState | undefined {
-  if (markets.kind === 'loaded' && query.isError)
+  const failed = markets.kind === 'failed' ? markets.read : query;
+  if (markets.kind === 'failed' || query.isError)
     return {
       kind: 'error',
-      ...readErrorProps(query),
+      ...readErrorProps(failed),
       title: "Couldn't load the markets",
       fallback: 'The request failed or timed out.',
     };

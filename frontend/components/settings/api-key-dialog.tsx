@@ -8,7 +8,7 @@ import {
   resolveExpiry,
   type ExpiryChoice,
 } from '@/components/settings/api-key-expiry';
-import { addIsoDays, formatWeekdayDate } from '@/lib/format';
+import { addIsoDays, formatWeekdayDate } from '@/lib/iso-day';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CopyButton } from '@/components/ui/copy-button';

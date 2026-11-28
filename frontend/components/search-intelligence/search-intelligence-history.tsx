@@ -9,13 +9,8 @@ import {
   searchIntelligenceQueries,
   type SearchIntelligenceDataset,
 } from '@/lib/api/search-intelligence';
-import {
-  formatCompactCount,
-  formatCount,
-  formatMonth,
-  formatWindowDate,
-  isIsoDay,
-} from '@/lib/format';
+import { formatCompactCount, formatCount, formatMonth, formatWindowDate } from '@/lib/format';
+import { isIsoDay } from '@/lib/iso-day';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Notice, readErrorProps } from '@/components/ui/notice';

@@ -28,7 +28,7 @@ import {
   READING_LABELS,
   type CellReading,
 } from '@/lib/visibility/matrix';
-import { todayIso } from '@/lib/format';
+import { todayIso } from '@/lib/iso-day';
 import { AxisLabel, matrixBodyState, pendingAxisLength, useAxisText } from './matrix-parts';
 
 const DIMENSIONS = MATRIX_DIMENSIONS.map((option) => option.value);

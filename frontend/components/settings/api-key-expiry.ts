@@ -1,5 +1,5 @@
 import { endOfDayInZone } from '@/lib/display-timezone';
-import { addIsoDays, isIsoDay } from '@/lib/format';
+import { addIsoDays, isIsoDay } from '@/lib/iso-day';
 
 export const EXPIRY_PRESET_DAYS = [1, 7, 30, 90] as const;
 

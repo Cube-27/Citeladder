@@ -116,6 +116,22 @@ describe('Visibility by market', () => {
     expect(screen.queryByText('United States · English')).not.toBeInTheDocument();
   });
 
+  it('says the market list failed to load instead of hiding the table', async () => {
+    render(
+      <VisibilityByMarket
+        query={loaded}
+        markets={{
+          kind: 'failed',
+          read: { error: new Error('offline'), refetch: () => undefined, isFetching: false },
+        }}
+        market={null}
+        onSelectMarket={() => undefined}
+      />,
+    );
+    expect(await screen.findByText("Couldn't load the markets")).toBeVisible();
+    expect(screen.queryByText('United States · English')).not.toBeInTheDocument();
+  });
+
   it('stays out of the way for a project with only its default market', () => {
     const { container } = render(
       <VisibilityByMarket

@@ -7,7 +7,8 @@ import { AXIS_PROPS, ChartText, LINE_CURSOR, LineTooltipCard } from '@/component
 import { METRIC_COLOR } from '@/components/ui/metric-tiles';
 import { SeriesTable, shownWith, type TrendPoint } from '@/components/ui/series-data';
 import { StateBlock } from '@/components/ui/state-block';
-import { formatShortDate, formatWeekdayDate, formatWindowDate, pluralCount } from '@/lib/format';
+import { formatShortDate, formatWindowDate, pluralCount } from '@/lib/format';
+import { formatWeekdayDate } from '@/lib/iso-day';
 import {
   formatAxisTick,
   formatMetric,

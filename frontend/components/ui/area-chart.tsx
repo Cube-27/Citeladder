@@ -158,6 +158,7 @@ export function AreaChart({
     return asOf && !isAbsent(value) ? `${value} · as of ${asOf.axisLabel ?? asOf.label}` : value;
   };
   const placed = eventsInSpan(data, events);
+  const note = legend ? breakNote : 'caption';
   return (
     <ChartFrame height={heightRole} summary={summarise(label, data, lines, shown)}>
       <div className="flex min-w-0 flex-col gap-4">
@@ -173,7 +174,7 @@ export function AreaChart({
                 value: latestText(line),
               }))}
             />
-            {breakNote === 'hint' ? (
+            {note === 'hint' ? (
               <ChartBreakNote data={data} lines={lines} placement="hint" bridged />
             ) : null}
           </div>
@@ -189,7 +190,7 @@ export function AreaChart({
           yFormat={yFormat}
           shown={shown}
         />
-        {breakNote === 'caption' ? (
+        {note === 'caption' ? (
           <ChartBreakNote data={data} lines={lines} placement="caption" bridged />
         ) : null}
         <EventLegend events={placed} shown={eventLegend} />
