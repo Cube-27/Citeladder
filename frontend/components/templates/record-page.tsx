@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { Columns, Stack } from '@/components/ui/layout';
+import { AppGrid } from '@/components/ui/app-grid';
+import { Stack } from '@/components/ui/layout';
 import { PageSections } from '@/components/ui/page-chrome';
 import { RecordBody } from '@/components/ui/record-chrome';
 import { FloatingBar } from '@/components/ui/selection-dock';
@@ -28,12 +29,12 @@ export function RecordPage({
         <PageSections>
           {identity}
           {aside ? (
-            <Columns template="record" gap="section" align="start">
+            <AppGrid layout="main-aside">
               <PageSections>{children}</PageSections>
               <Stack as="aside" gap="section" box="shrink">
                 {aside}
               </Stack>
-            </Columns>
+            </AppGrid>
           ) : (
             children
           )}

@@ -208,7 +208,6 @@ const COLUMN_TEMPLATE = {
   'rail-panel': 'desktop:grid-cols-label-value',
   'halves-desktop': 'desktop:grid-cols-2',
   two: 'grid-cols-2',
-  record: 'column-split:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
 } as const;
 
 type ColumnTemplate = keyof typeof COLUMN_TEMPLATE;

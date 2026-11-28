@@ -1,6 +1,5 @@
 import { useId, type ComponentProps, type ReactNode } from 'react';
 
-import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import {
   FlowBar,
@@ -19,6 +18,8 @@ import { Section } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { Text } from '@/components/ui/typography';
 import { ChevronLeft } from '@/lib/icons';
+
+import { FlowHead } from './flow-page';
 
 export function SetupPage({
   label,
@@ -105,20 +106,10 @@ export function SetupStep({
 }>) {
   const generatedId = useId();
   const headingId = titleId ?? generatedId;
-  useDocumentTitle(typeof title === 'string' ? title : undefined);
   return (
     <div className="flex flex-1 flex-col">
       <StepBody width={width}>
-        <Stack as="header" gap="item">
-          <Text as="h1" variant="title" wrap="balance" id={headingId} tabIndex={-1}>
-            {title}
-          </Text>
-          {help ? (
-            <Text as="p" variant="body" tone="ink-2">
-              {help}
-            </Text>
-          ) : null}
-        </Stack>
+        <FlowHead id={headingId} title={title} sub={help} />
         <Section aria-labelledby={headingId}>{children}</Section>
       </StepBody>
       {back || next ? (
