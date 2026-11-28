@@ -107,6 +107,10 @@
   padding: calc((var(--spacing-row) - var(--spacing-body-line)) / 2) var(--spacing-panel-inset);
 }
 
+[data-bleed-rows] > [data-flush-row] {
+  padding: 0;
+}
+
 [data-bleed-rows] > * [data-button-shape='icon'] {
   margin-block: calc((var(--spacing-body-line) - var(--spacing-control-md)) / 2);
 }
