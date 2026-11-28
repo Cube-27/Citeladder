@@ -1,5 +1,6 @@
 import { useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 
+import { FieldCount } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { FIELD_EDGE } from '@/components/ui/input';
 import { Check, X } from '@/lib/icons';
@@ -220,16 +221,7 @@ export function ChipInput({
     <fieldset className="flex min-w-0 flex-col gap-2">
       <legend className="text-body text-ink mb-2">{label}</legend>
       <ValuesInput label={label} max={max} {...input} />
-      {max !== undefined ? (
-        <span
-          className={cn(
-            'ms-auto text-caption tabular-nums',
-            input.items.length >= max ? 'text-ink' : 'text-ink-2',
-          )}
-        >
-          {`${input.items.length}/${max}`}
-        </span>
-      ) : null}
+      {max !== undefined ? <FieldCount used={input.items.length} max={max} /> : null}
     </fieldset>
   );
 }

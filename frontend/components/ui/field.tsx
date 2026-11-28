@@ -36,16 +36,7 @@ export function Field({
   const id = useId();
   const messageId = `${id}-msg`;
   const message = error ?? hint;
-  const name = (
-    <>
-      {label}
-      {required ? (
-        <span aria-hidden="true" className="text-ink-2 ms-0.5">
-          *
-        </span>
-      ) : null}
-    </>
-  );
+  const name = <FieldName label={label} required={required} />;
   const control = children({
     id,
     required,
@@ -85,6 +76,32 @@ export function Field({
   );
 }
 
+export function FieldName({ label, required }: Readonly<{ label: string; required?: boolean }>) {
+  return (
+    <>
+      {label}
+      {required ? (
+        <span aria-hidden="true" className="text-ink-2 ms-0.5">
+          *
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+export function FieldCount({ used, max }: Readonly<{ used: number; max: number }>) {
+  return (
+    <span
+      className={cn(
+        'text-caption ms-auto shrink-0 tabular-nums',
+        used >= max ? 'text-ink' : 'text-ink-2',
+      )}
+    >
+      {`${used}/${max}`}
+    </span>
+  );
+}
+
 export function FieldRow({
   label,
   required,
@@ -114,12 +131,7 @@ export function FieldRow({
         id={labelId}
         className="text-label text-ink phone:min-h-0 flex min-h-8 items-center"
       >
-        {label}
-        {required ? (
-          <span aria-hidden="true" className="text-ink-2 ms-0.5">
-            *
-          </span>
-        ) : null}
+        <FieldName label={label} required={required} />
       </Label>
       <div className="flex min-w-0 flex-col gap-1">{children}</div>
     </div>
@@ -156,16 +168,7 @@ export function FieldFoot({
   return (
     <div className="flex items-start justify-between gap-3">
       {note}
-      {count ? (
-        <span
-          className={cn(
-            'text-caption text-ink-2 ms-auto shrink-0 tabular-nums',
-            count.used >= count.max ? 'text-ink' : 'text-ink-2',
-          )}
-        >
-          {`${count.used}/${count.max}`}
-        </span>
-      ) : null}
+      {count ? <FieldCount used={count.used} max={count.max} /> : null}
     </div>
   );
 }

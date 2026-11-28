@@ -13,9 +13,10 @@ describe('CellMeter', () => {
       </>,
     );
     const share = (name: string) =>
-      (
-        screen.getByRole('meter', { name }).firstElementChild as HTMLElement | null
-      )?.style.getPropertyValue('--share') ?? null;
+      screen
+        .getByRole('meter', { name })
+        .querySelector<HTMLElement>('span')
+        ?.style.getPropertyValue('--share') ?? null;
     expect([share('Empty'), share('Half'), share('Over')]).toEqual([null, '50%', '100%']);
   });
 });
