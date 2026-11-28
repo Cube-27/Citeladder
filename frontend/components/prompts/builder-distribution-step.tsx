@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { Section, SectionStack } from '@/components/ui/section';
-import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-row';
+import { SectionStack } from '@/components/ui/section';
+import { SettingField, SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { SplitBar } from '@/components/ui/split-bar';
 import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -230,31 +230,30 @@ export function BuilderDistributionStep({
   return (
     <SectionStack>
       {notices}
-      <Section>
-        <SettingRows density="roomy">
-          <SettingRow
-            label="What to generate"
-            description={
-              mode === 'brand'
-                ? `AI credits: up to ${formatCount(limits.brand_generation_calls)} model calls`
-                : undefined
-            }
-            action={
-              <SegmentedControl<GenerationMode>
-                ariaLabel="What to generate"
-                value={mode}
-                options={MODE_OPTIONS}
-                onChange={onModeChange}
-              />
-            }
+      <SettingsGroup
+        title="What to generate"
+        description={
+          mode === 'brand'
+            ? `AI credits: up to ${formatCount(limits.brand_generation_calls)} model calls`
+            : undefined
+        }
+        action={
+          <SegmentedControl<GenerationMode>
+            ariaLabel="What to generate"
+            value={mode}
+            options={MODE_OPTIONS}
+            onChange={onModeChange}
           />
+        }
+      >
+        <SettingRows density="roomy">
           {mode === 'brand' ? (
             <CountField settings={settings} onChange={onChange} max={limits.brand_prompts_max} />
           ) : (
             <MarketSettings {...props} />
           )}
         </SettingRows>
-      </Section>
+      </SettingsGroup>
     </SectionStack>
   );
 }

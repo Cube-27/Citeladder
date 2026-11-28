@@ -194,6 +194,15 @@
       right top / var(--radius-tray-inner) var(--radius-tray-inner) no-repeat;
   pointer-events: none;
 }
+:root:not([data-public-surface]) [data-panel='card']:has(> header:only-child) {
+  padding-bottom: 0;
+}
+:root:not([data-public-surface]) [data-panel='card'] > header:only-child {
+  padding-bottom: calc(var(--spacing-tray-head-top) - var(--spacing-tray-frame));
+}
+:root:not([data-public-surface]) [data-panel='card'] > header:only-child::after {
+  display: none;
+}
 
 :root:not([data-public-surface]) .table-frame thead th {
   font-size: var(--text-label);
