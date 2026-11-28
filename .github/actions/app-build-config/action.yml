@@ -1,8 +1,8 @@
 name: Bake the product app's public build config
 description: >-
   Validates and exports the public values the product app bakes into its
-  bundle, as deployed. The app deploy and CI's bundle-budget build both use it,
-  so the budget always measures the build that ships.
+  bundle, as deployed. The app deploy and CI's app build both use it, so CI
+  builds what ships.
 
 inputs:
   logo-dev-publishable:
