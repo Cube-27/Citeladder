@@ -1,6 +1,5 @@
 import type { ReactNode, RefObject } from 'react';
 
-import { POP_FACE } from '@/components/ui/slip';
 import { cn } from '@/lib/utils';
 
 export function RecordBody({
@@ -14,24 +13,6 @@ export function RecordBody({
       className={cn(
         'flex min-w-0 flex-1 flex-col',
         clearsBar && 'pb-[calc(var(--spacing-filter-bar)_+_2_*_var(--spacing-gutter))]',
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-
-export function ActionBar({
-  sticky = false,
-  children,
-}: Readonly<{ sticky?: boolean; children: ReactNode }>) {
-  return (
-    <div
-      data-page-band="action-bar"
-      className={cn(
-        POP_FACE,
-        'mt-workspace mx-auto flex w-fit max-w-full min-w-0 items-center gap-1 p-2',
-        sticky ? 'z-sticky bottom-gutter sticky' : 'shrink-0 flex-wrap justify-center',
       )}
     >
       {children}

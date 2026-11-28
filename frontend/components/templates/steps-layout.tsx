@@ -1,13 +1,8 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
-import {
-  ActionBar,
-  RouteFill,
-  StepsNav,
-  StepsRowMark,
-  StepsScroller,
-} from '@/components/ui/record-chrome';
+import { RouteFill, StepsNav, StepsRowMark, StepsScroller } from '@/components/ui/record-chrome';
 import { Pressable } from '@/components/ui/pressable';
+import { FloatingBar } from '@/components/ui/selection-dock';
 import { SidebarRowFace, SidebarRowLabel } from '@/components/ui/sidebar';
 import { Check } from '@/lib/icons';
 import { Icon } from '@/components/ui/icon';
@@ -59,10 +54,10 @@ export function StepsLayout<T extends string>({
           {children}
         </section>
       </StepsScroller>
-      <ActionBar>
+      <FloatingBar place="flow" data-page-band="action-bar">
         {footerStart}
         {footerEnd}
-      </ActionBar>
+      </FloatingBar>
     </RouteFill>
   );
 }

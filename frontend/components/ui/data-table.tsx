@@ -338,30 +338,46 @@ function DataTableHeader({
       }
     />
   ) : undefined;
-  const lifted = tabHead !== null && !title && !description;
-  if (lifted) {
-    return (
-      <>
-        {controls ? createPortal(controls, tabHead) : null}
-        {toolbar?.search ? (
-          <SectionHeader data-data-table-header="" search={toolbar.search} />
-        ) : null}
-      </>
-    );
-  }
-  if (!title && !description && !shown && !toolbar?.search) return null;
+  const titled = Boolean(title || description);
+  if (tabHead !== null && !titled)
+    return <LiftedHeader slot={tabHead} controls={controls} search={toolbar?.search} />;
+  if (!titled && !shown && !toolbar?.search) return null;
   return (
     <SectionHeader data-data-table-header="" search={toolbar?.search} actions={controls}>
-      {title || description ? (
-        <>
-          {title ? (
-            <SectionTitle id={headingId} level={level === 3 ? 3 : 2} truncate>
-              {title}
-            </SectionTitle>
-          ) : null}
-          {description ? <SectionDescription>{description}</SectionDescription> : null}
-        </>
+      {titled ? (
+        <HeaderText title={title} headingId={headingId} level={level} description={description} />
       ) : null}
     </SectionHeader>
+  );
+}
+
+function LiftedHeader({
+  slot,
+  controls,
+  search,
+}: Readonly<{ slot: HTMLElement; controls?: ReactNode; search?: TableToolbarProps['search'] }>) {
+  return (
+    <>
+      {controls ? createPortal(controls, slot) : null}
+      {search ? <SectionHeader data-data-table-header="" search={search} /> : null}
+    </>
+  );
+}
+
+function HeaderText({
+  title,
+  headingId,
+  level,
+  description,
+}: Readonly<{ title?: string; headingId: string; level: HeadingLevel; description?: ReactNode }>) {
+  return (
+    <>
+      {title ? (
+        <SectionTitle id={headingId} level={level === 3 ? 3 : 2} truncate>
+          {title}
+        </SectionTitle>
+      ) : null}
+      {description ? <SectionDescription>{description}</SectionDescription> : null}
+    </>
   );
 }
