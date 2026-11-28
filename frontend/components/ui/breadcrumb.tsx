@@ -1,5 +1,6 @@
 import { Fragment, type MouseEvent, type ReactNode } from 'react';
 
+import { Icon } from '@/components/ui/icon';
 import { ChevronRight } from '@/lib/icons';
 import { ProjectLink } from '@/components/ui/project-link';
 
@@ -33,7 +34,7 @@ export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
               )}
             </li>
             <li aria-hidden className="shrink-0">
-              <ChevronRight className="text-ink-placeholder block size-3" />
+              <Icon icon={ChevronRight} size="xs" tone="ink-2" />
             </li>
           </Fragment>
         ))}

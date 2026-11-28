@@ -260,7 +260,7 @@ difference is a bug unless the plan lists it.
 
 **Rule:** When a primitive drops `className` from its public props, its
 implementation still accepts the `className` a Radix `Slot` parent injects at
-runtime (`TextLink asChild`, `MastheadLabelled`) and merges it with its own
+runtime (`TextLink asChild`, a `Tooltip` trigger) and merges it with its own
 classes. Export it through a narrower function type, as `Button` and
 `Pressable` do, so screens still cannot pass one. Never use such a slot to give
 a button a fixed or minimum width: a button is its label plus the control
