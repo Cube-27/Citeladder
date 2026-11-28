@@ -9,7 +9,7 @@ import { ACTIONS } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
-import { DockLabel, DockSlot, PageDock } from '@/components/ui/selection-dock';
+import { DockLabel, PageDock } from '@/components/ui/selection-dock';
 import { useToast } from '@/components/ui/toast';
 import { Check, RotateCcw, Sparkles, X, type IconGlyph } from '@/lib/icons';
 import { actionsApi, actionsQueries, type ActionDetail } from '@/lib/api/actions';
@@ -54,53 +54,39 @@ export function ActionDock({
   const markImplemented = useMarkImplemented({ workspaceId, action, revision: null });
   const [first, second] = mayWrite ? DOCK_SLOTS[action.status] : [null, null];
   const linkRoute = action.members.some((member) => member.rule_id === 'site_contextual_links');
-  const slot = (decision: Decision | null, size: 'decision' | 'wide') => (
-    <DockSlot size={size}>
-      {decision ? (
-        <Button
-          variant="quiet"
-          aria-disabled={decide.isPending || undefined}
-          onClick={() => {
-            if (!decide.isPending) decide.mutate(decision.to);
-          }}
-        >
-          <Icon icon={decision.icon} />
-          {decision.label}
-        </Button>
-      ) : undefined}
-    </DockSlot>
+  const decisionButton = (decision: Decision | null) =>
+    decision ? (
+      <Button
+        variant="quiet"
+        aria-disabled={decide.isPending || undefined}
+        onClick={() => {
+          if (!decide.isPending) decide.mutate(decision.to);
+        }}
+      >
+        <Icon icon={decision.icon} />
+        {decision.label}
+      </Button>
+    ) : null;
+  const declarable = second === 'declare' && isDeclarable(action);
+  const markButton = (
+    <Button variant="quiet" onClick={markImplemented.start}>
+      <Icon icon={ACTIONS.markImplemented.icon} />
+      {ACTIONS.markImplemented.label}
+    </Button>
   );
-  let declare = slot(null, 'wide');
-  if (second === 'declare' && isDeclarable(action))
-    declare = (
-      <DockSlot size="wide">
-        {linkRoute ? (
-          <ContextualLinkDeclarationRoute />
-        ) : (
-          <Button variant="quiet" onClick={markImplemented.start}>
-            <Icon icon={ACTIONS.markImplemented.icon} />
-            {ACTIONS.markImplemented.label}
-          </Button>
-        )}
-      </DockSlot>
-    );
+  const declare = linkRoute ? <ContextualLinkDeclarationRoute /> : markButton;
+  const declared = declarable ? declare : null;
   return (
     <PageDock label="Work on this action">
       <output className="sr-only">{decide.isSuccess ? ANNOUNCED[decide.variables] : null}</output>
-      {first === null && second === null ? null : (
-        <>
-          {slot(first, 'decision')}
-          {second === 'declare' ? declare : slot(second, 'wide')}
-        </>
-      )}
-      <DockSlot size="primary">
-        <Button asChild variant="primary">
-          <ProjectLink href={agentHref}>
-            <Icon icon={Sparkles} />
-            <DockLabel>{agentLabel}</DockLabel>
-          </ProjectLink>
-        </Button>
-      </DockSlot>
+      {decisionButton(first)}
+      {second === 'declare' ? declared : decisionButton(second)}
+      <Button asChild variant="primary" box="shrink">
+        <ProjectLink href={agentHref}>
+          <Icon icon={Sparkles} />
+          <DockLabel>{agentLabel}</DockLabel>
+        </ProjectLink>
+      </Button>
       {markImplemented.dialog}
     </PageDock>
   );

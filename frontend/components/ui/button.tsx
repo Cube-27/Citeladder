@@ -1,4 +1,6 @@
 import {
+  createContext,
+  useContext,
   type ComponentPropsWithRef,
   type ComponentPropsWithoutRef,
   type ReactElement,
@@ -66,6 +68,7 @@ const BUTTON_BOX = {
   float: 'pointer-events-auto',
   middle: 'align-middle',
   fill: 'w-full',
+  shrink: 'min-w-0 shrink',
   share: 'flex-1',
   'rail-hidden': 'rail:hidden',
   'rail-hidden-fixed': 'rail:hidden shrink-0',
@@ -194,18 +197,26 @@ function NativeButton({
   );
 }
 
+type Emphasis = Partial<Record<ButtonVariant, ButtonVariant>>;
+
+export const DEMOTE: Emphasis = { primary: 'secondary' };
+export const PROMOTE: Emphasis = { secondary: 'primary' };
+export const ButtonEmphasis = createContext<Emphasis | null>(null);
+
 type SlotClass = { className?: string };
 
 function SlotMergedButton({
   box,
   className: slotClass,
+  variant = 'secondary',
   ...props
 }: Readonly<ButtonProps & SlotClass>) {
+  const shown = useContext(ButtonEmphasis)?.[variant] ?? variant;
   const className = cn(slotClass, box && BUTTON_BOX[box]) || undefined;
   return props.asChild ? (
-    <SlottedButton {...props} className={className} />
+    <SlottedButton {...props} variant={shown} className={className} />
   ) : (
-    <NativeButton {...props} className={className} />
+    <NativeButton {...props} variant={shown} className={className} />
   );
 }
 

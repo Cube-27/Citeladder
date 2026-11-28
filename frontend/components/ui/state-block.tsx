@@ -1,6 +1,13 @@
-import { useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
+import {
+  Children,
+  Fragment,
+  isValidElement,
+  useContext,
+  useLayoutEffect,
+  type ReactNode,
+} from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button, ButtonEmphasis, PROMOTE } from '@/components/ui/button';
 import { usePageEmptyOfferRegister } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { Section, useOnPage } from '@/components/ui/section';
@@ -152,36 +159,23 @@ function FramedState({
   onPage,
   ...props
 }: Exclude<StateBlockProps, InlineEmpty> & Readonly<{ onPage: boolean }>) {
-  const ref = useRef<HTMLDivElement>(null);
-  usePageOffer(
-    ref,
-    onPage && (props.kind === 'empty' || props.kind === 'not_measured') && !!props.action,
-  );
+  const offers =
+    onPage && (props.kind === 'empty' || props.kind === 'not_measured') && !!props.action;
+  const register = usePageEmptyOfferRegister();
+  useLayoutEffect(() => {
+    if (!offers) return;
+    return register?.();
+  }, [offers, register]);
   const framed = framedKind(props);
   return (
     <div
-      ref={ref}
       data-state-block={props.kind}
       data-state-frame={framed ? '' : undefined}
       className="min-w-0"
     >
-      <BlockBody {...props} />
+      <BlockBody {...props} offers={offers} />
     </div>
   );
-}
-
-function usePageOffer(ref: Readonly<{ current: HTMLElement | null }>, offers: boolean) {
-  const register = usePageEmptyOfferRegister();
-  useLayoutEffect(() => {
-    const node = ref.current;
-    if (!offers || !node) return;
-    node.dataset.stateOffer = '';
-    const release = register?.();
-    return () => {
-      delete node.dataset.stateOffer;
-      release?.();
-    };
-  }, [ref, offers, register]);
 }
 
 const isFigures = (shape: LoadingShape | undefined) => shape?.kind === 'figures';
@@ -215,7 +209,10 @@ function FilteredBody({
   );
 }
 
-function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
+function BlockBody({
+  offers,
+  ...props
+}: Exclude<StateBlockProps, InlineEmpty> & Readonly<{ offers: boolean }>) {
   const containerLevel = useContext(StateHeadingLevelContext);
   switch (props.kind) {
     case 'loading': {
@@ -244,6 +241,7 @@ function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
           heading="No measurements yet"
           description={props.description}
           action={props.action}
+          offers={offers}
           headingLevel={props.headingLevel ?? containerLevel}
         />
       );
@@ -254,6 +252,7 @@ function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
           heading={props.heading}
           description={props.description}
           action={props.action}
+          offers={offers}
           actionNote={props.actionNote}
           headingLevel={props.headingLevel ?? containerLevel}
         />
@@ -272,6 +271,7 @@ function EmptyBody({
   heading,
   description,
   action,
+  offers,
   actionNote,
   headingLevel,
 }: Readonly<{
@@ -279,10 +279,13 @@ function EmptyBody({
   heading: string;
   description?: ReactNode;
   action?: ReactNode;
+  offers?: boolean;
   actionNote?: ActionNote;
   headingLevel: HeadingLevel;
 }>) {
   const Heading = HEADING_TAG[headingLevel];
+  const group = isValidElement<{ children?: ReactNode }>(action) && action.type === Fragment;
+  const [lead, ...rest] = Children.toArray(group ? action.props.children : action);
   return (
     <div className="flex flex-col items-center text-center">
       <span aria-hidden data-icon-tile="" className="text-ink-2">
@@ -296,7 +299,8 @@ function EmptyBody({
       ) : null}
       {action ? (
         <div className="mt-[var(--state-action-gap,var(--spacing-loose))] flex flex-wrap items-center justify-center gap-2">
-          {action}
+          <ButtonEmphasis value={offers ? PROMOTE : null}>{lead}</ButtonEmphasis>
+          {rest}
         </div>
       ) : null}
       {actionNote ? (

@@ -127,26 +127,37 @@ describe('StateBlock empty states', () => {
         {state}
       </PageEmptyOfferProvider>
     );
-    const demoted = () =>
-      screen.getByRole('button', { name: 'Run audit' }).closest('[data-demoted]') !== null;
-    const offered = () =>
-      screen.getByRole('button', { name: 'Add prompts' }).closest('[data-state-offer]') !== null;
+    const variant = (name: string) =>
+      screen.getByRole('button', { name }).getAttribute('data-button-variant');
     const empty = (
-      <StateBlock kind="empty" heading="No prompts yet" action={<Button>Add prompts</Button>} />
+      <StateBlock
+        kind="empty"
+        heading="No prompts yet"
+        action={
+          <>
+            <Button>Add prompts</Button>
+            <Button>Import</Button>
+          </>
+        }
+      />
     );
 
     const { rerender } = render(view(empty));
-    expect([offered(), demoted()]).toEqual([true, true]);
+    expect([variant('Add prompts'), variant('Import'), variant('Run audit')]).toEqual([
+      'primary',
+      'secondary',
+      'secondary',
+    ]);
 
     rerender(view(<Section>{empty}</Section>));
-    expect([offered(), demoted()]).toEqual([false, false]);
+    expect([variant('Add prompts'), variant('Run audit')]).toEqual(['secondary', 'primary']);
 
     rerender(view(empty));
-    expect(demoted()).toBe(true);
+    expect(variant('Run audit')).toBe('secondary');
     rerender(view(<StateBlock kind="loading" />));
-    expect(demoted()).toBe(false);
+    expect(variant('Run audit')).toBe('primary');
     rerender(view(<StateBlock kind="empty" heading="No prompts yet" />));
-    expect(demoted()).toBe(false);
+    expect(variant('Run audit')).toBe('primary');
   });
 
   it("keeps the page's level inside a Card that renders no title of its own", () => {

@@ -1,7 +1,7 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import type { ReactNode, RefObject } from 'react';
 
-import { IconButton } from '@/components/ui/button';
+import { ButtonEmphasis, IconButton } from '@/components/ui/button';
 import { SCRIM, useReturnFocus } from '@/components/ui/dialog';
 import { X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -89,41 +89,43 @@ export function Drawer({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className={cn('drawer-overlay', SCRIM)} />
-        <DialogPrimitive.Content
-          {...(description ? {} : { 'aria-describedby': undefined })}
-          onCloseAutoFocus={returnFocus}
-          data-overlay=""
-          data-side={side}
-          className={cn(
-            SHEET_FACE,
-            'drawer-panel z-modal fixed inset-y-2 flex w-[calc(100vw_-_1rem)] flex-col overflow-hidden',
-            side === 'left' ? 'left-2 max-w-68' : 'right-2',
-            side === 'right' && DRAWER_WIDTH[width],
-          )}
-        >
-          <DrawerHeader
-            title={title}
-            eyebrow={eyebrow}
-            description={description}
-            actions={actions}
-            hidden={hideHeader}
-            close={close}
-          />
-          <div
+        <ButtonEmphasis value={null}>
+          <DialogPrimitive.Overlay className={cn('drawer-overlay', SCRIM)} />
+          <DialogPrimitive.Content
+            {...(description ? {} : { 'aria-describedby': undefined })}
+            onCloseAutoFocus={returnFocus}
+            data-overlay=""
+            data-side={side}
             className={cn(
-              'flex min-h-0 flex-1 flex-col panel-inset-modal',
-              body === 'dock' ? 'overflow-hidden' : DRAWER_PANE,
+              SHEET_FACE,
+              'drawer-panel z-modal fixed inset-y-2 flex w-[calc(100vw_-_1rem)] flex-col overflow-hidden',
+              side === 'left' ? 'left-2 max-w-68' : 'right-2',
+              side === 'right' && DRAWER_WIDTH[width],
             )}
           >
-            <SurfaceContext value="surface">{children}</SurfaceContext>
-          </div>
-          {footer ? (
-            <footer className="border-rule px-modal flex items-center justify-end gap-2 border-t py-3">
-              {footer}
-            </footer>
-          ) : null}
-        </DialogPrimitive.Content>
+            <DrawerHeader
+              title={title}
+              eyebrow={eyebrow}
+              description={description}
+              actions={actions}
+              hidden={hideHeader}
+              close={close}
+            />
+            <div
+              className={cn(
+                'flex min-h-0 flex-1 flex-col panel-inset-modal',
+                body === 'dock' ? 'overflow-hidden' : DRAWER_PANE,
+              )}
+            >
+              <SurfaceContext value="surface">{children}</SurfaceContext>
+            </div>
+            {footer ? (
+              <footer className="border-rule px-modal flex items-center justify-end gap-2 border-t py-3">
+                {footer}
+              </footer>
+            ) : null}
+          </DialogPrimitive.Content>
+        </ButtonEmphasis>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );

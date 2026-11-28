@@ -169,10 +169,6 @@
   );
   --color-nav-current: var(--color-panel);
   --spacing-tag: 20px;
-  --route-chrome-height: calc(
-    2 * var(--spacing-shell-inset) + var(--masthead-block-size, var(--spacing-masthead)) +
-      var(--page-heading-block-size, 0px) + var(--spacing-page-block) + 24px
-  );
   --spacing-card: 16px;
   --spacing-gutter: var(--spacing-card);
 

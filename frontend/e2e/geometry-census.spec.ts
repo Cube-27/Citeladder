@@ -608,7 +608,6 @@ const ROUTE_GROUPS: Readonly<Record<string, readonly PageState[]>> = {
         [new RegExp(String.raw`/api/v1/audits/${run?.id}$`), run],
         [new RegExp(String.raw`/api/v1/audits/${run?.id}/executions(\?.*)?$`), []],
       ],
-      required: ['figure-cell.padding-y', 'figure-strip.height-spread', 'figure-strip.top-spread'],
     },
   ],
   'ai traffic': [

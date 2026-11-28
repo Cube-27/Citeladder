@@ -338,7 +338,7 @@ function WorkspaceLayout({
     <TabsRoot
       value={tabs.stackTab}
       onValueChange={tabs.showStack}
-      className="flex min-h-0 flex-col"
+      className="flex min-h-0 flex-1 flex-col"
     >
       <EditorStack
         tabs={

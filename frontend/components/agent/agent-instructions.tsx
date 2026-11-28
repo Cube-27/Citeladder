@@ -10,7 +10,7 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { SettingRows, SettingsGroup } from '@/components/ui/setting-row';
+import { SettingFlushRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 
 export function useAgentInstructions(workspaceId: string, projectId: string) {
   const scope = { workspaceId, projectId };
@@ -113,7 +113,7 @@ export function AgentInstructionsCard({
           {!query.data.created_at && !mayEdit ? (
             <Absence state="none" />
           ) : (
-            <div>
+            <SettingFlushRow>
               <label htmlFor="agent-instructions-text" className="sr-only">
                 Agent instructions
               </label>
@@ -129,7 +129,7 @@ export function AgentInstructionsCard({
                     : undefined
                 }
               />
-            </div>
+            </SettingFlushRow>
           )}
         </SettingRows>
       ) : null}

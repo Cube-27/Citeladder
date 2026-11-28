@@ -139,8 +139,8 @@ describe('application route recovery', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Finish session' }));
     const heading = await screen.findByRole('heading', { level: 1, name: 'Page not found' });
     const shell = screen.getByRole('region', { name: 'Application shell' });
-    expect(within(shell).getAllByRole('heading')).toEqual([heading]);
-    expect(screen.getByText(/There is no page at this address/)).toBeInTheDocument();
+    expect(within(shell).getAllByRole('heading', { level: 1 })).toEqual([heading]);
+    expect(screen.getByRole('heading', { name: 'There is no page at this address' })).toBeVisible();
     router.dispose();
   });
 });

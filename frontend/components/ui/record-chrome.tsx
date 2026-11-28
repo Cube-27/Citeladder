@@ -21,7 +21,11 @@ export function RecordBody({
 }
 
 export function RouteFill({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="h-route-fill flex min-h-0 min-w-0 flex-col">{children}</div>;
+  return (
+    <div data-route-fill="" className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {children}
+    </div>
+  );
 }
 
 export function StepsScroller({

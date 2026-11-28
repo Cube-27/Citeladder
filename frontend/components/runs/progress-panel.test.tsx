@@ -82,11 +82,20 @@ describe('ProgressPanel', () => {
     expect(screen.getByText('Cancelling…')).toBeVisible();
   });
 
-  it('says when the run started by time only: the masthead title carries its day', () => {
-    renderPanel({ status: 'running' });
+  it('puts a completed run on one line: status, the three counts and its start, with no progress bar', () => {
+    renderPanel({
+      status: 'completed',
+      cancelable: false,
+      requested_count: 124,
+      completed_count: 123,
+      failed_count: 1,
+    });
 
-    expect(screen.getByText('Started 12:00 AM')).toBeVisible();
-    expect(screen.queryByText(/Aug 1, 2026/)).toBeNull();
+    expect(screen.getByText('Completed')).toBeVisible();
+    expect(screen.getByText('124 requested · 123 completed · 1 failed')).toBeVisible();
+    expect(screen.getByText(/^Started Aug 1, 2026, \d{2}:\d{2} [AP]M$/)).toBeVisible();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(screen.queryByText('United States')).toBeNull();
   });
 
   it('counts failed answers as finished in the progress percentage', () => {
@@ -95,12 +104,10 @@ describe('ProgressPanel', () => {
     expect(screen.getByText('98.0%')).toBeVisible();
   });
 
-  it('shows the updating indicator while reporting and hides it once completed', () => {
-    const { unmount } = render(<ProgressPanel audit={{ ...BASE_AUDIT, status: 'reporting' }} />);
-    expect(screen.getByText('Updating…')).toBeVisible();
-    unmount();
-    render(<ProgressPanel audit={{ ...BASE_AUDIT, status: 'completed' }} />);
-    expect(screen.queryByText('Updating…')).not.toBeInTheDocument();
+  it('shows the progress bar on the run line while running', () => {
+    render(<ProgressPanel audit={{ ...BASE_AUDIT, status: 'running' }} />);
+    expect(screen.getByRole('progressbar', { name: 'Progress' })).toBeInTheDocument();
+    expect(screen.getByText('12 requested · 5 completed · 0 failed')).toBeVisible();
   });
 
   it('offers authenticated export actions for both formats', () => {

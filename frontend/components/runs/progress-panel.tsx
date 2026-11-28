@@ -1,26 +1,21 @@
-import type { ReactNode } from 'react';
-
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { CircleStop, RotateCcw } from '@/lib/icons';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import { marketLabel } from '@citeladder/contracts/markets';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Inline, Stack } from '@/components/ui/layout';
-import { Spinner } from '@/components/ui/spinner';
+import { Inline } from '@/components/ui/layout';
 import { ProgressMeter } from '@/components/ui/progress-meter';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@citeladder/contracts';
 import { saveBlob } from '@/lib/download';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatCount, formatDisplayTime } from '@/lib/format';
+import { formatCount, formatDisplayTimestamp } from '@/lib/format';
 import { AUDIT_STATES } from '@/lib/runs/status';
 import { Notice } from '@/components/ui/notice';
-import { FigureStrip } from '@/components/ui/figure-strip';
 import { ExportAction } from '@/components/ui/export-action';
 import { Text } from '@/components/ui/typography';
 
@@ -69,66 +64,48 @@ export function RunActions({
 }
 
 export function ProgressSkeleton() {
-  return (
-    <FigureStrip
-      label="Run figures"
-      lead={<Skeleton variant="text" lines={1} label="Loading run" />}
-      segments={RUN_FIGURES.map(({ key, label }) => ({ key, label, value: null, loading: true }))}
-    />
-  );
+  return <Skeleton variant="text" lines={1} label="Loading run" />;
 }
 
-function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: boolean }>) {
+const RUN_COUNTS = [
+  { label: 'requested', count: (audit: Audit) => audit.requested_count },
+  { label: 'completed', count: (audit: Audit) => audit.completed_count },
+  { label: 'failed', count: (audit: Audit) => audit.failed_count },
+] as const;
+
+function RunLine({ audit }: Readonly<{ audit: Audit }>) {
   const engines = useEngineCatalog();
   const timeZone = useDisplayTimeZone();
+  const finished = audit.completed_count + audit.failed_count;
+  const percent =
+    audit.requested_count > 0
+      ? Math.min(100, Math.round((finished / audit.requested_count) * 100))
+      : 0;
+  const running = AUDIT_STATES[audit.status].active && audit.requested_count > 0;
   return (
-    <Inline wrap>
-      <Text variant="body" tone="ink-2">
-        Started {formatDisplayTime(audit.created_at, timeZone)}
-      </Text>
+    <Inline wrap gap="group">
       <StatusMark variant="run-status" value={AUDIT_STATES[audit.status].badge}>
         {AUDIT_STATES[audit.status].label}
       </StatusMark>
-      <Tag>{marketLabel(audit.market)}</Tag>
+      <Text variant="body" tone="ink-2" numeric>
+        {RUN_COUNTS.map(({ label, count }) => `${formatCount(count(audit))} ${label}`).join(' · ')}
+      </Text>
       {audit.not_applicable_engines.length ? (
         <Tag>
           Not available in this market: {audit.not_applicable_engines.map(engines.label).join(', ')}
         </Tag>
       ) : null}
-      {polling ? <Spinner label="Updating…" showLabel /> : null}
+      {running ? (
+        <Inline box="fill">
+          <ProgressMeter label="Progress" value={percent} />
+        </Inline>
+      ) : null}
+      <Inline box="end">
+        <Text variant="body" tone="ink-2" numeric>
+          Started {formatDisplayTimestamp(audit.created_at, timeZone)}
+        </Text>
+      </Inline>
     </Inline>
-  );
-}
-
-function RunProgress({
-  requested,
-  finished,
-}: Readonly<{
-  requested: number;
-  finished: number;
-}>) {
-  const percent = requested > 0 ? Math.min(100, Math.round((finished / requested) * 100)) : 0;
-
-  return <ProgressMeter label="Progress" value={percent} />;
-}
-
-const RUN_FIGURES = [
-  { key: 'requested', label: 'Requested', count: (audit: Audit) => audit.requested_count },
-  { key: 'completed', label: 'Completed', count: (audit: Audit) => audit.completed_count },
-  { key: 'failed', label: 'Failed', count: (audit: Audit) => audit.failed_count },
-] as const;
-
-function ProgressMetrics({ audit, lead }: Readonly<{ audit: Audit; lead: ReactNode }>) {
-  return (
-    <FigureStrip
-      label="Run figures"
-      lead={lead}
-      segments={RUN_FIGURES.map(({ key, label, count }) => ({
-        key,
-        label,
-        value: formatCount(count(audit)),
-      }))}
-    />
   );
 }
 
@@ -169,24 +146,9 @@ export function ProgressPanel({
   rerunNotice?: MutationNoticeData | null;
   onRerunRetry?: () => void;
 }>) {
-  const polling = AUDIT_STATES[audit.status].active;
-
   return (
     <>
-      <ProgressMetrics
-        audit={audit}
-        lead={
-          <Stack>
-            <ProgressStatus audit={audit} polling={polling} />
-            {polling && audit.requested_count > 0 ? (
-              <RunProgress
-                requested={audit.requested_count}
-                finished={audit.completed_count + audit.failed_count}
-              />
-            ) : null}
-          </Stack>
-        }
-      />
+      <RunLine audit={audit} />
       <ProgressNotices
         errorMessage={audit.error_message}
         cancelNotice={cancelNotice}

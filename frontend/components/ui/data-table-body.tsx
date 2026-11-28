@@ -34,11 +34,7 @@ export function DataTableBody({
     return (
       <TableBody>
         <tr data-table-state="">
-          <TableCell
-            colSpan={colSpan}
-            className="h-[calc(var(--data-table-rows)_*_var(--spacing-row))] align-top"
-            style={{ '--data-table-rows': pageSize ?? 0 }}
-          >
+          <TableCell colSpan={colSpan} className="align-top">
             <InFrame>
               <StateBlock {...state} />
             </InFrame>

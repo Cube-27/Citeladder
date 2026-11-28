@@ -174,19 +174,21 @@ function Connections({
 }
 
 function ConnectionsHead({ empty, connect }: Readonly<{ empty: boolean; connect: ReactNode }>) {
-  if (empty && connect)
-    return (
-      <StateBlock
-        kind="empty"
-        icon={ICONS.connect}
-        heading="No crawl logs connected"
-        action={connect}
-      />
-    );
+  const offers = empty && Boolean(connect);
   return (
-    <SectionHeader actions={connect}>
-      <SectionTitle>Crawl logs</SectionTitle>
-    </SectionHeader>
+    <>
+      <SectionHeader actions={offers ? undefined : connect}>
+        <SectionTitle>Crawl logs</SectionTitle>
+      </SectionHeader>
+      {offers ? (
+        <StateBlock
+          kind="empty"
+          icon={ICONS.connect}
+          heading="No crawl logs connected"
+          action={connect}
+        />
+      ) : null}
+    </>
   );
 }
 

@@ -112,7 +112,7 @@ describe('DataTable', () => {
     ).toBeVisible();
   });
 
-  it('holds ten rows of space under a paged table and keeps its empty state inside it', () => {
+  it('replaces a paged table with its state exactly as an unpaged one, holding no row space', () => {
     const pager = {
       canPrev: false,
       canNext: false,
@@ -135,18 +135,14 @@ describe('DataTable', () => {
         }}
       />
     );
-    const reserved = (root: HTMLElement) =>
-      root
-        .querySelector<HTMLElement>('[style*="--reserve-rows"]')
-        ?.style.getPropertyValue('--reserve-rows');
-    const { container, rerender } = render(table(false));
-    expect(reserved(container)).toBeUndefined();
+    const { rerender } = render(table(false));
+    expect(screen.getByText("Couldn't load signals")).toBeVisible();
     expect(screen.getByRole('table', { hidden: true }).closest('[hidden]')).not.toBeNull();
 
     rerender(table(true));
-    expect(reserved(container)).toBe('10');
     expect(screen.getByText("Couldn't load signals")).toBeVisible();
-    expect(screen.getByRole('table', { hidden: true }).closest('[inert]')).not.toBeNull();
+    expect(screen.getByRole('table', { hidden: true }).closest('[hidden]')).not.toBeNull();
+    expect(screen.getByRole('table', { hidden: true }).closest('[inert]')).toBeNull();
   });
 
   it('draws the pager only once the rows run past one page, and never blank rows', () => {

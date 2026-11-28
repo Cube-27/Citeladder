@@ -75,6 +75,10 @@ export function SettingRows({
   );
 }
 
+export function SettingFlushRow({ children }: Readonly<{ children: ReactNode }>) {
+  return <div data-flush-row="">{children}</div>;
+}
+
 export function SettingRow({
   label,
   description,

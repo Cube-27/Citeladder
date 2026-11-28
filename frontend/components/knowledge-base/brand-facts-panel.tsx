@@ -5,6 +5,7 @@ import type { BrandFact, BrandFactList } from '@citeladder/contracts/fact-checki
 
 import { BrandFactDialog, type FactEdit } from '@/components/knowledge-base/brand-fact-dialog';
 import { Absence } from '@/components/ui/absence';
+import { ClampText } from '@/components/ui/clamp-text';
 import { Button, IconButton } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ConfirmDialog } from '@/components/ui/dialog';
@@ -183,7 +184,9 @@ function FactRow({ fact, actions }: Readonly<{ fact: BrandFact; actions: ReactNo
     <TableRow>
       <TableCell>
         <Inline as="span" wrap>
-          {fact.statement}
+          <ClampText lines={2} box="shrink">
+            {fact.statement}
+          </ClampText>
           {fact.status === 'draft' ? (
             <StatusMark variant="status" value="warning">
               Draft

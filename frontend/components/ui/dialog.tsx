@@ -3,7 +3,7 @@ import { useInsertionEffect, useRef, type ReactNode } from 'react';
 
 import { AlertTriangle, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
-import { Button, IconButton } from './button';
+import { Button, ButtonEmphasis, IconButton } from './button';
 import { Icon } from './icon';
 import { SurfaceContext } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
@@ -140,42 +140,49 @@ export function Dialog({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className={cn('dialog-overlay', SCRIM)} />
-        <DialogPrimitive.Content
-          role={danger ? 'alertdialog' : 'dialog'}
-          data-overlay=""
-          {...(description ? {} : { 'aria-describedby': undefined })}
-          onOpenAutoFocus={(event) => {
-            const target = leadingField(event.target);
-            if (!target) return;
-            event.preventDefault();
-            target.focus();
-          }}
-          onCloseAutoFocus={returnFocus}
-          className={cn(
-            SHEET_FACE,
-            'dialog-panel z-modal fixed left-1/2 flex w-dialog-fit -translate-x-1/2 flex-col overflow-hidden',
-            answer
-              ? 'max-w-270 top-16 h-full max-h-dialog-max'
-              : 'top-[12dvh] max-h-[calc(88dvh_-_1.5rem)]',
-            !answer && overlayWidth(danger || width === 'answer' ? 'narrow' : width),
-          )}
-        >
-          <DialogHeader title={title} description={description} toolbar={toolbar} danger={danger} />
-          {danger ? null : (
-            <DialogPrimitive.Close asChild>
-              <IconButton
-                icon={X}
-                label="Close dialog"
-                tooltip={false}
-                variant="secondary"
-                shape="close"
-                box="corner"
-              />
-            </DialogPrimitive.Close>
-          )}
-          <DialogBody footer={footer}>{children}</DialogBody>
-        </DialogPrimitive.Content>
+        <ButtonEmphasis value={null}>
+          <DialogPrimitive.Overlay className={cn('dialog-overlay', SCRIM)} />
+          <DialogPrimitive.Content
+            role={danger ? 'alertdialog' : 'dialog'}
+            data-overlay=""
+            {...(description ? {} : { 'aria-describedby': undefined })}
+            onOpenAutoFocus={(event) => {
+              const target = leadingField(event.target);
+              if (!target) return;
+              event.preventDefault();
+              target.focus();
+            }}
+            onCloseAutoFocus={returnFocus}
+            className={cn(
+              SHEET_FACE,
+              'dialog-panel z-modal fixed left-1/2 flex w-dialog-fit -translate-x-1/2 flex-col overflow-hidden',
+              answer
+                ? 'max-w-270 top-16 h-full max-h-dialog-max'
+                : 'top-[12dvh] max-h-[calc(88dvh_-_1.5rem)]',
+              !answer && overlayWidth(danger || width === 'answer' ? 'narrow' : width),
+            )}
+          >
+            <DialogHeader
+              title={title}
+              description={description}
+              toolbar={toolbar}
+              danger={danger}
+            />
+            {danger ? null : (
+              <DialogPrimitive.Close asChild>
+                <IconButton
+                  icon={X}
+                  label="Close dialog"
+                  tooltip={false}
+                  variant="secondary"
+                  shape="close"
+                  box="corner"
+                />
+              </DialogPrimitive.Close>
+            )}
+            <DialogBody footer={footer}>{children}</DialogBody>
+          </DialogPrimitive.Content>
+        </ButtonEmphasis>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );

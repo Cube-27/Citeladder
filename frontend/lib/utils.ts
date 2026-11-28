@@ -55,7 +55,6 @@ const SPACING_ROLES = [
   'section-rail',
   'tray-inset',
   'popup-inset',
-  'route-fill',
   'indent',
   'indent-2',
   'tray',

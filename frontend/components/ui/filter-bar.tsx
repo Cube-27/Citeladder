@@ -52,7 +52,10 @@ function dataWindow(chips: readonly FilterDefinition[]): string | undefined {
 }
 
 export function FilterBar({ view, filters = [], status, actions }: FilterBarProps) {
-  const windowLabel = dataWindow(inlineOrder(filters));
+  const label = dataWindow(inlineOrder(filters));
+  const inBand = useContext(PageFilterBandContext);
+  const leads = Boolean(view) && !inBand;
+  const windowLabel = leads ? undefined : label;
   return (
     <fieldset
       data-filter-bar=""
@@ -66,7 +69,9 @@ export function FilterBar({ view, filters = [], status, actions }: FilterBarProp
           view ? 'min-w-[min(100%,16rem)] grow basis-0 justify-end' : 'contents',
         )}
       >
-        {filters.length > 0 ? <ChipGroup filters={filters} /> : null}
+        {filters.length > 0 ? (
+          <ChipGroup filters={filters} end={Boolean(view)} lead={leads ? label : undefined} />
+        ) : null}
         {windowLabel || status !== undefined ? (
           <StripMeta windowLabel={windowLabel} status={status} afterView={Boolean(view)} />
         ) : null}
@@ -112,7 +117,8 @@ export const hasHeadControls = ({ view, filters, status, actions }: FilterBarPro
 function ChipGroup({
   filters,
   end = false,
-}: Readonly<{ filters: readonly FilterDefinition[]; end?: boolean }>) {
+  lead,
+}: Readonly<{ filters: readonly FilterDefinition[]; end?: boolean; lead?: string }>) {
   const grouped = filters.filter((filter) => filter.inFilters);
   const pinned = grouped.length > 1 ? grouped : [];
   const inline = [...inlineOrder(filters), ...grouped.filter((filter) => !pinned.includes(filter))];
@@ -129,6 +135,14 @@ function ChipGroup({
         end && 'justify-end',
       )}
     >
+      {lead ? (
+        <span
+          data-filter-trailing=""
+          className="text-caption text-ink-2 shrink-0 whitespace-nowrap"
+        >
+          {lead}
+        </span>
+      ) : null}
       {chips.map((filter) => (
         <div key={filter.id} data-filter-slot={filter.id} className="flex min-w-0 shrink-0">
           <FilterChip filter={filter} align={end ? 'end' : 'start'} />
