@@ -10,6 +10,47 @@ export type ReviewCompetitor = {
   selected: boolean;
 };
 
+export function toggleCompetitor(
+  items: ReviewCompetitor[],
+  { index, maximum }: Readonly<{ index: number; maximum: number | undefined }>,
+): ReviewCompetitor[] {
+  const selected = items.filter((item) => item.selected).length;
+  return items.map((item, itemIndex) =>
+    itemIndex !== index || (!item.selected && (maximum === undefined || selected >= maximum))
+      ? item
+      : { ...item, selected: !item.selected },
+  );
+}
+
+export function editCompetitor(
+  items: ReviewCompetitor[],
+  { index, name, domain }: Readonly<{ index: number; name: string; domain: string }>,
+): ReviewCompetitor[] {
+  return items.map((item, itemIndex) =>
+    itemIndex === index
+      ? { ...item, domains: [domain, ...item.domains.slice(1).filter((d) => d !== domain)], name }
+      : item,
+  );
+}
+
+export function addCompetitor(
+  items: ReviewCompetitor[],
+  maximum: number | undefined,
+): ReviewCompetitor[] {
+  if (maximum === undefined || items.filter((item) => item.selected).length >= maximum)
+    return items;
+  return [
+    ...items,
+    {
+      id: `competitor:manual:${globalThis.crypto.randomUUID()}`,
+      name: '',
+      aliases: [],
+      domains: [],
+      selected: true,
+    },
+  ];
+}
+
 export type ReviewDomain = {
   id: string;
   domain: string;

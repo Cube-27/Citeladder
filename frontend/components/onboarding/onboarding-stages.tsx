@@ -13,7 +13,13 @@ import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/market
 import { scrollBehavior } from '@/lib/accessibility/use-reduced-motion';
 import { isPlanLimit, PLANS_HREF } from '@/lib/billing/plan-limit';
 import { discoveryActivity } from '@/lib/onboarding/discovery-activity';
-import { onboardingErrorMessage, type BrandStepValues } from '@/lib/onboarding/forms';
+import {
+  onboardingErrorMessage,
+  type BrandStepValues,
+  addCompetitor,
+  editCompetitor,
+  toggleCompetitor,
+} from '@/lib/onboarding/forms';
 import { hasConfirmedIcp, IcpAudience, IcpCategory } from './icp-confirmation';
 import { ReviewStep } from './review-step';
 import { useStaggeredSteps } from './use-staggered-steps';
@@ -285,15 +291,19 @@ export function ReviewStage({
             competitors={competitors}
             onToggleDomain={toggle(flow.setDomains)}
             onToggleCompetitor={(index) =>
-              toggleCompetitor(index, setCompetitors, maximumCompetitors)
+              setCompetitors((items) =>
+                toggleCompetitor(items, { index, maximum: maximumCompetitors }),
+              )
             }
             onEditCompetitor={(index, name, domain) =>
-              editCompetitor(index, name, domain, setCompetitors)
+              setCompetitors((items) => editCompetitor(items, { index, name, domain }))
             }
             onRemoveCompetitor={(index) =>
               setCompetitors((current) => current.filter((_, itemIndex) => itemIndex !== index))
             }
-            onAddCompetitor={() => addCompetitor(setCompetitors, maximumCompetitors)}
+            onAddCompetitor={() =>
+              setCompetitors((items) => addCompetitor(items, maximumCompetitors))
+            }
             maximumCompetitors={maximumCompetitors}
             domainNote={
               hasSelectedDomain ? undefined : 'Keep at least one website address selected.'
@@ -402,61 +412,4 @@ function warningMessage(code: string): string {
     site_health_deferred: 'The Website review was not started.',
   };
   return messages[code] ?? 'Some research could not be confirmed.';
-}
-
-function toggleCompetitor(
-  index: number,
-  setCompetitors: React.Dispatch<
-    React.SetStateAction<import('@/lib/onboarding/forms').ReviewCompetitor[]>
-  >,
-  maximum: number | undefined,
-) {
-  setCompetitors((items) => {
-    const selected = items.filter((item) => item.selected).length;
-    return items.map((item, itemIndex) =>
-      itemIndex !== index || (!item.selected && (maximum === undefined || selected >= maximum))
-        ? item
-        : { ...item, selected: !item.selected },
-    );
-  });
-}
-
-function editCompetitor(
-  index: number,
-  name: string,
-  domain: string,
-  setCompetitors: React.Dispatch<
-    React.SetStateAction<import('@/lib/onboarding/forms').ReviewCompetitor[]>
-  >,
-) {
-  setCompetitors((items) =>
-    items.map((item, itemIndex) =>
-      itemIndex === index
-        ? { ...item, domains: [domain, ...item.domains.slice(1).filter((d) => d !== domain)], name }
-        : item,
-    ),
-  );
-}
-
-function addCompetitor(
-  setCompetitors: React.Dispatch<
-    React.SetStateAction<import('@/lib/onboarding/forms').ReviewCompetitor[]>
-  >,
-  maximum: number | undefined,
-) {
-  setCompetitors((items) => {
-    if (maximum === undefined || items.filter((item) => item.selected).length >= maximum)
-      return items;
-    const id = globalThis.crypto.randomUUID();
-    return [
-      ...items,
-      {
-        id: `competitor:manual:${id}`,
-        name: '',
-        aliases: [],
-        domains: [],
-        selected: true,
-      },
-    ];
-  });
 }
