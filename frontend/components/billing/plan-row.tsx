@@ -15,7 +15,7 @@ import {
 } from '@/lib/billing/catalog';
 import { CreditCard } from '@/lib/icons';
 import { billingReasonMessage } from '@/lib/billing/reason-copy';
-import { websiteHref } from '@/lib/config/app-link';
+import { websiteUrl } from '@/lib/config/app-link';
 import { contactSalesHref } from '@/lib/config/contact-sales';
 
 import { Button } from '@/components/ui/button';
@@ -95,10 +95,7 @@ export function PlanRow({
           <TextLink
             variant="external"
             box="nowrap"
-            href={contactSalesHref(
-              plan.contact_url,
-              new URL(websiteHref('/contact'), 'https://citeladder.com').href,
-            )}
+            href={contactSalesHref(plan.contact_url, websiteUrl('/contact'))}
           >
             Contact sales
           </TextLink>
