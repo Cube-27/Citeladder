@@ -392,7 +392,8 @@ Pages are placed into these layouts, never arranged by hand (AR-10).
   hue only at a quota limit or as a score; Perception › Brand's attributes
   table keeps its negative-vs-positive bar (AR-19).
 - **Table:** a `DataTable` is always a `Section` (a card on the paper, flat in
-  a surface) whose rows bleed to the card's edges; no tray and no inner card.
+  a surface) whose rows bleed to the card's edges; a table card with a head is a tray
+  like any headed card (D1), and there is no inner card.
   Head band 40 on `panel` with a hairline under it; every table and grid head
   reads 13px at 500 in `ink-2` (`text-caption-strong`, owner 2026-11-28, D9).
   Cells padded 14 inline and 8 block, a hairline between columns and between
@@ -486,7 +487,7 @@ holds the depth rules.
   label role. A card with a head is a tray; a headless card is plain (owner,
   2026-11-28, D1): the tray is a 5 `tray` frame along the sides and foot,
   radius 14, its head on the `tray` fill with the title in the label role,
-  and the white body below it with the inner radius. A
+  and the `panel` body below it with the inner radius. A
   card can never draw inside a card.
 - **Slots.** A card's description is muted trailing text on its title row,
   never a second row: when the row lacks room it is not shown, and one that
