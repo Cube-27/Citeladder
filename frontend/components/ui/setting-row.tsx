@@ -1,9 +1,13 @@
-import { useId, type HTMLAttributes, type ReactNode } from 'react';
+import { useId, type ComponentProps, type HTMLAttributes, type ReactNode } from 'react';
 
+import { IconButton } from '@/components/ui/button';
 import { FieldFoot, type ControlProps } from '@/components/ui/field';
 import { Section, SectionBleed, SectionDescription, SectionHeader } from '@/components/ui/section';
 
+import { Check, Pencil, Trash2, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+
+import './setting-row.css';
 
 export function SettingsGroup({
   title,
@@ -46,10 +50,12 @@ export function SettingRows({
   label,
   foot,
   onSubmit,
+  density = 'compact',
   children,
 }: Readonly<{
   label?: string;
   foot?: ReactNode;
+  density?: 'compact' | 'roomy';
   onSubmit?: HTMLAttributes<HTMLElement>['onSubmit'];
   children: ReactNode;
 }>) {
@@ -59,7 +65,7 @@ export function SettingRows({
       as={onSubmit ? 'form' : 'div'}
       noValidate={onSubmit ? true : undefined}
       onSubmit={onSubmit}
-      data-setting-rows=""
+      data-setting-rows={density}
       aria-label={label}
       role={label ? 'group' : undefined}
     >
@@ -104,6 +110,27 @@ export function SettingRow({
   );
 }
 
+const INLINE_ROW = 'flex min-h-13 min-w-0 flex-wrap justify-between gap-x-6 gap-y-2';
+
+const FIELD_LAYOUT = {
+  stacked: { row: 'grid min-h-13 min-w-0 gap-2', label: 'flex-1', control: undefined },
+  narrow: {
+    row: cn(INLINE_ROW, 'items-center'),
+    label: 'flex-1',
+    control: 'w-44 max-w-full *:w-full',
+  },
+  wide: {
+    row: cn(INLINE_ROW, 'items-center'),
+    label: 'flex-1',
+    control: 'w-80 max-w-full *:w-full',
+  },
+  fill: {
+    row: cn(INLINE_ROW, 'items-baseline'),
+    label: 'shrink-0',
+    control: 'flex-1 basis-60 *:w-full',
+  },
+} as const;
+
 export function SettingField({
   label,
   hint,
@@ -116,7 +143,7 @@ export function SettingField({
   hint?: string;
   error?: ReactNode;
   required?: boolean;
-  inline?: boolean | 'wide';
+  inline?: boolean | 'wide' | 'fill';
   children: (props: ControlProps) => ReactNode;
 }>) {
   const id = useId();
@@ -129,16 +156,10 @@ export function SettingField({
     'aria-invalid': error ? true : undefined,
     'aria-describedby': describedBy || undefined,
   });
+  const layout = FIELD_LAYOUT[inline === true ? 'narrow' : inline || 'stacked'];
   return (
-    <div
-      data-setting-row=""
-      className={
-        inline
-          ? 'flex min-h-13 min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-2'
-          : 'grid min-h-13 min-w-0 gap-2'
-      }
-    >
-      <div className="grid min-w-0 flex-1 basis-60 content-start gap-0.5">
+    <div data-setting-row="" className={layout.row}>
+      <div className={cn('grid min-w-0 basis-60 content-start gap-0.5', layout.label)}>
         <label htmlFor={id} className="text-label text-ink">
           {label}
           {required ? (
@@ -153,13 +174,7 @@ export function SettingField({
           </p>
         ) : null}
       </div>
-      <div
-        className={cn(
-          'grid min-w-0 gap-1',
-          inline === true && 'w-44 max-w-full *:w-full',
-          inline === 'wide' && 'w-80 max-w-full *:w-full',
-        )}
-      >
+      <div className={cn('grid min-w-0 gap-1', layout.control)}>
         {control}
         {error ? <FieldFoot id={errorId} error={error} /> : null}
       </div>
@@ -176,4 +191,15 @@ function RowName({ label, description }: Readonly<{ label: ReactNode; descriptio
       )}
     </div>
   );
+}
+
+const ROW_ACTIONS = { edit: Pencil, delete: Trash2, save: Check, cancel: X } as const;
+
+export function RowAction({
+  kind,
+  ...props
+}: Readonly<
+  Omit<ComponentProps<typeof IconButton>, 'icon' | 'variant'> & { kind: keyof typeof ROW_ACTIONS }
+>) {
+  return <IconButton {...props} icon={ROW_ACTIONS[kind]} />;
 }

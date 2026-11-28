@@ -164,6 +164,7 @@ function ScheduleForm({
         <SectionTitle id="new-schedule-title">New schedule</SectionTitle>
       </SectionHeader>
       <SettingRows
+        density="roomy"
         label="New schedule"
         foot={
           <Button variant="secondary" onClick={createSchedule} disabled={!canCreate}>

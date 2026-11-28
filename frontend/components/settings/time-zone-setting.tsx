@@ -82,6 +82,7 @@ export function TimeZoneSetting() {
         {custom ? (
           <SettingField
             label="IANA timezone"
+            inline="wide"
             error={error?.at === 'zone' ? error.message : undefined}
           >
             {(field) => (
