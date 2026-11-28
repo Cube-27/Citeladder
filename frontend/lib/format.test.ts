@@ -135,9 +135,17 @@ describe('urlCut', () => {
     [
       'https://shop.test/Baby/BB0554_1871652_OFF_WHITE_CLOUD_DANCER_MUMMY_DADDY_SLOGAN',
       {
-        head: 'https://shop.test/Baby/BB0554_1871652_OFF_WHITE_CLO',
-        tail: 'UD_DANCER_MUMMY_DADDY_SLOGAN',
+        head: 'https://shop.test/Baby/BB0554_1871652_OFF_WHITE_CLOUD_',
+        tail: 'DANCER_MUMMY_DADDY_SLOGAN',
       },
+    ],
+    [
+      '/blog/portland-coffee-roasters-2024-guide',
+      { head: '/blog/portland-', tail: 'coffee-roasters-2024-guide' },
+    ],
+    [
+      '/blog/ethiopia-yirgacheffe-kochere',
+      { head: '/blog', tail: '/ethiopia-yirgacheffe-kochere' },
     ],
     [
       'shop.test-with-a-very-long-host-name-and-no-path-at-all',

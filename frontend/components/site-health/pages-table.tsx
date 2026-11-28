@@ -127,10 +127,10 @@ export function PagesTable({
                     </PageLink>
                   </ClampText>
                   {page.robots_excluded ? <RobotsExcludedBadge /> : null}
-                  <Text variant="body" tone="ink-2" box="clip">
-                    <UrlText url={page.display_url} origin={origin} />
-                  </Text>
                 </Inline>
+                <Text variant="body" tone="ink-2" box="clip">
+                  <UrlText url={page.display_url} origin={origin} />
+                </Text>
                 <LinkedFromLine page={page} />
               </Stack>
             </TableCell>

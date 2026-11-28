@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 const LONG = 'Structured-data names match the visible title and h1 content of the page';
@@ -81,6 +81,23 @@ describe('table cell text', () => {
     await userEvent.hover(screen.getByText(LONG));
 
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+});
+
+describe('url text', () => {
+  it('drops the own origin and cuts a long path at a word, keeping its end', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <UrlText
+          url="https://harbor.test/blog/portland-coffee-roasters-2024-guide"
+          origin="https://harbor.test"
+        />
+      </TooltipProvider>,
+    );
+    const parts = [...container.querySelectorAll('[data-url-text] > span')].map(
+      (part) => part.textContent,
+    );
+    expect(parts).toEqual(['/blog/portland-', 'coffee-roasters-2024-guide']);
   });
 });
 

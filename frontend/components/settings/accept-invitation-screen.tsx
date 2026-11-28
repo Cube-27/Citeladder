@@ -110,7 +110,7 @@ function InvitationDeadEnd({
         }
       />
       {reference ? (
-        <Text as="p" variant="caption" box="scroll-x" wrap="nowrap">
+        <Text as="p" variant="caption" wrap="anywhere">
           {`Reference: ${reference}`}
         </Text>
       ) : null}

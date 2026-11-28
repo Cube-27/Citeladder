@@ -89,12 +89,10 @@ export function InvoiceHistory({
       <DataTable label="Invoices" columns={COLUMNS} {...invoicesState(read, invoices.length)}>
         {invoices.map((invoice) => (
           <TableRow key={invoice.invoice_id}>
-            <TableCell>
-              <ClampText lines={1}>
-                {invoice.status === 'credited'
-                  ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
-                  : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
-              </ClampText>
+            <TableCell wrap="normal">
+              {invoice.status === 'credited'
+                ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
+                : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
             </TableCell>
             <TableCell>
               <DisplayTime value={invoice.paid_at} dateOnly />
