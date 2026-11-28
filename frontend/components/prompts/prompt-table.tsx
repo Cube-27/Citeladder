@@ -9,7 +9,6 @@ import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from '@/compo
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import {
-  isRowSurfaceClick,
   TableActionsCell,
   TableCell,
   TableCellLines,
@@ -134,9 +133,7 @@ export function PromptTable({
         return (
           <TableRow
             key={prompt.id}
-            className="cursor-pointer"
-            onClick={(event) => {
-              if (!isRowSurfaceClick(event)) return;
+            onOpen={() => {
               if (openAnswer) openAnswer();
               else void navigate(projectHref(promptHistoryHref(prompt.id)));
             }}

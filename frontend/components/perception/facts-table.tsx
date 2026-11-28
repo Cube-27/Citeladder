@@ -3,6 +3,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import { Absence } from '@/components/ui/absence';
 import { DataTable } from '@/components/ui/data-table';
+import { queryTableState } from '@/components/ui/state-block';
 import type { DataTableColumn } from '@/components/ui/data-table-columns';
 import { TableCell, TableCellLines, TableRow, TableTime } from '@/components/ui/table';
 import { VERDICT_LABELS } from '@/lib/visibility/accuracy';
@@ -22,7 +23,7 @@ export function FactsTable({ query }: Readonly<{ query: UseQueryResult<AccuracyF
     <DataTable
       label="Claims by fact"
       columns={COLUMNS}
-      state={tableState(query, facts)}
+      {...tableState(query, facts)}
       busy={{ active: query.isFetching && query.isPlaceholderData, label: 'Updating facts' }}
     >
       {facts.map((fact) => (
@@ -33,23 +34,13 @@ export function FactsTable({ query }: Readonly<{ query: UseQueryResult<AccuracyF
 }
 
 function tableState(query: UseQueryResult<AccuracyFactList>, facts: readonly AccuracyFact[]) {
-  if (query.isPending) return { kind: 'loading', label: 'Loading facts' } as const;
-  if (query.isError)
-    return {
-      kind: 'error',
-      error: query.error,
-      title: "Couldn't load the facts",
-      fallback: 'The facts could not be loaded.',
-      onRetry: () => void query.refetch(),
-      pending: query.isFetching,
-    } as const;
-  if (!facts.length)
-    return {
-      kind: 'empty',
-      inline: true,
-      message: 'No confirmed facts were frozen in these runs.',
-    } as const;
-  return undefined;
+  return queryTableState(query, {
+    subject: 'the facts',
+    empty: () =>
+      facts.length
+        ? undefined
+        : { kind: 'empty', inline: true, message: 'No confirmed facts were frozen in these runs.' },
+  });
 }
 
 function FactRow({ fact }: Readonly<{ fact: AccuracyFact }>) {

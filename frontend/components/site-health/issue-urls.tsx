@@ -96,8 +96,7 @@ export function IssueUrlTable({
       {rows.map((row) => (
         <TableRow
           key={row.site_url_id}
-          onClick={() => openPage?.({ crawlId: row.crawl_id, siteUrlId: row.site_url_id })}
-          className="cursor-pointer"
+          onOpen={() => openPage?.({ crawlId: row.crawl_id, siteUrlId: row.site_url_id })}
         >
           <TableCell>
             <PageLink

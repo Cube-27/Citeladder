@@ -43,12 +43,14 @@ describe('PagesTable', () => {
     opened.length = 0;
   });
 
-  it('exposes scores as cells in a native row and keeps keyboard navigation', () => {
+  it('exposes scores as cells in a native row and opens the page from a cell or its link', () => {
     renderPages(<PagesTable pages={[page()]} />);
     const row = screen.getByRole('row', { name: /Homepage/ });
-    expect(within(row).getByRole('cell', { name: '46' })).toBeInTheDocument();
-    fireEvent.keyDown(row, { key: 'Enter' });
+    expect(row).not.toHaveAttribute('tabindex');
+    fireEvent.click(within(row).getByRole('cell', { name: '46' }));
     expect(opened).toEqual([`${CRAWL}:${UUID}`]);
+    fireEvent.click(within(row).getByRole('link', { name: /^View Homepage, / }));
+    expect(opened).toEqual([`${CRAWL}:${UUID}`, `${CRAWL}:${UUID}`]);
   });
 
   it('leads with the page, its title the link to its detail', () => {

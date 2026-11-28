@@ -7,8 +7,8 @@ import { EngineBrandMark } from '@/components/ui/engine-mark';
 import { Icon } from '@/components/ui/icon';
 import type { EvidenceSubject } from '@/components/runs/answer-dialog';
 import { useAnswerDialog } from '@/components/runs/answer-link';
-import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { readErrorProps } from '@/components/ui/notice';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { queryTableState } from '@/components/ui/state-block';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -68,7 +68,7 @@ export function SourcePrompts({
       <DataTable
         title="Prompts"
         columns={COLUMNS}
-        state={promptsState(query)}
+        {...promptsState(query)}
         busy={{ active: query.isFetching, label: 'Updating prompts' }}
         footer={query.data?.truncated ? `Newest ${EVIDENCE_LIMIT} shown` : null}
       >
@@ -90,25 +90,19 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'open', label: 'Open', width: 'status', hideLabel: true },
 ];
 
-function promptsState(
-  query: UseQueryResult<VisibilityEvidenceResponse, unknown>,
-): DataTableState | undefined {
-  if (query.isError) {
-    return {
-      kind: 'error',
-      ...readErrorProps(query),
-      title: "Couldn't load the tracked prompts",
-      fallback: 'The request failed or timed out.',
-    };
-  }
-  if (!query.data) return { kind: 'loading', label: 'Loading prompts…' };
-  if (query.data.items.length) return undefined;
-  return {
-    kind: 'empty',
-    headingLevel: 3,
-    icon: MessageSquare,
-    heading: 'No tracked prompts in this selection used this source',
-  };
+function promptsState(query: UseQueryResult<VisibilityEvidenceResponse, unknown>) {
+  return queryTableState(query, {
+    subject: 'the tracked prompts',
+    empty: (data) =>
+      data.items.length
+        ? undefined
+        : {
+            kind: 'empty',
+            headingLevel: 3,
+            icon: MessageSquare,
+            heading: 'No tracked prompts in this selection used this source',
+          },
+  });
 }
 
 function PromptRow({

@@ -7,6 +7,7 @@ import { Absence } from './absence';
 import { Button } from './button';
 import { DataTable } from './data-table';
 import { FilterBar } from './filter-bar';
+import { queryTableState } from './state-block';
 
 type DataTableProps = ComponentProps<typeof DataTable>;
 import { TableActionsCell, TableCell, TableRow, TableSelectCell } from './table';
@@ -110,6 +111,35 @@ describe('DataTable', () => {
         'Shares use all GA4 source-report sessions.',
       ),
     ).toBeVisible();
+  });
+
+  it('keeps the loaded rows after a failed refresh and shows the error beside them', () => {
+    const read = {
+      isError: true,
+      error: new Error('timeout'),
+      isFetching: false,
+      refetch: () => undefined,
+    };
+    const table = (data: readonly string[] | undefined) => (
+      <DataTable
+        label="Prompts"
+        columns={[{ key: 'prompt', label: 'Prompt' }]}
+        {...queryTableState({ ...read, data }, { subject: 'prompts' })}
+      >
+        {data?.map((prompt) => (
+          <TableRow key={prompt}>
+            <TableCell>{prompt}</TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    );
+    const { rerender } = render(table(undefined));
+    expect(screen.getByText("Couldn't load prompts")).toBeVisible();
+    expect(screen.queryByRole('cell', { name: 'Best CRM for startups' })).toBeNull();
+
+    rerender(table(['Best CRM for startups']));
+    expect(screen.getByRole('cell', { name: 'Best CRM for startups' })).toBeVisible();
+    expect(screen.getByText("Couldn't load prompts")).toBeVisible();
   });
 
   it('replaces a paged table with its state exactly as an unpaged one, holding no row space', () => {

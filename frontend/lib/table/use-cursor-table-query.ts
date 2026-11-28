@@ -2,8 +2,11 @@ import { useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-q
 
 import type { DataTablePager, DataTableState } from '@/components/ui/data-table';
 import { cursorControls, pageRange, useCursorTable } from './use-cursor-table';
-import { readErrorProps } from '@/components/ui/notice';
-import { READ_FAILED } from '@/components/ui/state-block';
+import {
+  queryTableState,
+  type QueryTableState,
+  type RefreshError,
+} from '@/components/ui/state-block';
 
 type CursorPage = Readonly<{ items: readonly unknown[]; next_cursor: string | null }>;
 
@@ -11,7 +14,8 @@ type CursorPageRequest = Readonly<{ cursor: string | undefined; limit: number }>
 
 type CursorTableProps = Readonly<{
   pageSize: number;
-  state: DataTableState | undefined;
+  state: QueryTableState['state'];
+  refreshError: RefreshError | undefined;
   busy: Readonly<{ active: boolean; label: string }>;
   pager: DataTablePager | undefined;
 }>;
@@ -59,20 +63,16 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
     },
   });
   const page = query.data;
-  let state: DataTableState | undefined;
-  if (query.isPending) state = { kind: 'loading', label: loading };
-  else if (query.isError)
-    state = {
-      kind: 'error',
-      ...readErrorProps(query),
-      title: `Couldn't load ${subject}`,
-      fallback: READ_FAILED,
-    };
-  else if (query.data.items.length === 0) state = empty(query.data);
+  const { state, refreshError } = queryTableState(query, {
+    subject,
+    loading,
+    empty: (data) => (data.items.length === 0 ? empty(data) : undefined),
+  });
   const total = totalOf?.(page);
   const table: CursorTableProps = {
     pageSize,
     state,
+    refreshError,
     busy: { active: query.isFetching && !query.isPending, label: loading },
     pager:
       total !== undefined || (page && (page.items.length > 0 || cursor.canPrev))

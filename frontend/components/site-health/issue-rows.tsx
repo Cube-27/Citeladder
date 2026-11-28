@@ -51,7 +51,7 @@ export function IssueRow({
 }>) {
   const title = issueTitle(issue);
   return (
-    <TableRow onClick={onOpen} className={onOpen ? 'cursor-pointer' : undefined}>
+    <TableRow onOpen={onOpen}>
       <TableCell>{renderName(title)}</TableCell>
       <TableCell className="whitespace-nowrap">
         <IssueSeverityMark issue={issue} />

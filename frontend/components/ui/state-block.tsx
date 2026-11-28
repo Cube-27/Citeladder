@@ -135,6 +135,49 @@ export function screenState<T, M extends T>(
   return { kind: 'state', state: { kind: 'not_measured', ...options.notMeasured } };
 }
 
+export type TableRead<T> = RetryableRead &
+  Readonly<{
+    isError: boolean;
+    data: T | undefined;
+  }>;
+
+export type RefreshError = Readonly<{
+  error: unknown;
+  fallback: string;
+  onRetry: () => void;
+  pending?: boolean;
+  title: string;
+}>;
+
+type TableState = Exclude<StateBlockProps, { inline: true }>;
+
+export type QueryTableState<S extends StateBlockProps = TableState> = Readonly<{
+  state?: S | TableState;
+  refreshError?: RefreshError;
+}>;
+
+export function queryTableState<T, S extends StateBlockProps = TableState>(
+  read: TableRead<T>,
+  {
+    subject,
+    loading = `Loading ${subject}…`,
+    empty,
+  }: Readonly<{
+    subject: string;
+    loading?: string;
+    empty?: (data: T) => S | undefined;
+  }>,
+): QueryTableState<S> {
+  const failure = read.isError
+    ? { title: `Couldn't load ${subject}`, fallback: READ_FAILED, ...readErrorProps(read) }
+    : undefined;
+  if (read.data === undefined) {
+    if (failure) return { state: { kind: 'error', ...failure } };
+    return { state: { kind: 'loading', label: loading } };
+  }
+  return { state: empty?.(read.data), refreshError: failure };
+}
+
 export function StateBlock(props: StateBlockProps) {
   const onPage = useOnPage();
   const level = useContext(StateHeadingLevelContext);

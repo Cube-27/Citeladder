@@ -100,31 +100,38 @@ export function TableRow({
   children,
   className,
   highlight,
-  focusable = false,
+  onOpen,
   well = false,
   dimmed = false,
   ...props
 }: Readonly<
-  HTMLAttributes<HTMLTableRowElement> & {
+  Omit<HTMLAttributes<HTMLTableRowElement>, 'onClick'> & {
     highlight?: boolean;
-    focusable?: boolean;
+    onOpen?: () => void;
     well?: boolean;
     dimmed?: boolean;
   }
 >) {
-  const pressable = props.onClick !== undefined;
+  const pressable = onOpen !== undefined;
   return (
     <tr
       {...props}
+      onClick={
+        onOpen
+          ? (event) => {
+              if (isRowSurfaceClick(event)) onOpen();
+            }
+          : undefined
+      }
       data-pressable={pressable || undefined}
       className={cn(
         'h-row transition-colors duration-fast',
+        pressable && 'cursor-pointer',
         pressable &&
           !highlight &&
           '[[data-public-surface]_&]:not-aria-selected:hover:overlay-hover',
         '[[data-public-surface]_&]:aria-selected:overlay-selected',
         highlight && '[[data-public-surface]_&]:bg-accent-wash',
-        focusable && 'focus-ring',
         well && 'bg-well hover:bg-well',
         dimmed && 'opacity-disabled',
         className,

@@ -8,9 +8,8 @@ import { useAnswerDialog } from '@/components/runs/answer-link';
 import { Absence } from '@/components/ui/absence';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import type { DataTableState } from '@/components/ui/data-table-body';
 import { Inline } from '@/components/ui/layout';
-import { readErrorProps, type RetryableRead } from '@/components/ui/notice';
+import { queryTableState, type TableRead } from '@/components/ui/state-block';
 import { Pressable } from '@/components/ui/pressable';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -78,7 +77,7 @@ export function PromptPastAnswers({
         title="Past answers"
         columns={COLUMNS}
         pageSize={PAGE_SIZE}
-        state={tableState(read, page)}
+        {...tableState(read)}
         busy={{ active: read.isPlaceholderData, label: 'Loading answers…' }}
         pager={
           page?.items.length
@@ -97,11 +96,7 @@ export function PromptPastAnswers({
         }
       >
         {page?.items.map((answer) => (
-          <TableRow
-            key={answer.execution_id}
-            className="cursor-pointer"
-            onClick={() => openAnswer(answer.execution_id)}
-          >
+          <TableRow key={answer.execution_id} onOpen={() => openAnswer(answer.execution_id)}>
             <TableCell>
               <TextLink asChild underline="hover">
                 <Pressable
@@ -146,26 +141,14 @@ export function PromptPastAnswers({
   );
 }
 
-function tableState(
-  read: RetryableRead & Readonly<{ isError: boolean }>,
-  page: PromptAnswerPage | undefined,
-): DataTableState | undefined {
-  if (read.isError && !page)
-    return {
-      kind: 'error',
-      ...readErrorProps(read),
-      title: "Couldn't load past answers",
-      fallback: 'The request failed or timed out.',
-    };
-  if (!page) return { kind: 'loading', label: 'Loading past answers…' };
-  if (!page.items.length)
-    return {
-      kind: 'empty',
-      headingLevel: 3,
-      icon: ICONS.runs,
-      heading: 'No answers to show',
-    };
-  return undefined;
+function tableState(read: TableRead<PromptAnswerPage>) {
+  return queryTableState(read, {
+    subject: 'past answers',
+    empty: (page) =>
+      page.items.length
+        ? undefined
+        : { kind: 'empty', headingLevel: 3, icon: ICONS.runs, heading: 'No answers to show' },
+  });
 }
 
 type Brand = PromptAnswer['brands'][number];

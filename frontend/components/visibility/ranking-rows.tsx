@@ -60,12 +60,7 @@ export function RankingRowsTable({
           <TableRow
             key={rankingRowKey(row)}
             highlight={row.is_brand}
-            {...(row.is_brand
-              ? {}
-              : {
-                  className: 'cursor-pointer',
-                  onClick: () => navigate(competitorHref(row.name)),
-                })}
+            onOpen={row.is_brand ? undefined : () => void navigate(competitorHref(row.name))}
           >
             <TableCell>
               <Inline as="span">

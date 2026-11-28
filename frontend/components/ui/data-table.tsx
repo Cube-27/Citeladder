@@ -34,7 +34,8 @@ import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
 import { TabHeadSlotContext } from '@/components/ui/tab-head-slot';
-import { StateBlock } from '@/components/ui/state-block';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock, type RefreshError } from '@/components/ui/state-block';
 import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
 
 import './data-table.css';
@@ -52,6 +53,7 @@ export function DataTable({
   children,
   pageSize,
   state,
+  refreshError,
   pager,
   busy,
   selection,
@@ -66,6 +68,7 @@ export function DataTable({
   children?: ReactNode;
   pageSize?: number;
   state?: DataTableState | DataTableInlineEmpty;
+  refreshError?: RefreshError;
   pager?: DataTablePager;
   busy?: Readonly<{ active: boolean; label: string }>;
   selection?: DataTableSelection;
@@ -105,6 +108,7 @@ export function DataTable({
         actions={actions}
         toolbar={toolbar}
       />
+      {refreshError ? <Notice kind="read" {...refreshError} /> : null}
       <ReplacedFootprint state={replacing} level={stateLevel(title, level)}>
         <DataTableFrame
           scroll={scroll}

@@ -165,7 +165,7 @@ function SourceRows({
       frame={{
         pageSize: SOURCE_ROWS,
         busy: { active: query.isFetching, label: 'Updating sources' },
-        state: tableState({ query, rows, narrowed: false, searching: false, gapOnly: false }),
+        ...tableState({ query, rows, narrowed: false, searching: false, gapOnly: false }),
       }}
     />
   );

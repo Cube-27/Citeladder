@@ -1,18 +1,16 @@
-import type { DataTableState } from '@/components/ui/data-table';
 import { ExecutionsTable } from '@/components/runs/executions-table';
 import { ProgressPanel, ProgressSkeleton } from '@/components/runs/progress-panel';
 import { ICONS } from '@/lib/icons';
 import type { MutationNotice } from '@/lib/api/mutation-notice';
 import type { Audit, Execution } from '@citeladder/contracts';
 import { readErrorProps, type RetryableRead } from '@/components/ui/notice';
-import { StateBlock } from '@/components/ui/state-block';
+import { queryTableState, StateBlock } from '@/components/ui/state-block';
 
 type RunDetailViewProps = {
   audit: Audit | undefined;
   auditLoading: boolean;
   auditRead: RetryableRead;
   executions: Execution[] | undefined;
-  executionsLoading: boolean;
   executionsRead: RetryableRead;
   cancelNotice: MutationNotice | null;
   rerunNotice: MutationNotice | null;
@@ -54,29 +52,18 @@ function AuditSection({
 
 function executionsState({
   executions,
-  executionsLoading,
   executionsRead,
-}: Pick<RunDetailViewProps, 'executions' | 'executionsLoading' | 'executionsRead'>):
-  | DataTableState
-  | undefined {
-  if (executionsRead.error && !executions) {
-    return {
-      kind: 'error',
-      ...readErrorProps(executionsRead),
-      title: "Couldn't load the executions",
-      fallback: 'The request failed or timed out.',
-    };
-  }
-  if (executionsLoading || !executions) return { kind: 'loading', label: 'Loading executions…' };
-  if (executions.length === 0) {
-    return {
-      kind: 'empty',
-      headingLevel: 3,
-      icon: ICONS.runs,
-      heading: 'No executions yet',
-    };
-  }
-  return undefined;
+}: Pick<RunDetailViewProps, 'executions' | 'executionsRead'>) {
+  return queryTableState(
+    { ...executionsRead, isError: Boolean(executionsRead.error), data: executions },
+    {
+      subject: 'the executions',
+      empty: (rows) =>
+        rows.length === 0
+          ? { kind: 'empty', headingLevel: 3, icon: ICONS.runs, heading: 'No executions yet' }
+          : undefined,
+    },
+  );
 }
 
 export function RunDetailView(props: Readonly<RunDetailViewProps>) {
@@ -88,7 +75,7 @@ export function RunDetailView(props: Readonly<RunDetailViewProps>) {
       <AuditSection {...props} />
       <ExecutionsTable
         executions={props.executions ?? []}
-        state={executionsState(props)}
+        {...executionsState(props)}
         onSelectEvidence={props.onSelectEvidence}
       />
     </>

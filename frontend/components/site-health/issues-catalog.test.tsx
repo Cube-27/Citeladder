@@ -132,7 +132,9 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
-    expect(await screen.findByRole('status', { name: 'Loading issues…' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('status', { name: 'Loading issues for this crawl…' }),
+    ).toBeInTheDocument();
     act(() => releaseIssues());
     expect(
       await screen.findByRole('button', { name: 'WebSite schema is missing' }),

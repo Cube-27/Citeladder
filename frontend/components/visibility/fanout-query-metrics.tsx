@@ -7,7 +7,7 @@ import { Absence } from '@/components/ui/absence';
 import type { DataTableColumn } from '@/components/ui/data-table';
 import type { DataTableState } from '@/components/ui/data-table-body';
 import { Delta } from '@/components/ui/delta';
-import { readErrorProps } from '@/components/ui/notice';
+import { queryTableState } from '@/components/ui/state-block';
 import { TableCell } from '@/components/ui/table';
 import { Search } from '@/lib/icons';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -70,7 +70,6 @@ export function useFanoutQueries(scope: FanoutScope, enabled: boolean, view: Fan
     byQuery,
     rows: read.data?.items ?? [],
     compared: read.data?.compared ?? false,
-    isError: read.isError && !read.data,
     lookup: lookupState(read),
   };
 }
@@ -150,15 +149,13 @@ const empty = (heading: string): DataTableState => ({
 export function movedState(
   view: Exclude<FanoutView, 'top'>,
   queries: ReturnType<typeof useFanoutQueries>,
-): DataTableState | undefined {
-  if (queries.isError)
-    return {
-      kind: 'error',
-      ...readErrorProps(queries.read),
-      title: "Couldn't load query changes",
-      fallback: 'The request failed or timed out.',
-    };
-  if (!queries.compared) return empty('Nothing to compare yet');
-  if (queries.rows.length) return undefined;
-  return view === 'rising' ? empty('No query rose') : empty('No query fell');
+) {
+  return queryTableState(queries.read, {
+    subject: 'query changes',
+    empty: (data) => {
+      if (!data.compared) return empty('Nothing to compare yet');
+      if (data.items.length) return undefined;
+      return view === 'rising' ? empty('No query rose') : empty('No query fell');
+    },
+  });
 }

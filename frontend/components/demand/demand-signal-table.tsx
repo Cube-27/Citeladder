@@ -14,7 +14,6 @@ import {
   numericMetric,
   signalPage,
   signalSubject,
-  signalTarget,
   signalTypeMeta,
   type RankedSignal,
 } from '@/lib/demand/signals';
@@ -92,31 +91,13 @@ function SignalRow({
     inspect();
   };
   return (
-    <TableRow
-      tabIndex={0}
-      aria-label={`Inspect evidence for ${signalTarget(signal)}`}
-      onClick={inspectFromRow}
-      onKeyDown={(event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        if (event.target !== event.currentTarget) return;
-        event.preventDefault();
-        inspect();
-      }}
-      focusable
-      className="cursor-pointer"
-    >
+    <TableRow onOpen={inspectFromRow}>
       <TableCell>
         <TableCellLines
           title
           primary={
             <TextLink asChild text="body" underline="hover">
-              <Pressable
-                box="row"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  inspect();
-                }}
-              >
+              <Pressable box="row" onClick={inspect}>
                 <ClampText>{subject.primary}</ClampText>
               </Pressable>
             </TextLink>

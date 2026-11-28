@@ -7,11 +7,12 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Inline } from '@/components/ui/layout';
-import { Notice, readErrorProps } from '@/components/ui/notice';
+import { Notice } from '@/components/ui/notice';
 import { TitledSection } from '@/components/ui/section';
+import { queryTableState } from '@/components/ui/state-block';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
 import { useToast } from '@/components/ui/toast';
@@ -72,7 +73,7 @@ export function CompetitorSuggestions({
     <TitledSection title={TITLE} description={sectionDescription(tracked, limit)}>
       <DecisionFailure mutation={acceptMutation} action="add that competitor" />
       <DecisionFailure mutation={rejectMutation} action="reject that suggestion" />
-      <DataTable label={TITLE} columns={columns(canWrite)} state={tableState(suggestionsQuery)}>
+      <DataTable label={TITLE} columns={columns(canWrite)} {...tableState(suggestionsQuery)}>
         {rows.map((candidate) => (
           <TableRow key={candidate.id}>
             <TableCell>
@@ -167,23 +168,17 @@ function columns(canWrite: boolean): DataTableColumn[] {
   ];
 }
 
-function tableState(
-  query: UseQueryResult<ObservedCompetitor[], unknown>,
-): DataTableState | undefined {
-  if (query.isError)
-    return {
-      kind: 'error',
-      ...readErrorProps(query),
-      title: "Couldn't load competitor suggestions",
-      fallback: 'The request failed or timed out.',
-    };
-  if (query.isPending) return { kind: 'loading', label: 'Loading suggestions…' };
-  if (!query.data.length)
-    return {
-      kind: 'empty',
-      headingLevel: 3,
-      icon: UserPlus,
-      heading: 'No suggested competitors yet.',
-    };
-  return undefined;
+function tableState(query: UseQueryResult<ObservedCompetitor[], unknown>) {
+  return queryTableState(query, {
+    subject: 'competitor suggestions',
+    empty: (data) =>
+      data.length
+        ? undefined
+        : {
+            kind: 'empty',
+            headingLevel: 3,
+            icon: UserPlus,
+            heading: 'No suggested competitors yet.',
+          },
+  });
 }

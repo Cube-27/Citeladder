@@ -304,12 +304,13 @@ describe('Demand tab', () => {
     expect(within(other).queryByRole('link', { name: /^Open the Action/ })).not.toBeInTheDocument();
   });
 
-  it('inspects a signal from the keyboard on its focused row', async () => {
+  it('inspects a signal from the keyboard through the one stop in its row', async () => {
     const user = userEvent.setup();
     renderProjection();
 
     const row = await findSignalRow('school fees');
-    row.focus();
+    expect(row).not.toHaveAttribute('tabindex');
+    within(row).getByRole('button', { name: 'school fees' }).focus();
     await user.keyboard('{Enter}');
 
     const drawer = await screen.findByRole('dialog', { name: 'school fees' });

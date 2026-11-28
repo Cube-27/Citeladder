@@ -4,10 +4,10 @@ import { useState } from 'react';
 import { ConnectStrip } from '@/components/mcp/connect-strip';
 import { IconButton } from '@/components/ui/button';
 import { ClampText } from '@/components/ui/clamp-text';
-import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
-import { StateBlock } from '@/components/ui/state-block';
+import { queryTableState, StateBlock } from '@/components/ui/state-block';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { Text } from '@/components/ui/typography';
 import { SettingRows, SettingsGroup } from '@/components/ui/setting-row';
@@ -16,7 +16,7 @@ import type { McpConnection } from '@citeladder/contracts/mcp';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { mcpConnectionMutations, mcpConnectionQueries } from '@/lib/api/mcp-connections';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
-import { Notice, readErrorProps } from '@/components/ui/notice';
+import { Notice } from '@/components/ui/notice';
 
 type ConnectionEntry =
   | { kind: 'own'; connection: McpConnection }
@@ -80,19 +80,19 @@ const COLUMNS: readonly DataTableColumn[] = [
 ];
 
 function connectionsState(
+  own: UseQueryResult<McpConnection[]>,
   queries: readonly UseQueryResult<McpConnection[]>[],
-): DataTableState | undefined {
+) {
   const failed = queries.find((query) => query.isError);
-  if (failed)
-    return {
-      kind: 'error',
-      title: "Couldn't load connections",
-      ...readErrorProps(failed),
-      fallback: 'Connections could not be loaded.',
-    };
-  if (queries.some((query) => query.isPending))
-    return { kind: 'loading', label: 'Loading connections…' };
-  return undefined;
+  const read = failed ?? queries.find((query) => query.data === undefined) ?? own;
+  return queryTableState(
+    {
+      ...read,
+      isError: failed !== undefined,
+      data: queries.every((query) => query.data !== undefined) ? queries : undefined,
+    },
+    { subject: 'connections' },
+  );
 }
 
 function connectionEntries(
@@ -116,7 +116,7 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId: string | null }
     enabled: workspaceId !== null,
   });
   const queries = workspaceId === null ? [ownQuery] : [ownQuery, workspaceQuery];
-  const state = connectionsState(queries);
+  const table = connectionsState(ownQuery, queries);
   const entries = connectionEntries(
     ownQuery.data ?? [],
     workspaceId === null ? null : { id: workspaceId, connections: workspaceQuery.data ?? [] },
@@ -124,10 +124,10 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId: string | null }
   const title = 'Connections';
   return (
     <SettingsGroup title={title} region={false}>
-      {state === undefined && entries.length === 0 ? (
+      {table.state === undefined && !table.refreshError && entries.length === 0 ? (
         <StateBlock kind="empty" icon={ICONS.agent} heading="No connections yet" />
       ) : (
-        <DataTable label={title} columns={COLUMNS} state={state}>
+        <DataTable label={title} columns={COLUMNS} {...table}>
           {entries.map((entry) => (
             <ConnectionRow
               key={`${entry.kind}:${entry.connection.id}`}

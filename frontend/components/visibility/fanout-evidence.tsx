@@ -208,7 +208,7 @@ export function FanoutEvidence({
         status: <SearchScopeNote search={needle} matched={matched} />,
       }}
       columns={COLUMNS}
-      state={tableState({ view, rows: visible.length, needle, matched, queries })}
+      {...tableState({ view, rows: visible.length, needle, matched, queries })}
       pager={tablePager({ view, unit, from, to, grouping, page, pageCount, setPage })}
       footer={query.data?.truncated ? `Newest ${limit} shown` : null}
     >
@@ -269,7 +269,7 @@ function tableState(input: {
   queries: ReturnType<typeof useFanoutQueries>;
 }) {
   if (input.view !== 'top') return movedState(input.view, input.queries);
-  return input.rows === 0 ? noSearchMatchState(input.needle, input.matched) : undefined;
+  return { state: input.rows === 0 ? noSearchMatchState(input.needle, input.matched) : undefined };
 }
 
 function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) {

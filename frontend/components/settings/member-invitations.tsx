@@ -5,7 +5,8 @@ import { Tag } from '@/components/ui/tag';
 import { Button, IconButton } from '@/components/ui/button';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { CopyButton } from '@/components/ui/copy-button';
-import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { queryTableState } from '@/components/ui/state-block';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -17,7 +18,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/workspaces';
 
 import { ROLE_OPTIONS, ROLE_SUMMARY, roleLabel } from './member-roles';
-import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
+import { Notice, type RetryableRead } from '@/components/ui/notice';
 import { Text } from '@/components/ui/typography';
 import { Trash2 } from '@/lib/icons';
 
@@ -161,7 +162,7 @@ export function PendingInvitations({
       <DataTable
         label="Pending invitations"
         columns={INVITATION_COLUMNS}
-        state={invitationsState(read)}
+        {...queryTableState(read, { subject: 'pending invitations' })}
       >
         {invitations.map((invitation) => (
           <TableRow key={invitation.id}>
@@ -199,20 +200,6 @@ export function PendingInvitations({
       </DataTable>
     </SettingsGroup>
   );
-}
-
-function invitationsState(
-  read: RetryableRead & Readonly<{ isLoading: boolean; isError: boolean }>,
-): DataTableState | undefined {
-  if (read.isError)
-    return {
-      kind: 'error',
-      title: "Couldn't load pending invitations",
-      ...readErrorProps(read),
-      fallback: 'Pending invitations could not be loaded.',
-    };
-  if (read.isLoading) return { kind: 'loading', label: 'Loading invitations…' };
-  return undefined;
 }
 
 const INVITATION_COLUMNS: readonly DataTableColumn[] = [

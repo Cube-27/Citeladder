@@ -4,6 +4,7 @@ import type { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query
 import { choiceFilter } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import { queryTableState } from '@/components/ui/state-block';
 import { CLAIM_COLUMNS, ClaimRow, claimKey } from '@/components/visibility/claim-row';
 import {
   CLAIM_STATE_LABELS,
@@ -43,7 +44,7 @@ export function ClaimsTable({
           }),
         ],
       }}
-      state={tableState(query, claims, claimState)}
+      {...tableState(query, claims, claimState)}
       footer={
         query.hasNextPage ? (
           <Button
@@ -64,24 +65,18 @@ export function ClaimsTable({
 }
 
 function tableState(query: Query, claims: readonly AccuracyClaim[], state: ClaimStateView) {
-  if (query.isPending) return { kind: 'loading', label: 'Loading claims' } as const;
-  if (query.isError)
-    return {
-      kind: 'error',
-      error: query.error,
-      title: "Couldn't load the claims",
-      fallback: 'The claims could not be loaded.',
-      onRetry: () => void query.refetch(),
-      pending: query.isFetching,
-    } as const;
-  if (!claims.length)
-    return {
-      kind: 'empty',
-      inline: true,
-      message:
-        state === 'all'
-          ? 'No claims in these answers.'
-          : `No ${CLAIM_STATE_LABELS[state].toLowerCase()} claims in these answers.`,
-    } as const;
-  return undefined;
+  return queryTableState(query, {
+    subject: 'the claims',
+    empty: () =>
+      claims.length
+        ? undefined
+        : {
+            kind: 'empty',
+            inline: true,
+            message:
+              state === 'all'
+                ? 'No claims in these answers.'
+                : `No ${CLAIM_STATE_LABELS[state].toLowerCase()} claims in these answers.`,
+          },
+  });
 }

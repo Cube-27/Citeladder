@@ -1,7 +1,8 @@
 import { Avatar } from '@/components/ui/avatar';
 import { Tag } from '@/components/ui/tag';
 import { Button, IconButton } from '@/components/ui/button';
-import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { queryTableState, type TableRead } from '@/components/ui/state-block';
 import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
@@ -23,47 +24,27 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'actions', label: 'Actions', kind: 'actions', width: 'rowActions', hideLabel: true },
 ];
 
-function rosterState({
-  isLoading,
-  isError,
-  error,
-  onRetry,
-  noMatch,
-}: Readonly<{
-  isLoading: boolean;
-  isError: boolean;
-  error: unknown;
-  onRetry: () => void;
-  noMatch: string | null;
-}>): DataTableState | undefined {
-  if (isLoading) return { kind: 'loading', label: 'Loading members…' };
-  if (isError)
-    return {
-      kind: 'error',
-      title: "Couldn't load members",
-      error,
-      fallback: 'The member list could not be loaded.',
-      onRetry,
-    };
-  if (noMatch !== null)
-    return {
-      kind: 'empty',
-      icon: SearchX,
-      heading: `No members match “${noMatch}”`,
-      headingLevel: 3,
-    };
-  return undefined;
+function rosterState(read: TableRead<unknown>, noMatch: string | null) {
+  return queryTableState(read, {
+    subject: 'members',
+    empty: () =>
+      noMatch === null
+        ? undefined
+        : {
+            kind: 'empty',
+            icon: SearchX,
+            heading: `No members match “${noMatch}”`,
+            headingLevel: 3,
+          },
+  });
 }
 
 export function MemberRoster({
   members,
   toolbar,
   noMatch,
-  isLoading,
-  isError,
-  error,
+  read,
   busy,
-  onRetry,
   onChangeRole,
   onTransfer,
   onRemove,
@@ -71,22 +52,14 @@ export function MemberRoster({
   members: readonly WorkspaceMember[];
   toolbar: TableToolbarProps;
   noMatch: string | null;
-  isLoading: boolean;
-  isError: boolean;
-  error: unknown;
+  read: TableRead<unknown>;
   busy: boolean;
-  onRetry: () => void;
   onChangeRole: (member: WorkspaceMember, role: AssignableWorkspaceRole) => void;
   onTransfer?: (member: WorkspaceMember) => void;
   onRemove: (member: WorkspaceMember) => void;
 }>) {
   return (
-    <DataTable
-      label="Members"
-      toolbar={toolbar}
-      columns={COLUMNS}
-      state={rosterState({ isLoading, isError, error, onRetry, noMatch })}
-    >
+    <DataTable label="Members" toolbar={toolbar} columns={COLUMNS} {...rosterState(read, noMatch)}>
       {members.map((member) => (
         <MemberRow
           key={member.id}

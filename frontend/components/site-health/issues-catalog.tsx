@@ -8,15 +8,9 @@ import { IssuePage, PendingIssuePage, type IssueHead } from '@/components/site-h
 import { ISSUE_COLUMNS, IssueRow } from '@/components/site-health/issue-rows';
 import { pageKindFilter } from '@/components/site-health/page-kind-select';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
-import {
-  DataTable,
-  type DataTableColumn,
-  type DataTablePager,
-  type DataTableState,
-} from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn, type DataTablePager } from '@/components/ui/data-table';
 import { InfoHint } from '@/components/ui/info-hint';
-import { readErrorProps } from '@/components/ui/notice';
-import { READ_FAILED } from '@/components/ui/state-block';
+import { queryTableState } from '@/components/ui/state-block';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { SubmittedSearch } from '@/components/site-health/submitted-search';
@@ -144,7 +138,7 @@ export function IssuesCatalog({
           ),
           filters: catalogFilters(filters, rows, updateFilters),
         }}
-        state={tableState(issuesQuery)}
+        {...tableState(issuesQuery)}
         pageSize={ISSUE_PAGE_LIMIT}
         pager={pager}
         busy={{ active: issuesQuery.isFetching, label: 'Updating issues' }}
@@ -163,21 +157,13 @@ export function IssuesCatalog({
 }
 
 function tableState(query: ReturnType<typeof useIssuesCatalogQueries>['issuesQuery']) {
-  if (query.isError && !query.data)
-    return {
-      kind: 'error',
-      ...readErrorProps(query),
-      fallback: READ_FAILED,
-      title: "Couldn't load issues for this crawl",
-    } satisfies DataTableState;
-  if (!query.data) return { kind: 'loading', label: 'Loading issues…' } satisfies DataTableState;
-  if (query.data.items.length === 0)
-    return {
-      kind: 'empty',
-      icon: ICONS.issues,
-      heading: 'No issue types match this view',
-    } satisfies DataTableState;
-  return undefined;
+  return queryTableState(query, {
+    subject: 'issues for this crawl',
+    empty: (data) =>
+      data.items.length === 0
+        ? { kind: 'empty', icon: ICONS.issues, heading: 'No issue types match this view' }
+        : undefined,
+  });
 }
 
 function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataTableColumn[] {
