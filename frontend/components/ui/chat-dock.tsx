@@ -53,7 +53,7 @@ export function ComposerDock({
   onJumpToLatest,
 }: Readonly<{ children: ReactNode; onJumpToLatest?: (() => void) | null }>) {
   return (
-    <div className="z-sticky relative shrink-0 pt-2 pb-1">
+    <div className="z-sticky relative shrink-0 pt-2">
       {onJumpToLatest ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-full flex justify-center pb-2">
           <IconButton
@@ -98,7 +98,7 @@ export function ComposerFrame({
   return (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <form // NOSONAR
-      className="max-w-thread mx-auto grid w-full min-w-0 grid-cols-1 gap-1"
+      className="max-w-chat mx-auto grid w-full min-w-0 grid-cols-1 gap-1"
       onDragOver={(event) => {
         if (!carriesFiles(event)) return;
         event.preventDefault();
@@ -173,11 +173,7 @@ export function ComposerFrame({
 }
 
 export function AgentThread({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div className="max-w-thread gap-card mx-auto flex w-full min-w-0 flex-col px-4">
-      {children}
-    </div>
-  );
+  return <div className="max-w-chat gap-card mx-auto flex w-full min-w-0 flex-col">{children}</div>;
 }
 
 export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: ReactNode }>) {

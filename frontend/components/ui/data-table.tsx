@@ -6,6 +6,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 import { BusyRung } from '@/components/ui/rung-meter';
 import {
@@ -32,6 +33,7 @@ import {
 import { TABLE_DEFAULT_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
+import { TabHeadSlotContext } from '@/components/ui/tab-head-slot';
 import { StateBlock } from '@/components/ui/state-block';
 import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
 
@@ -323,26 +325,33 @@ function DataTableHeader({
   actions?: ReactNode;
   toolbar?: TableToolbarProps;
 }>) {
+  const tabHead = useContext(TabHeadSlotContext);
   const shown = hasHeadControls({ ...toolbar, actions: toolbar?.actions || actions });
+  const controls = shown ? (
+    <HeadControls
+      {...toolbar}
+      actions={
+        <>
+          {toolbar?.actions}
+          {actions}
+        </>
+      }
+    />
+  ) : undefined;
+  const lifted = tabHead !== null && !title && !description;
+  if (lifted) {
+    return (
+      <>
+        {controls ? createPortal(controls, tabHead) : null}
+        {toolbar?.search ? (
+          <SectionHeader data-data-table-header="" search={toolbar.search} />
+        ) : null}
+      </>
+    );
+  }
   if (!title && !description && !shown && !toolbar?.search) return null;
   return (
-    <SectionHeader
-      data-data-table-header=""
-      search={toolbar?.search}
-      actions={
-        shown ? (
-          <HeadControls
-            {...toolbar}
-            actions={
-              <>
-                {toolbar?.actions}
-                {actions}
-              </>
-            }
-          />
-        ) : undefined
-      }
-    >
+    <SectionHeader data-data-table-header="" search={toolbar?.search} actions={controls}>
       {title || description ? (
         <>
           {title ? (

@@ -3,14 +3,16 @@ import {
   useContext,
   useEffect,
   useRef,
-  type ButtonHTMLAttributes,
+  useState,
   type ComponentPropsWithoutRef,
   type KeyboardEvent,
   type ReactNode,
 } from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 
+import { Inline } from '@/components/ui/layout';
 import { ScrollFrame } from '@/components/ui/scroll-edges';
+import { TabHeadSlotContext } from '@/components/ui/tab-head-slot';
 import { useOnPage } from '@/components/ui/section';
 import { sidebarNavRowClasses } from '@/components/ui/sidebar';
 import { MEDIA } from '@/lib/breakpoints';
@@ -57,7 +59,7 @@ const TAB_KIND = {
   },
 } as const;
 
-function tabFace({
+export function tabFace({
   kind,
   selected,
   className,
@@ -72,9 +74,11 @@ function tabFace({
 
 export const TAB_BASELINE = 'shadow-[inset_0_-1px_0_var(--color-rule)]';
 
+const PILL_TRACK = 'rounded-control bg-state-fill p-tray-inset';
+
 const STRIP_ROW = {
   page: 'min-h-page-tabs',
-  section: cn(TAB_BASELINE, 'flex w-full'),
+  section: PILL_TRACK,
 } as const;
 
 const TAB_TRACK =
@@ -148,6 +152,8 @@ export type TabsProps<T extends string> = TabStripProps<T> & {
   onValueChange: (value: T) => void;
   children?: ReactNode;
   spaced?: boolean;
+  heading?: ReactNode;
+  actions?: ReactNode;
 };
 
 const TABS_LAYOUT = {
@@ -326,7 +332,10 @@ function TabStrip<T extends string>({
                 event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
               }}
               data-tab-face=""
-              className={tabFace({ kind: 'tab', selected: item.value === active })}
+              className={tabFace({
+                kind: kind === 'page' ? 'tab' : 'segment',
+                selected: item.value === active,
+              })}
             >
               {item.label}
               {item.count === undefined ? null : <ControlCount count={item.count} />}
@@ -343,12 +352,28 @@ export function Tabs<T extends string>({
   onValueChange,
   children,
   spaced = false,
+  heading,
+  actions,
   ...bar
 }: Readonly<TabsProps<T>>) {
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
   return (
     <TabsRoot value={value} onValueChange={onValueChange} layout={spaced ? 'spaced' : 'flow'}>
-      <TabStrip {...bar} />
-      {children}
+      <Inline data-tab-head="" wrap gap="group">
+        {heading ? <Inline box="fill">{heading}</Inline> : null}
+        <TabStrip {...bar} />
+        <Inline
+          ref={setSlot}
+          data-tab-head-controls=""
+          wrap
+          justify="end"
+          hideEmpty
+          box={heading ? 'auto' : 'fill'}
+        >
+          {actions}
+        </Inline>
+      </Inline>
+      <TabHeadSlotContext value={slot}>{children}</TabHeadSlotContext>
     </TabsRoot>
   );
 }
@@ -443,7 +468,7 @@ export function SegmentedControl<T extends string>({
             strip.current = node;
           }}
           data-segmented-track=""
-          className={cn(TAB_STRIP, 'rounded-control bg-state-fill p-tray-inset', className)}
+          className={cn(TAB_STRIP, PILL_TRACK, className)}
         >
           <div
             id={id}
@@ -500,40 +525,5 @@ export function SegmentedControl<T extends string>({
         </div>
       )}
     </ScrollFrame>
-  );
-}
-
-export function SegmentedAction({
-  selected = false,
-  label,
-  labels,
-  className,
-  children,
-  ...props
-}: Readonly<
-  Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
-    selected?: boolean;
-    label: string;
-    labels: readonly string[];
-    children?: ReactNode;
-  }
->) {
-  return (
-    <button
-      {...props}
-      type="button"
-      data-tab-face=""
-      className={tabFace({ kind: 'segment', selected, className })}
-    >
-      <span className="inline-grid justify-items-center">
-        {labels.map((reserved) => (
-          <span key={reserved} aria-hidden="true" className="invisible col-start-1 row-start-1">
-            {reserved}
-          </span>
-        ))}
-        <span className="col-start-1 row-start-1">{label}</span>
-      </span>
-      {children}
-    </button>
   );
 }

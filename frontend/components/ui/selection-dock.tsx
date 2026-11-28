@@ -47,9 +47,7 @@ export function DockLabel({ children }: Readonly<{ children: ReactNode }>) {
 export function PageDock({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
     <DockLayer>
-      <DockBar label={label} span>
-        {children}
-      </DockBar>
+      <DockBar label={label}>{children}</DockBar>
     </DockLayer>
   );
 }
@@ -61,9 +59,8 @@ function DockLayer({ children }: Readonly<{ children: ReactNode }>) {
 function DockBar({
   label,
   slidesIn,
-  span = false,
   children,
-}: Readonly<{ label: string; slidesIn?: boolean; span?: boolean; children: ReactNode }>) {
+}: Readonly<{ label: string; slidesIn?: boolean; children: ReactNode }>) {
   return (
     <div
       role="toolbar"
@@ -71,8 +68,7 @@ function DockBar({
       data-selection-dock={slidesIn ? '' : undefined}
       className={cn(
         POP_FACE,
-        'pointer-events-auto absolute bottom-0 flex items-center gap-1 p-2',
-        span ? 'inset-x-0 justify-end' : 'max-w-viewport-fit left-1/2 -translate-x-1/2',
+        'max-w-viewport-fit pointer-events-auto absolute bottom-0 left-1/2 flex -translate-x-1/2 items-center gap-1 p-2',
       )}
     >
       {children}

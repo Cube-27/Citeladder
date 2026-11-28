@@ -11,11 +11,9 @@ import { WebSources } from '@/components/agent/web-sources';
 import { ProjectLink } from '@/components/ui/project-link';
 import { DraftSheet } from '@/components/ui/draft-sheet';
 import { revisionDraft } from '@/components/agent/revision-draft';
-import { Tag } from '@/components/ui/tag';
-import { Button } from '@/components/ui/button';
+import { Button, IconButton } from '@/components/ui/button';
 import { ClampText } from '@/components/ui/clamp-text';
 import { CopyButton } from '@/components/ui/copy-button';
-import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/typography';
@@ -69,37 +67,34 @@ export function OutputPane({
       <Stack as="section" gap="compact" aria-labelledby={headingId} box="shrink" content="start">
         <UnsavedChangesGuard when={unsaved} />
         <Stack as="header" gap="tight">
-          <Text as="h2" variant="heading" box="shrink" id={headingId}>
-            {revision.title}
-          </Text>
           <Inline wrap>
-            <Text variant="caption">Document {output.number}</Text>
-            <Tag>{kindLabel(output.kind)}</Tag>
-            <Text variant="caption">Revision {revision.number}</Text>
-            {output.target_label ? (
-              <ClampText text="caption" box="fill">
-                {output.target_label}
-              </ClampText>
-            ) : null}
+            <Text as="h2" variant="heading" box="fill" id={headingId}>
+              {revision.title}
+            </Text>
+            {editing ? null : (
+              <OutputActions
+                revision={revision}
+                locked={locked}
+                onEdit={
+                  canEdit
+                    ? () => {
+                        setTab('output');
+                        setDraft({
+                          baseRevisionId: revision.id,
+                          title: revision.title,
+                          body: revision.body,
+                        });
+                      }
+                    : undefined
+                }
+              />
+            )}
           </Inline>
-          {editing ? null : (
-            <OutputActions
-              revision={revision}
-              locked={locked}
-              onEdit={
-                canEdit
-                  ? () => {
-                      setTab('output');
-                      setDraft({
-                        baseRevisionId: revision.id,
-                        title: revision.title,
-                        body: revision.body,
-                      });
-                    }
-                  : undefined
-              }
-            />
-          )}
+          <ClampText text="caption">
+            {[kindLabel(output.kind), `Revision ${revision.number}`, output.target_label]
+              .filter(Boolean)
+              .join(' · ')}
+          </ClampText>
           {editing ? null : (
             <OutputDeclaration
               workspaceId={workspaceId}
@@ -184,23 +179,22 @@ function OutputActions({
   onEdit?: () => void;
 }>) {
   return (
-    <Inline wrap>
+    <Inline gap="tight">
       {onEdit ? (
-        <Button variant="secondary" disabled={locked} onClick={onEdit}>
-          <Icon icon={Pencil} />
-          Edit
-        </Button>
+        <IconButton icon={Pencil} label="Edit" variant="quiet" disabled={locked} onClick={onEdit} />
       ) : null}
-      <CopyButton value={outputMarkdown(revision.title, revision.body)} variant="secondary">
-        Copy
-      </CopyButton>
-      <Button
-        variant="secondary"
+      <CopyButton
+        value={outputMarkdown(revision.title, revision.body)}
+        variant="quiet"
+        shape="icon"
+        iconOnly
+      />
+      <IconButton
+        icon={Download}
+        label="Export Markdown"
+        variant="quiet"
         onClick={() => downloadOutputMarkdown(revision.title, revision.body)}
-      >
-        <Icon icon={Download} />
-        Export Markdown
-      </Button>
+      />
     </Inline>
   );
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { DimensionTable, useWarmDimensionTable } from './dimension-table';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionTitle } from '@/components/ui/section';
 import type { PerformanceDashboard, PerformanceDimension } from '@/lib/api/performance';
 import { BING_DIMENSION_TABS } from '@/lib/performance/performance';
 
@@ -26,10 +26,8 @@ export function BingPanel({
 
   return (
     <Section aria-label="Bing performance" data-testid="bing-panel">
-      <SectionHeader>
-        <SectionTitle>Bing</SectionTitle>
-      </SectionHeader>
       <Tabs
+        heading={<SectionTitle>Bing</SectionTitle>}
         value={dimension}
         onValueChange={setDimension}
         items={BING_DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}

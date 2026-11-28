@@ -327,7 +327,10 @@ for (const width of [1280, 390]) {
       expect(stopBox!.y).toBeLessThan(fieldBox!.y + fieldBox!.height);
       expect(stopBox!.y + stopBox!.height).toBeGreaterThan(fieldBox!.y);
       expect(menuBox!.y).toBeGreaterThanOrEqual(stopBox!.y + stopBox!.height);
-      const thread = page.getByRole('region', { name: 'Agent conversation' });
+      const thread =
+        surface === 'page'
+          ? page.locator('#main')
+          : page.getByRole('region', { name: 'Agent conversation' });
       await thread.evaluate((element) => element.scrollTo(0, 0));
       await expect(page.getByRole('button', { name: 'Jump to latest' })).toBeAttached();
       const jumpBox = await page.getByRole('button', { name: 'Jump to latest' }).boundingBox();
@@ -373,7 +376,8 @@ for (const width of [1280, 390]) {
         (element) => element.scrollHeight - element.scrollTop - element.clientHeight,
       );
       expect(remaining).toBeLessThanOrEqual(1);
-      expect(await page.locator('#main').evaluate((panel) => panel.scrollTop)).toBe(0);
+      if (surface === 'panel')
+        expect(await page.locator('#main').evaluate((panel) => panel.scrollTop)).toBe(0);
       await expect(reply).toHaveValue('Draft kept while working');
       const stop = page.getByRole('button', { name: 'Stop', exact: true });
       await stop.focus();

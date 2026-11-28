@@ -325,12 +325,12 @@ function TargetChoice({
     choose.isPending && choose.variables?.decision === decision;
   return (
     <Stack gap="tight">
-      <Text as="p" variant="caption" wrap="words">
-        This document names {name}, not the page of this chat&apos;s Action.
-      </Text>
-      <Inline wrap>
+      <Inline wrap gap="tight">
+        <Text variant="caption" wrap="words">
+          Names {name}, not this Action&apos;s page.
+        </Text>
         <Button
-          variant="secondary"
+          variant="quiet"
           disabled={disabled || pending('keep')}
           pending={pending('link')}
           pendingLabel="Linking…"
@@ -339,13 +339,13 @@ function TargetChoice({
           Link to {name}
         </Button>
         <Button
-          variant="secondary"
+          variant="quiet"
           disabled={disabled || pending('link')}
           pending={pending('keep')}
           pendingLabel="Keeping…"
           onClick={() => submit('keep')}
         >
-          Keep with this Action
+          Keep with Action
         </Button>
       </Inline>
       {choose.isError ? (

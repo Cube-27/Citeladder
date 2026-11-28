@@ -61,7 +61,6 @@ export function StepsLayout<T extends string>({
       </StepsScroller>
       <ActionBar>
         {footerStart}
-        <span className="flex-1" />
         {footerEnd}
       </ActionBar>
     </RouteFill>

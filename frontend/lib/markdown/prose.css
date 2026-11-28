@@ -78,7 +78,8 @@
   }
   .prose-content pre {
     max-width: 100%;
-    white-space: pre-wrap;
+    overflow-x: auto;
+    white-space: pre;
     padding: calc(var(--spacing) * 4);
     border-radius: var(--radius-control);
     background: var(--color-well);
