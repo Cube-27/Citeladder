@@ -19,6 +19,7 @@ import { MEDIA } from '@/lib/breakpoints';
 import { useMediaQuery } from '@/lib/use-media-query';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import './tabs.css';
 
 const TAB_STRIP =
   'relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden';

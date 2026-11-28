@@ -169,31 +169,6 @@
   animation: slide-out var(--transition-duration-open) var(--ease-fluid) both;
 }
 
-.disclosure > summary > svg {
-  transition: rotate var(--transition-duration-turn) var(--ease-standard);
-}
-.disclosure[open] > summary > svg {
-  rotate: -180deg;
-}
-@supports selector(::details-content) and (interpolate-size: allow-keywords) {
-  .disclosure {
-    interpolate-size: allow-keywords;
-  }
-  .disclosure::details-content {
-    block-size: 0;
-    opacity: 0;
-    overflow-y: clip;
-    transition:
-      block-size var(--transition-duration-open) var(--ease-quad),
-      opacity var(--transition-duration-open) var(--ease-standard),
-      content-visibility var(--transition-duration-open) allow-discrete;
-  }
-  .disclosure[open]::details-content {
-    block-size: auto;
-    opacity: 1;
-  }
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .skeleton-sweep {
     position: relative;

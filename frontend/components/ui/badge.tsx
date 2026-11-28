@@ -1,6 +1,7 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
+import './badge.css';
 
 export type BadgeTone =
   | 'neutral'

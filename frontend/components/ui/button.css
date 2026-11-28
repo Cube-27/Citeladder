@@ -1,0 +1,41 @@
+:root:not([data-public-surface]) [data-button-variant='secondary'] {
+  background: var(--color-control);
+  border-color: var(--color-edge-control);
+  box-shadow: none;
+}
+:root:not([data-public-surface]) [data-button-variant='primary'] {
+  background-image: linear-gradient(var(--color-primary-from), var(--color-primary-to));
+  box-shadow: var(--shadow-raised-primary);
+}
+:root:not([data-public-surface])
+  [data-button-variant='secondary']:is(
+    [aria-pressed='true'],
+    [data-state='open'],
+    :active:not(:disabled)
+  ) {
+  background: var(--color-field-hover);
+}
+@media (hover: hover) {
+  :root:not([data-public-surface]) [data-button-variant='secondary']:hover:not(:disabled) {
+    background: var(--color-field-hover);
+  }
+  :root:not([data-public-surface]) [data-button-variant='primary']:hover:not(:disabled) {
+    background-image: linear-gradient(var(--color-primary-to), var(--color-primary-to));
+  }
+}
+
+:root:not([data-public-surface]) button.face:not([data-button-variant]) {
+  background: var(--color-control);
+  box-shadow: 0 0 0 var(--rule-width) var(--color-edge-control);
+  color: var(--text-color-ink-soft);
+  font-weight: var(--weight-medium);
+}
+@media (hover: hover) {
+  :root:not([data-public-surface]) button.face:not([data-button-variant]):hover:not(:disabled) {
+    background: var(--color-field-hover);
+    color: var(--text-color-ink);
+  }
+}
+:root:not([data-public-surface]) button.face:not([data-button-variant])[data-state='open'] {
+  color: var(--text-color-ink);
+}

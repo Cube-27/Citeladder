@@ -1,0 +1,4 @@
+:root:not([data-public-surface]) [data-segmented-track] {
+  background-color: var(--color-well);
+  box-shadow: var(--shadow-well);
+}

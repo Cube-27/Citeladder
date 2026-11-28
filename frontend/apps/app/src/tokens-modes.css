@@ -33,27 +33,24 @@
   --shadow-button:
     inset 0 1px 0 var(--ramp-white-a5), 0 1px 1px var(--ramp-black-a50),
     0 2px 6px -1px var(--ramp-black-a30);
-  --shadow-xs: 0 0 0 1px var(--ramp-white-a8), 0 1px 2px var(--ramp-black-a50);
   --shadow-pop: 0 0 0 1px var(--ramp-white-a10), 0 16px 40px var(--ramp-black-a60);
   --shadow-sheet: 0 1px 2px var(--ramp-black-a40), 0 16px 40px -8px var(--ramp-black-a60);
 }
 
 :root[data-theme='dark']:not([data-public-surface]) {
-  --color-ground: var(--ramp-neutral-18_2);
-  --color-panel: var(--ramp-neutral-23_5);
-  --color-raised: var(--color-panel);
-  --color-raised-2: var(--ramp-neutral-26_4);
-  --color-table-head: var(--color-panel);
+  --color-ground: var(--ramp-grey-19_1);
+  --color-panel: var(--ramp-grey-21_8);
+  --color-raised-2: var(--ramp-grey-24_4);
   --color-thumb: var(--color-mark-ink-2);
-  --color-rule: var(--ramp-neutral-26_4);
+  --color-rule: var(--ramp-grey-26_9);
   --color-control-line: var(--ramp-white-a22);
   --color-control-edge-hover: var(--ramp-neutral-56);
   --color-danger-face-hover: var(--ramp-red-26);
-  --color-page: var(--ramp-neutral-21_3);
-  --text-color-ink: var(--ramp-neutral-95_2);
-  --text-color-ink-2: var(--ramp-neutral-69_9);
+  --color-page: var(--ramp-grey-20_9);
+  --text-color-ink: var(--ramp-grey-94_6);
+  --text-color-ink-2: var(--ramp-grey-68_6);
   --color-accent: var(--ramp-orange-70_3-h39);
-  --text-color-ink-placeholder: var(--ramp-neutral-64_0);
+  --text-color-ink-placeholder: var(--ramp-grey-63_3);
   --text-color-accent-text: var(--ramp-orange-75_3);
   --color-accent-wash: var(--ramp-orange-27);
   --color-positive: var(--ramp-green-81_4);
@@ -72,45 +69,47 @@
   --color-state-selected: var(--ramp-white-a7-srgb);
   --color-state-fill: var(--ramp-white-a7-srgb);
   --color-state-fill-hover: var(--ramp-white-a10);
-  --color-nav-current: var(--ramp-neutral-32_9);
+  --color-nav-current: var(--ramp-grey-26);
   --color-scrim: var(--ramp-black-a60);
-  --shadow-card: none;
-  --shadow-field: none;
   --shadow-pop: inset 0 0 1px var(--ramp-white-a30);
-  --shadow-sheet: var(--shadow-pop);
-  --color-well: var(--ramp-neutral-23_5);
-  --color-well-hover: var(--ramp-neutral-26_4);
-  --color-field-hover: var(--ramp-neutral-26_4);
+  --color-well: var(--ramp-grey-18_2);
+  --color-well-hover: var(--ramp-grey-23_5);
+  --color-field-hover: var(--ramp-grey-23_5);
   --color-link: var(--ramp-neutral-69_9-a50);
   --scrollbar-thumb: var(--ramp-neutral-52_1);
   --shadow-thumb: none;
-
-  --weight-regular: 350;
-  --weight-medium: 450;
+  --color-field: var(--ramp-grey-18_2);
+  --color-edge-card: var(--ramp-grey-27_7);
+  --color-edge-cell: var(--ramp-grey-25_6);
+  --color-edge-field: var(--ramp-grey-28_5);
+  --color-edge-control: var(--ramp-grey-30_1);
+  --color-control: var(--ramp-grey-22_2);
+  --color-tray: var(--ramp-grey-23_9);
+  --text-color-ink-soft: var(--ramp-grey-77);
 }
 
 :root:not([data-public-surface]) {
   text-wrap: pretty;
   -webkit-tap-highlight-color: transparent;
-  --color-table-head: var(--ramp-zinc-95_2);
+  --color-table-head: var(--color-panel);
   --table-ground: var(--color-panel);
-  --color-ground: var(--ramp-zinc-95_2);
+  --color-ground: var(--ramp-grey-97_6);
   --color-panel: var(--ramp-white);
   --color-raised: var(--color-panel);
-  --color-raised-2: var(--ramp-zinc-95_2);
-  --color-well: var(--ramp-neutral-94_3);
-  --color-page: var(--ramp-neutral-96_7);
-  --color-rule: var(--ramp-black-a11);
-  --color-field-hover: var(--ramp-neutral-99_1);
-  --color-well-hover: var(--ramp-zinc-91_2);
+  --color-raised-2: var(--ramp-grey-97);
+  --color-well: var(--ramp-grey-97);
+  --color-page: var(--ramp-white);
+  --color-rule: var(--ramp-grey-92_5);
+  --color-field-hover: var(--ramp-grey-98_5);
+  --color-well-hover: var(--ramp-grey-94_3);
   --spacing-control-x: 12px;
   --color-control-line: var(--ramp-black-a22);
   --color-control-edge: var(--ramp-neutral-61_7);
   --color-control-edge-hover: var(--color-mark-ink-2);
   --color-focus: var(--color-accent);
-  --text-color-ink: var(--ramp-zinc-21);
-  --text-color-ink-2: var(--ramp-zinc-47);
-  --text-color-ink-placeholder: var(--ramp-zinc-50);
+  --text-color-ink: var(--ramp-grey-19_6);
+  --text-color-ink-2: var(--ramp-grey-48_2);
+  --text-color-ink-placeholder: var(--ramp-grey-52_8);
   --text-color-on-ink: var(--color-panel);
   --color-accent: var(--ramp-orange-63_4-h38);
   --text-color-accent-text: var(--ramp-orange-53_1);
@@ -127,7 +126,7 @@
   --color-data-rival-3: var(--ramp-violet-43_6);
   --color-data-rival-4: var(--ramp-teal-54_3);
   --color-data-other: var(--ramp-slate-61);
-  --color-state-hover: var(--ramp-black-a3);
+  --color-state-hover: var(--ramp-black-a4);
   --color-state-selected: var(--ramp-black-a6);
   --color-state-pressed: var(--color-state-selected);
   --color-state-fill: var(--ramp-black-a8);
@@ -137,7 +136,6 @@
   --color-scrim: var(--ramp-black-a50);
   --color-chart-grid: var(--color-rule);
   --color-rule-strong: var(--color-control-line);
-
   --radius-mark: 5px;
   --radius-control: 8px;
   --radius-card: 10px;
@@ -145,22 +143,19 @@
   --radius-popup-item: calc(var(--radius-card) - var(--spacing-popup-inset));
   --spacing-tray-inset: 4px;
   --spacing-popup-inset: 6px;
-  --shadow-card:
-    0 2px 4px var(--ramp-black-a4), 0 1px 2px var(--ramp-black-a6), 0 0 1px var(--ramp-black-a6);
-  --shadow-field: var(--shadow-card);
+  --shadow-card: 0 0 0 var(--rule-width) var(--color-edge-card);
+  --shadow-field: var(--shadow-field-look);
   --shadow-pop:
     0 2px 8px var(--ramp-black-a6), 0 -6px 12px var(--ramp-black-a3),
     0 14px 28px var(--ramp-black-a8);
   --shadow-sheet: var(--shadow-pop);
   --shadow-thumb:
     0 0 5px var(--ramp-black-a2), 0 2px 10px var(--ramp-black-a6), 0 0 1px var(--ramp-black-a30);
-
   --spacing-control-sm: 24px;
   --spacing-control-md: 32px;
   --spacing-control-lg: 40px;
   --spacing-control-coarse: 44px;
   --button-hit: 40px;
-
   --spacing-sidebar: 224px;
   --spacing-sidebar-rail: 56px;
   --spacing-page-tabs: 40px;
@@ -171,13 +166,63 @@
   --spacing-tag: 20px;
   --spacing-card: 16px;
   --spacing-gutter: var(--spacing-card);
-
   --spacing-compact: 8px;
   --spacing-section: var(--spacing-card);
+  --color-field: var(--ramp-white);
+  --color-edge-card: var(--ramp-grey-91_6);
+  --color-edge-cell: var(--ramp-grey-94_3);
+  --color-edge-field: var(--ramp-grey-90_1);
+  --color-edge-control: var(--ramp-grey-89_4);
+  --color-control: var(--ramp-white);
+  --color-tray: var(--ramp-grey-97_3);
+  --text-color-ink-soft: var(--ramp-grey-36);
+  --shadow-field-look: 0 0 0 var(--rule-width) var(--color-edge-field);
+  --shadow-well: 0 0 0 var(--rule-width) var(--color-edge-cell);
+  --shadow-raised-primary: 0 0 0 0 var(--ramp-black-a4);
+  --shadow-nav-current: 0 0 0 0 var(--ramp-black-a4);
+  --shadow-segment-thumb: 0 0 0 var(--rule-width) var(--color-edge-card);
+  --spacing-sidebar-pad: 12px;
+  --spacing-nav-row-x: 10px;
+  --spacing-nav-icon: 16px;
+  --spacing-cell-x: 14px;
+  --spacing-tray-frame: 5px;
+  --spacing-tray-head-top: 12px;
+  --spacing-tray-head-bottom: 11px;
+  --spacing-tray-head-start: 8px;
+  --spacing-tray-head-end: 6px;
+  --spacing-badge: 24px;
+  --radius-tray: 14px;
+  --radius-tray-inner: calc(var(--radius-tray) - var(--spacing-tray-frame));
+  --radius-badge: 7px;
+  --badge-tint: 12%;
+  --badge-edge: 16%;
 }
 
 @media (min-width: 768px) {
   :root:not([data-public-surface]) {
     --spacing-page-inline: var(--spacing-page-block);
   }
+}
+
+@media (min-width: 900px) and (pointer: fine), (min-width: 900px) and (pointer: none) {
+  :root:not([data-public-surface]) {
+    --spacing-masthead: 56px;
+    --spacing-control-sm: 28px;
+  }
+}
+
+@media (min-resolution: 2dppx) {
+  :root:not([data-public-surface]) {
+    --rule-width: 0.5px;
+  }
+}
+
+:root:not([data-public-surface])
+  :is([data-app-surface] > aside, [data-steps-nav], [role='tablist'][aria-orientation='vertical']) {
+  --color-nav-current: var(--ramp-grey-94_3);
+  --shadow-card: var(--shadow-nav-current);
+}
+:root[data-theme='dark']:not([data-public-surface])
+  :is([data-app-surface] > aside, [data-steps-nav], [role='tablist'][aria-orientation='vertical']) {
+  --color-nav-current: var(--ramp-grey-24_4);
 }

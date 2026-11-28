@@ -16,6 +16,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 
 import type { IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import './button.css';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'danger-confirm';
 

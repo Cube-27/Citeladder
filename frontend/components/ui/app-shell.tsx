@@ -5,12 +5,13 @@ import { Drawer } from '@/components/ui/drawer';
 import { SidebarResizeHandle } from '@/components/ui/sidebar-resize-handle';
 import { Menu } from '@/lib/icons';
 import { useSidebarCollapsed, useSidebarWidth } from '@/lib/sidebar-width';
+import './app-shell.css';
 
 const FRAME =
   'bg-ground text-ink grid h-dvh overflow-hidden grid-cols-1 rail:grid-cols-[var(--spacing-sidebar-compact)_minmax(0,1fr)] shell:grid-cols-[var(--spacing-sidebar)_minmax(0,1fr)] data-[sidebar-state=collapsed]:rail:grid-cols-[var(--spacing-sidebar-rail)_minmax(0,1fr)] transition-[grid-template-columns] duration-open ease-[ease-in-out] motion-reduce:transition-none has-[[data-dragging]]:transition-none';
 const SIDEBAR_COLUMN = 'rail:block z-sticky relative hidden min-h-0 min-w-0';
 const PANEL =
-  '@container/main bg-page rail:ms-0 rail:rounded-card rail:ring-1 ring-rule/50 m-shell-inset relative flex min-h-0 min-w-0 flex-col overflow-y-auto overscroll-contain px-page-inline';
+  '@container/main bg-page rail:ms-0 m-shell-inset relative flex min-h-0 min-w-0 flex-col overflow-y-auto overscroll-contain px-page-inline';
 const PAGE = 'flex w-full min-w-0 flex-1 flex-col';
 
 function useFrameState(): { width: string | undefined; state: 'collapsed' | 'expanded' } {

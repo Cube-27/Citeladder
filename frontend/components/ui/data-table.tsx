@@ -83,8 +83,15 @@ export function DataTable({
   const paging = pagingLayout(pager, pageSize);
   const scroll = useScrollFrame({ label: parts.regionLabel, start: false });
   const replacing = replacingState(state);
+  const tray = headerShown({
+    tabHead: useContext(TabHeadSlotContext),
+    titled: Boolean(title || description),
+    shown: hasHeadControls({ ...toolbar, actions: toolbar?.actions || actions }),
+    search: toolbar?.search,
+  });
   return (
     <Section
+      tray={tray}
       aria-labelledby={parts.naming.ariaLabelledBy}
       aria-label={parts.naming.ariaLabel}
       aria-busy={busy?.active || undefined}
@@ -289,6 +296,16 @@ function pagingLayout(
   return hasMorePages(pager) ? { pager, pageSize } : {};
 }
 
+function headerShown({
+  tabHead,
+  titled,
+  shown,
+  search,
+}: Readonly<{ tabHead: HTMLElement | null; titled: boolean; shown: boolean; search: unknown }>) {
+  if (tabHead !== null && !titled) return Boolean(search);
+  return titled || shown || Boolean(search);
+}
+
 function DataTableHeader({
   title,
   headingId,
@@ -320,7 +337,7 @@ function DataTableHeader({
   const titled = Boolean(title || description);
   if (tabHead !== null && !titled)
     return <LiftedHeader slot={tabHead} controls={controls} search={toolbar?.search} />;
-  if (!titled && !shown && !toolbar?.search) return null;
+  if (!headerShown({ tabHead, titled, shown, search: toolbar?.search })) return null;
   return (
     <SectionHeader data-data-table-header="" search={toolbar?.search} actions={controls}>
       {titled ? (

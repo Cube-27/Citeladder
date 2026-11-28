@@ -44,7 +44,7 @@ export function AiReferralsDashboard({
   return (
     <SectionStack aria-busy={fetching}>
       <ReferralQuality data={data} />
-      <Section>
+      <Section tray>
         <Tabs value={tab} onValueChange={setTab} ariaLabel="Referral views" items={REFERRAL_VIEWS}>
           <TabPanel value="overview">
             <AppGrid layout="halves">

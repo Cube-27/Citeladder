@@ -85,3 +85,9 @@
   color: var(--text-color-ink);
   text-decoration: none;
 }
+.page-editor .cm-editor.cm-focused {
+  outline: none;
+}
+.page-editor .cm-editor .cm-content:focus-visible {
+  outline-offset: calc(-1 * var(--focus-width));
+}

@@ -83,8 +83,6 @@
 }
 
 [data-screen-tabs] {
-  --scroll-shade-ground: var(--color-panel);
-
   background: var(--color-state-hover);
 }
 

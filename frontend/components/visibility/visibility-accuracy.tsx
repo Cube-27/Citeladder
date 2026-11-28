@@ -72,7 +72,7 @@ export function AccuracyView({
   return (
     <SectionStack>
       <Headline data={data} lede={lede} />
-      <Section aria-label="Claims">
+      <Section aria-label="Claims" tray>
         <Tabs value={view} onValueChange={setView} items={CLAIM_VIEWS} ariaLabel="Claims">
           <TabPanel value="contradicted">
             <ContradictedClaims claims={data.contradicted} />
@@ -131,7 +131,7 @@ function CoverageNote({ coverage }: Readonly<{ coverage: AccuracyCoverage }>) {
 function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: ReactNode }>) {
   const { coverage } = data.score;
   return (
-    <Section>
+    <Section tray={Boolean(lede)}>
       {lede}
       <FigureStrip
         label="Fact checks"

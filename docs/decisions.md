@@ -412,8 +412,8 @@ how to add or change an entry.
   closed set of section primitives so a layout bug shows everywhere at once;
   a section's header lives inside its card, as HeroUI's Card.Header
   (2026-11-26).
-- **AR-25** The design-system composition check warns and never fails CI
-  (2026-11-26).
+- **AR-25** The design-system composition check fails CI (design-system plan
+  PR 2, owner-approved 2026-11-28).
 - **AR-26 Design values are role tokens.** A violation is anything that would
   let a later design change drift one page: a raw value, or a page using a
   token or primitive class directly instead of a primitive. Text roles derive

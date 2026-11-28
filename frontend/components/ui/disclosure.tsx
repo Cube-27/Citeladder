@@ -1,6 +1,7 @@
 import { ChevronDown } from '@/lib/icons';
 import type { ReactNode } from 'react';
 import { Icon } from '@/components/ui/icon';
+import './disclosure.css';
 
 export function Disclosure({
   title,

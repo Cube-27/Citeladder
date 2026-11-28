@@ -16,10 +16,10 @@ shared and app sheets, each under the source size limit:
 [`tokens-ramps.css`](../frontend/apps/app/src/tokens-ramps.css) (ramps and
 base), [`tokens-roles.css`](../frontend/apps/app/src/tokens-roles.css) (the
 `@theme` roles), [`tokens-modes.css`](../frontend/apps/app/src/tokens-modes.css)
-(the dark twin and the app's `:root:not([data-public-surface])` re-points),
-`app-utilities.css`, `app-rules.css` and
-[`app-look.css`](../frontend/apps/app/src/app-look.css) (the flat panel look,
-imported last, so its re-points win). [`public-surface.css`](../frontend/apps/app/src/public-surface.css)
+(the dark twin and the app's `:root:not([data-public-surface])` re-points,
+the flat panel look included), `app-utilities.css` and `app-rules.css`. A rule
+for one primitive's element lives in a sheet that primitive imports, so it
+loads with it. [`public-surface.css`](../frontend/apps/app/src/public-surface.css)
 holds the website and docs blocks (`[data-public-surface]`,
 `[data-marketing-surface]`, the landing-page product screens) and the ramp
 steps only they read. Only the marketing and docs entries import it, so the
@@ -82,8 +82,13 @@ every rule (`scripts/frontend/design-lint.test.mjs`).
 `--text-color-*` role on the grounds of its palette at 4.5:1, marks 3:1, both
 themes), the app's Tailwind `@source` list and the CSS value rule
 ([`design-system-css-values.mjs`](../frontend/scripts/design-system-css-values.mjs)),
-and reports globals rules keyed on an ancestor section or dialog (a
-[composition](#composition) break) as a warning that never fails CI (AR-25).
+and fails on: a globals rule keyed on an ancestor section or dialog (a
+[composition](#composition) break, AR-25); a token declared twice in one scope
+of one bundle; a token or `@utility` nothing reads; an app sheet selecting a
+primitive's `data-*-variant` value from an ancestor; and a stale
+`lib/merge-roles.gen.ts`
+([`design-system-tokens.mjs`](../frontend/scripts/design-system-tokens.mjs),
+[`design-system-merge-roles.mjs`](../frontend/scripts/design-system-merge-roles.mjs)).
 The CSS value rule reads every `.css` file and Astro `<style>`, the app
 sheets' rule blocks included. Outside `@theme`, `@keyframes`, `@font-face` and
 `@property`, a colour, type, font-family, z-index, opacity, motion, shadow,
@@ -113,8 +118,8 @@ template part holds no non-zero `px`/`rem`/`em` length, and `strokeWidth`,
 lives in [`chart-geometry.ts`](../frontend/components/ui/chart-geometry.ts),
 media queries in [`breakpoints.ts`](../frontend/lib/breakpoints.ts)). Tailwind
 scale steps (`gap-2`) and computed values (`${x}px`) pass. A new size role is a
-`--spacing-*` or `--container-*` token registered in `lib/utils.ts` for
-tailwind-merge; the two never share a name, because `w-<name>` resolves to the
+`--spacing-*` or `--container-*` token; `pnpm gen:merge-roles` regenerates
+the tailwind-merge lists from the `@theme` blocks; the two never share a name, because `w-<name>` resolves to the
 spacing role first.
 
 The website (marketing and docs) composes the same primitives, and its own
@@ -140,27 +145,27 @@ Secondary text and placeholders sit one step lighter than the reference
 (#9c9c9c, #787878) so they pass AA on every fill. Our orange, accent and status
 hues stay. The website keeps its own dark.
 
-| Token                    | Use                                                      |
-| ------------------------ | -------------------------------------------------------- |
-| `ground`                 | window and sidebar                                       |
-| `page`                   | the content column's paper                               |
-| `panel`                  | cards, overlays, controls on the paper                   |
-| `raised`                 | secondary buttons, menus                                 |
-| `raised-2`               | hover and press fill, disabled field                     |
-| `well`                   | fields in a surface, quoted material, table group rows   |
-| `state-hover`            | row and quiet-control hover                              |
-| `state-selected`         | tags, keyboard hints, value tokens                       |
-| `state-fill`             | controls in a surface, segmented tray, rail current row  |
-| `rule`                   | every hairline                                           |
-| `control-line`           | draft edge, chart strokes, link underlines               |
-| `control-edge`           | checkbox, radio and off-switch edge, 3:1 on its fill     |
-| `ink`, `ink-2`           | text; secondary text and icons                           |
-| `ink-placeholder`        | field placeholders, 4.5:1 on `well` and `well-hover`     |
-| `mark-ink`, `mark-ink-2` | a fill, edge or shadow drawn in the ink colour           |
-| `accent`                 | "you, here" and focus                                    |
-| `primary`                | every action fill, white text                            |
-| `edge-card`              | the card's hairline edge (no card shadow, either theme)  |
-| `tray`                   | a headed card's frame and head fill                      |
+| Token                    | Use                                                     |
+| ------------------------ | ------------------------------------------------------- |
+| `ground`                 | window and sidebar                                      |
+| `page`                   | the content column's paper                              |
+| `panel`                  | cards, overlays, controls on the paper                  |
+| `raised`                 | secondary buttons, menus                                |
+| `raised-2`               | hover and press fill, disabled field                    |
+| `well`                   | fields in a surface, quoted material, table group rows  |
+| `state-hover`            | row and quiet-control hover                             |
+| `state-selected`         | tags, keyboard hints, value tokens                      |
+| `state-fill`             | controls in a surface, segmented tray, rail current row |
+| `rule`                   | every hairline                                          |
+| `control-line`           | draft edge, chart strokes, link underlines              |
+| `control-edge`           | checkbox, radio and off-switch edge, 3:1 on its fill    |
+| `ink`, `ink-2`           | text; secondary text and icons                          |
+| `ink-placeholder`        | field placeholders, 4.5:1 on `well` and `well-hover`    |
+| `mark-ink`, `mark-ink-2` | a fill, edge or shadow drawn in the ink colour          |
+| `accent`                 | "you, here" and focus                                   |
+| `primary`                | every action fill, white text                           |
+| `edge-card`              | the card's hairline edge (no card shadow, either theme) |
+| `tray`                   | a headed card's frame and head fill                     |
 
 Text colours live in `--text-color-*` (`ink`, `ink-2`, `ink-placeholder`,
 `accent-text`, `on-ink`, `on-primary`, `nav-ink`), so `text-ink` exists and

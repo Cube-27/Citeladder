@@ -1,0 +1,40 @@
+:root:not([data-public-surface]) [data-sidebar-state='expanded'] [data-sidebar-frame] {
+  padding-inline: var(--spacing-sidebar-pad);
+}
+:root:not([data-public-surface]) [data-sidebar-state='expanded'] [data-sidebar-ident-cell] {
+  margin: calc(-2 * var(--spacing)) calc(-1 * var(--spacing-sidebar-pad)) 0;
+  padding-inline: var(--spacing-sidebar-pad);
+  border-bottom: var(--rule-width) solid var(--color-rule);
+}
+:root:not([data-public-surface])
+  [data-sidebar-frame]
+  li
+  :is(a, button):has(> [data-sidebar-text='title']) {
+  gap: var(--spacing-nav-row-x);
+  padding-inline: var(--spacing-nav-row-x);
+  color: var(--text-color-ink-2);
+}
+:root:not([data-public-surface])
+  [data-sidebar-frame]
+  li
+  :is(a, button):has(> [data-sidebar-text='title'])
+  > svg {
+  width: var(--spacing-nav-icon);
+  height: var(--spacing-nav-icon);
+}
+:root:not([data-public-surface])
+  [data-sidebar-frame]
+  li
+  :is(a, button):has(> [data-sidebar-text='title']):is(:hover, [aria-current='page']) {
+  color: var(--text-color-ink);
+}
+:root:not([data-public-surface])
+  [data-sidebar-frame]
+  li
+  [aria-current='page']:has(> [data-sidebar-text='title']) {
+  font-weight: var(--weight-medium);
+}
+:root:not([data-public-surface]) [data-sidebar-frame] [data-segmented-track] {
+  --color-nav-current: var(--color-panel);
+  --shadow-card: var(--shadow-segment-thumb);
+}

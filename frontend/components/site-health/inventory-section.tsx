@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 
 import { PageDrawerHost } from '@/components/site-health/page-drawer';
 
@@ -43,25 +43,18 @@ export function InventorySection({
   active: boolean;
   exportPages?: ExportPages;
 }>) {
-  let content: ReactNode;
-  if (mode === 'none' || !crawl) {
-    content = <StateBlock kind="empty" icon={FileText} heading="No pages yet" headingLevel={3} />;
-  } else if (mode === 'discovering') {
-    content = <DiscoveringInventory crawl={crawl} />;
-  } else {
-    content = <ScoredInventory crawl={crawl} active={active} exportPages={exportPages} />;
-  }
-
+  if (mode === 'scored' && crawl)
+    return <ScoredInventory crawl={crawl} active={active} exportPages={exportPages} />;
   return (
     <Section data-testid="inventory-section">
-      {mode === 'scored' && crawl ? null : (
-        <SectionHeader>
-          <SectionTitle>
-            {mode === 'discovering' ? 'Pages discovered so far' : 'Pages'}
-          </SectionTitle>
-        </SectionHeader>
+      <SectionHeader>
+        <SectionTitle>{mode === 'discovering' ? 'Pages discovered so far' : 'Pages'}</SectionTitle>
+      </SectionHeader>
+      {mode === 'discovering' && crawl ? (
+        <DiscoveringInventory crawl={crawl} />
+      ) : (
+        <StateBlock kind="empty" icon={FileText} heading="No pages yet" headingLevel={3} />
       )}
-      {content}
     </Section>
   );
 }
@@ -281,7 +274,7 @@ function ScoredInventoryState({
 
   return (
     <PageDrawerHost workspaceId={crawl.workspace_id}>
-      <>
+      <Section data-testid="inventory-section" tray={rootErrors.length === 0}>
         <RootErrorsBlock errors={rootErrors} />
         <PagesTable
           title="Pages"
@@ -294,7 +287,7 @@ function ScoredInventoryState({
           pager={table.pager}
           busy={table.busy}
         />
-      </>
+      </Section>
     </PageDrawerHost>
   );
 }

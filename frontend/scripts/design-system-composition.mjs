@@ -1,5 +1,3 @@
-export const COMPOSITION_ENFORCED = false;
-
 const ANCESTOR_KEY = /\[(?:data-section\b|role=['"]?dialog\b)/;
 
 function lineAt(source, index) {
@@ -9,7 +7,7 @@ function lineAt(source, index) {
   return line;
 }
 
-function splitTop(text, separator) {
+export function splitTop(text, separator) {
   const parts = [];
   let depth = 0;
   let start = 0;
@@ -66,16 +64,4 @@ export function ancestorRuleFindings(label, css) {
       );
   }
   return findings;
-}
-
-export function compositionReport(findings) {
-  const perFile = new Map();
-  for (const finding of findings) {
-    const file = finding.slice(0, finding.indexOf(':'));
-    perFile.set(file, (perFile.get(file) ?? 0) + 1);
-  }
-  const lines = [...perFile]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([file, count]) => `  ${count}\t${file}`);
-  return [`Composition findings: ${findings.length} in ${perFile.size} files`, ...lines].join('\n');
 }

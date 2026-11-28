@@ -4,7 +4,9 @@ import { appStylesheet } from '@/test/app-stylesheet';
 
 import { cn } from './utils';
 
-const THEME = appStylesheet();
+const THEME = [...appStylesheet().matchAll(/@theme[^{]*\{([^}]*)\}/gu)]
+  .map((block) => block[1])
+  .join('\n');
 const roles = (namespace: string) => [
   ...new Set(
     [...THEME.matchAll(new RegExp(`--${namespace}-([a-z][a-z0-9-]*):`, 'gu'))].map(
