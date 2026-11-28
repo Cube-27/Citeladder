@@ -376,6 +376,21 @@ describe('Table head', () => {
       );
     expect(follows).toEqual([true, true, true, true, true]);
   });
+  it('starts an untitled head at its search row, with no empty heading above it', () => {
+    const { container } = render(
+      <DataTable
+        columns={[{ key: 'url', label: 'URL' }]}
+        toolbar={{
+          search: (
+            <SearchField value="" onValueChange={() => undefined} aria-label="Search pages" />
+          ),
+        }}
+      />,
+    );
+    const head = container.querySelector('[data-data-table-header]');
+    expect(head?.firstElementChild).toHaveAttribute('data-section-search-row');
+    expect(head?.querySelector('[data-section-heading]')).toBeNull();
+  });
   it('keeps every filter inline while they fit and folds the overflow into All filters with its set values beside it', () => {
     const filter = (id: string, value = 'all', icon?: FilterIcon) =>
       choiceFilter({

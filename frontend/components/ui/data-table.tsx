@@ -343,12 +343,16 @@ function DataTableHeader({
         ) : undefined
       }
     >
-      {title ? (
-        <SectionTitle id={headingId} level={level === 3 ? 3 : 2} truncate>
-          {title}
-        </SectionTitle>
+      {title || description ? (
+        <>
+          {title ? (
+            <SectionTitle id={headingId} level={level === 3 ? 3 : 2} truncate>
+              {title}
+            </SectionTitle>
+          ) : null}
+          {description ? <SectionDescription>{description}</SectionDescription> : null}
+        </>
       ) : null}
-      {description ? <SectionDescription>{description}</SectionDescription> : null}
     </SectionHeader>
   );
 }
