@@ -61,9 +61,9 @@ function UsagePlot({
   const [first, ...rest] = series;
   if (!first) {
     return (
-      <div className="grid place-items-center">
+      <ChartFrame centred>
         <StateBlock kind="empty" inline message="No sources were used in this period." />
-      </div>
+      </ChartFrame>
     );
   }
   return (
@@ -193,9 +193,9 @@ function TypesMix({
   if (query.isPending) return <Skeleton variant="chart" />;
   if (!slices.length && total <= 0) {
     return (
-      <div className="grid place-items-center">
+      <ChartFrame centred>
         <StateBlock kind="empty" inline message="No citations in this selection." />
-      </div>
+      </ChartFrame>
     );
   }
   return (

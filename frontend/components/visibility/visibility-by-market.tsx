@@ -1,6 +1,5 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import type { ProjectMarket } from '@citeladder/contracts/markets';
 import type { VisibilityMarkets } from '@citeladder/contracts/visibility';
 
 import { Pressable } from '@/components/ui/pressable';
@@ -13,6 +12,7 @@ import { formatRate } from '@/lib/visibility/dashboard';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { readErrorProps } from '@/components/ui/notice';
+import type { ProjectMarkets } from '@/lib/project/use-project-markets';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'market', label: 'Market' },
@@ -29,15 +29,19 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'net', label: 'Net sentiment', width: 'figure', kind: 'number' },
 ];
 
-function marketsState(query: UseQueryResult<VisibilityMarkets>): DataTableState | undefined {
-  if (query.isError)
+function marketsState(
+  query: UseQueryResult<VisibilityMarkets>,
+  markets: ProjectMarkets,
+): DataTableState | undefined {
+  if (markets.kind === 'loaded' && query.isError)
     return {
       kind: 'error',
       ...readErrorProps(query),
       title: "Couldn't load the markets",
       fallback: 'The request failed or timed out.',
     };
-  if (query.isPending) return { kind: 'loading', label: 'Loading markets…' };
+  if (markets.kind === 'pending' || query.isPending)
+    return { kind: 'loading', label: 'Loading markets…' };
   return undefined;
 }
 
@@ -48,13 +52,13 @@ export function VisibilityByMarket({
   onSelectMarket,
 }: Readonly<{
   query: UseQueryResult<VisibilityMarkets>;
-  markets: readonly ProjectMarket[];
+  markets: ProjectMarkets;
   market: string | null;
   onSelectMarket: (market: string | null) => void;
 }>) {
-  if (markets.length < 2) return null;
+  if (markets.kind === 'loaded' && markets.markets.length < 2) return null;
   return (
-    <DataTable title="By market" columns={COLUMNS} state={marketsState(query)}>
+    <DataTable title="By market" columns={COLUMNS} state={marketsState(query, markets)}>
       {(query.data?.markets ?? []).map((row) => (
         <TableRow key={row.market.id ?? 'default'}>
           <TableCell>

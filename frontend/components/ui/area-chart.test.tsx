@@ -11,7 +11,7 @@ import {
   gapRanges,
   niceTicks,
 } from './area-chart-data';
-import { SeriesTonesContext, seriesTones } from './step-chart-parts';
+import { SeriesTonesContext, seriesTones } from './series-palette';
 
 const points = (container: HTMLElement, tone: string) =>
   container.querySelectorAll(`[data-trend-point="${tone}"]`).length;

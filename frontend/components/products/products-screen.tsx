@@ -16,6 +16,7 @@ import { Columns3, PackageOpen } from '@/lib/icons';
 import { commerceQueries } from '@/lib/api/commerce';
 import { promptsQueries } from '@/lib/api/prompts';
 import { downloadCsv } from '@/lib/csv/download';
+import { todayIso } from '@/lib/format';
 import { useCatalogProjection } from '@/lib/products/use-catalog-projection';
 import { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 import {
@@ -197,11 +198,7 @@ function ProductsContent({
   const selectedCategory = catalog.data?.categories.find((row) => row.id === filters.category);
   const exportRows = () => {
     const csv = productCsv(rows, columns.shown);
-    downloadCsv(
-      `citeladder-products-${new Date().toISOString().slice(0, 10)}`,
-      csv.headers,
-      csv.rows,
-    );
+    downloadCsv(`citeladder-products-${todayIso()}`, csv.headers, csv.rows);
   };
   if (noProducts({ catalog, page, filters })) return <NoProducts empty={header.empty} />;
   return (

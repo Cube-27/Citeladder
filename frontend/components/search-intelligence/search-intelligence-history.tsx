@@ -9,7 +9,13 @@ import {
   searchIntelligenceQueries,
   type SearchIntelligenceDataset,
 } from '@/lib/api/search-intelligence';
-import { formatCount, formatMonth, formatWindowDate } from '@/lib/format';
+import {
+  formatCompactCount,
+  formatCount,
+  formatMonth,
+  formatWindowDate,
+  isIsoDay,
+} from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -60,7 +66,7 @@ function historyObservations(rows: HistoryRows): HistoryRow[] {
       new: numeric(row.auxiliary.new_backlinks),
       lost: numeric(row.auxiliary.lost_backlinks),
     }))
-    .filter(({ date }) => validHistoryDate(date))
+    .filter(({ date }) => isIsoDay(date))
     .sort((left, right) => left.date.localeCompare(right.date));
 }
 
@@ -104,7 +110,7 @@ function HistoryBody({
           label="Saved monthly backlink totals"
           name="Backlinks"
           data={points((row) => row.backlinks)}
-          yFormat={compactCount}
+          yFormat={formatCompactCount}
           format={formatCount}
           you={false}
         />
@@ -118,7 +124,7 @@ function HistoryBody({
           name="New backlinks"
           data={points((row) => row.new)}
           series={[{ label: 'Lost backlinks', values: data.map((row) => row.lost) }]}
-          yFormat={compactCount}
+          yFormat={formatCompactCount}
           format={formatCount}
           you={false}
         />
@@ -127,18 +133,8 @@ function HistoryBody({
   );
 }
 
-function compactCount(value: number): string {
-  return Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 0 }).format(value);
-}
-
 function numeric(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
-function validHistoryDate(date: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
-  const parsed = new Date(`${date}T00:00:00Z`);
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
 }
 
 function fillMonths(

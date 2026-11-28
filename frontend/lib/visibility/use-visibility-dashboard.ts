@@ -283,7 +283,7 @@ export function useVisibilityQueries(
       active,
     });
   const topic = filters.topic ?? undefined;
-  const { markets, marketRowsQuery } = useMarketVisibility(
+  const { markets, marketsState, marketRowsQuery } = useMarketVisibility(
     requestScope,
     { cohort: filters.cohort, topic },
     insights,
@@ -363,6 +363,7 @@ export function useVisibilityQueries(
     activeRunId,
     hasRuns,
     markets,
+    marketsState,
     marketRowsQuery,
     projectId,
     workspaceId,

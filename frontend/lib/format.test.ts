@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vite-plus/test';
 
 import {
+  addIsoDays,
   formatCount,
   formatCountry,
   formatDisplayDate,
   formatDisplayTimestamp,
   formatPercent,
+  formatWeekdayDate,
+  isIsoDay,
   isOwnHost,
   ownOrigin,
   readableUrl,
@@ -75,7 +78,41 @@ describe('dates and times', () => {
     expect(formatDisplayTimestamp(at, 'Asia/Kolkata')).toBe('Nov 14, 2026, 05:03 PM');
     expect(formatDisplayTimestamp(at, 'Europe/Paris')).toBe('Nov 14, 2026, 12:33 PM');
     expect(formatDisplayTimestamp(at, 'Not/A_Zone')).toBe('Nov 14, 2026, 11:33 AM');
-    expect(formatDisplayTimestamp(at, 'Not/A_Zone')).toBe('Nov 14, 2026, 11:33 AM');
+  });
+
+  it('prints every instant in one shape, with its date and year, whatever day it falls on', () => {
+    const stamps = ['2026-11-28T09:15:00Z', '2026-03-02T18:40:00Z', '2025-12-31T20:00:00Z'].flatMap(
+      (at) => [formatDisplayTimestamp(at, 'Asia/Kolkata'), formatDisplayTimestamp(at, 'UTC')],
+    );
+    expect(stamps).toEqual([
+      'Nov 28, 2026, 02:45 PM',
+      'Nov 28, 2026, 09:15 AM',
+      'Mar 3, 2026, 12:10 AM',
+      'Mar 2, 2026, 06:40 PM',
+      'Jan 1, 2026, 01:30 AM',
+      'Dec 31, 2025, 08:00 PM',
+    ]);
+  });
+});
+
+describe('ISO days', () => {
+  it('accepts only real calendar days and steps across month and leap-year ends', () => {
+    expect(
+      ['2026-02-28', '2028-02-29', '2026-02-30', '2026-13-01', '26-01-01'].map(isIsoDay),
+    ).toEqual([true, true, false, false, false]);
+    expect(addIsoDays('2028-02-28', 1)).toBe('2028-02-29');
+    expect(addIsoDays('2026-12-31', 1)).toBe('2027-01-01');
+    expect(addIsoDays('2026-03-01', -1)).toBe('2026-02-28');
+  });
+
+  it('names the weekday and adds the year only when it differs from today’s', () => {
+    expect(formatWeekdayDate({ isoDay: '2026-12-22', weekday: 'short', today: '2026-11-22' })).toBe(
+      'Tue, Dec 22',
+    );
+    expect(formatWeekdayDate({ isoDay: '2027-02-20', weekday: 'short', today: '2026-11-22' })).toBe(
+      'Sat, Feb 20, 2027',
+    );
+    expect(formatWeekdayDate({ isoDay: '2026-09-05', weekday: 'long' })).toBe('Saturday, Sep 5');
   });
 });
 

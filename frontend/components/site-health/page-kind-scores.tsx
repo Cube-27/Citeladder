@@ -3,14 +3,9 @@ import { mutedWhenMissing, TableCell, TableRow } from '@/components/ui/table';
 import { Absence, printed } from '@/components/ui/absence';
 import { ICONS } from '@/lib/icons';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
+import { MeasurementValue } from '@/components/site-health/measurement-value';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { byPageKindRows } from '@/lib/site-health/page-kinds';
-import {
-  checksRunLabel,
-  formatScore,
-  measurementCaveat,
-  type ChecksRun,
-} from '@/lib/site-health/status';
 import { formatCount, formatPercent } from '@/lib/format';
 
 function emptyState(unmeasured: boolean, rowCount: number) {
@@ -88,23 +83,3 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'aeo', label: 'AEO readiness', kind: 'number' },
   { key: 'coverage', label: 'AEO checklist completion', kind: 'number', width: 'metric' },
 ];
-
-function MeasurementValue({
-  score,
-  checks,
-  state,
-}: Readonly<{ score: number | null; checks: ChecksRun | null; state: string }>) {
-  if (score !== null) {
-    const caveat = measurementCaveat(state, checks);
-    return (
-      <span>
-        <span>{printed(formatScore(score))}</span>
-        {caveat ? <span className="sr-only">{caveat}</span> : null}
-      </span>
-    );
-  }
-  const run = checksRunLabel(checks);
-  if (run) return <Absence state="not_measured" label={run} />;
-  if (state === 'excluded') return <Absence state="not_applicable" label="Excluded" />;
-  return <Absence state="not_measured" />;
-}

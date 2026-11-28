@@ -13,8 +13,8 @@ import { runsQueries } from '@/lib/api/runs';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { marketLabel } from '@citeladder/contracts/markets';
 import { Play } from '@/lib/icons';
-import { formatCount, formatDisplayTime } from '@/lib/format';
-import { AUDIT_STATES, countedStatuses, pollAudits, runTitle } from '@/lib/runs/status';
+import { formatCount, formatDisplayTimestamp } from '@/lib/format';
+import { AUDIT_STATES, countedStatuses, pollAudits, runKind } from '@/lib/runs/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { sortUrlCodec, useUrlState, type UrlSort } from '@/lib/navigation/url-state';
 import { Text } from '@/components/ui/typography';
@@ -134,12 +134,11 @@ export function RunsTable({
               title
               primary={
                 <TextLink href={`/runs/${audit.id}`} underline="hover">
-                  {runTitle(audit, timeZone)}
+                  {`${runKind(audit)} · ${formatDisplayTimestamp(audit.created_at, timeZone)}`}
                 </TextLink>
               }
               secondary={runCaption({
                 audit,
-                timeZone,
                 launchAbove: sort.key === 'created' && sameLaunch(audit, audits[index - 1]),
               })}
             />
@@ -160,11 +159,9 @@ export function RunsTable({
 
 function runCaption({
   audit,
-  timeZone,
   launchAbove,
-}: Readonly<{ audit: Audit; timeZone: string; launchAbove: boolean }>): string {
+}: Readonly<{ audit: Audit; launchAbove: boolean }>): string {
   const parts = [
-    formatDisplayTime(audit.created_at, timeZone),
     audit.market.id === null ? '' : marketLabel(audit.market),
     launchAbove ? 'Same launch as above' : '',
   ];

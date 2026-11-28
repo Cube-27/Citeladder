@@ -7,7 +7,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { mutedWhenMissing, TableCell, TableRow, TableTime, UrlText } from '@/components/ui/table';
 import { sharedOrigin } from '@/lib/format';
-import { Absence, printed } from '@/components/ui/absence';
+import { Absence } from '@/components/ui/absence';
 import { PageLink } from '@/components/site-health/page-link';
 import { PageOpenContext } from '@/components/site-health/page-open-context';
 import type { PagesSort } from '@/lib/api/site-health';
@@ -15,17 +15,14 @@ import type { PageSummary } from '@citeladder/contracts';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { RobotsExcludedBadge } from '@/components/site-health/robots-choice';
 import {
-  checksRunLabel,
   DEFAULT_PAGES_SORT,
   formatIssueCount,
-  formatScore,
   pageDisplayTitle,
   pageStatusBadgeValue,
   isFetchFailure,
   statusLabel,
-  type ChecksRun,
 } from '@/lib/site-health/status';
-import { scoreTone } from '@/components/ui/score-gauge';
+import { MeasurementValue } from '@/components/site-health/measurement-value';
 import { Text } from '@/components/ui/typography';
 
 function LinkedFromLine({ page }: Readonly<{ page: PageSummary }>) {
@@ -190,27 +187,4 @@ function DepthValue({ page }: Readonly<{ page: PageSummary }>) {
   if (page.depth_from_home !== null) return page.depth_from_home;
   if (page.inbound_count === null) return <Absence state="not_measured" />;
   return <Absence state="unavailable" label="Not reached" />;
-}
-
-function MeasurementValue({
-  score,
-  checks,
-  state,
-}: Readonly<{ score: number | null; checks: ChecksRun | null; state: string }>) {
-  if (score === null) return measurementStateValue(state, checks);
-  const tone = scoreTone(score);
-  return tone === 'positive' ? (
-    <Text variant="body">{printed(formatScore(score))}</Text>
-  ) : (
-    <Text variant="label" tone={tone}>
-      {printed(formatScore(score))}
-    </Text>
-  );
-}
-
-function measurementStateValue(state: string, checks: ChecksRun | null) {
-  const run = checksRunLabel(checks);
-  if (run) return run;
-  if (state === 'excluded') return 'Excluded';
-  return <Absence state="not_measured" />;
 }

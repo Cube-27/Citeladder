@@ -28,9 +28,8 @@ import {
   READING_LABELS,
   type CellReading,
 } from '@/lib/visibility/matrix';
+import { todayIso } from '@/lib/format';
 import { AxisLabel, matrixBodyState, pendingAxisLength, useAxisText } from './matrix-parts';
-
-const today = () => new Date().toISOString().slice(0, 10);
 
 const DIMENSIONS = MATRIX_DIMENSIONS.map((option) => option.value);
 const metricCodec = stringUrlCodec(
@@ -73,7 +72,7 @@ export function PerformanceMatrix({
     MATRIX_DIMENSIONS.filter((option) => option.value !== skip);
   const exportCsv = () =>
     downloadCsv(
-      `citeladder-matrix-${rows}-${columns}-${today()}`,
+      `citeladder-matrix-${rows}-${columns}-${todayIso()}`,
       [
         dimensionLabel(rows),
         dimensionLabel(columns),

@@ -1,4 +1,4 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 
 import type { snapshotGranularitySchema } from '@citeladder/contracts/analytics';
 
@@ -92,15 +92,52 @@ export const GRANULARITY_OPTIONS: readonly { value: BucketGranularity; label: st
   { value: 'month', label: 'Month' },
 ] as const;
 
-export function formatShortDate(isoDay: string): string {
+function isoDayDate(isoDay: string): Date | null {
   const date = new Date(`${isoDay}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) return isoDay;
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function isIsoDay(value: string): boolean {
+  return z.iso.date().safeParse(value).success;
+}
+
+export function todayIso(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 10);
+}
+
+export function addIsoDays(isoDay: string, days: number): string {
+  const date = isoDayDate(isoDay);
+  if (!date) return isoDay;
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function formatShortDate(isoDay: string): string {
+  const date = isoDayDate(isoDay);
+  if (!date) return isoDay;
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
+export function formatWeekdayDate({
+  isoDay,
+  weekday,
+  today,
+}: Readonly<{ isoDay: string; weekday: 'long' | 'short'; today?: string }>): string {
+  const date = isoDayDate(isoDay);
+  if (!date) return isoDay;
+  const otherYear = today !== undefined && isoDay.slice(0, 4) !== today.slice(0, 4);
+  return date.toLocaleDateString('en-US', {
+    weekday,
+    month: 'short',
+    day: 'numeric',
+    ...(otherYear ? { year: 'numeric' } : {}),
+    timeZone: 'UTC',
+  });
+}
+
 export function formatWindowDate(isoDay: string): string {
-  const date = new Date(`${isoDay}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) return isoDay;
+  const date = isoDayDate(isoDay);
+  if (!date) return isoDay;
   return date.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -154,20 +191,6 @@ export function formatDisplayDate(timestamp: string, timeZone: string): string {
   }
 }
 
-export function formatDisplayTime(timestamp: string, timeZone: string): string {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  try {
-    return dateFormat('time', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone,
-    }).format(date);
-  } catch {
-    return timeZone === 'UTC' ? timestamp : formatDisplayTime(timestamp, 'UTC');
-  }
-}
-
 export function formatDisplayShortDate(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
@@ -186,6 +209,15 @@ const numberFormat = new Intl.NumberFormat('en-US');
 
 export function formatCount(value: number): string {
   return numberFormat.format(value);
+}
+
+const compactFormat = new Intl.NumberFormat('en-US', {
+  notation: 'compact',
+  maximumFractionDigits: 0,
+});
+
+export function formatCompactCount(value: number): string {
+  return compactFormat.format(value);
 }
 
 export function pluralCount(count: number, noun: string): string {

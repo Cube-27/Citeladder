@@ -272,7 +272,7 @@ describe('perception derivations', () => {
         point('15', -20, false),
         point('22', 100, true, 3),
       ],
-      (iso) => iso.slice(5, 10),
+      (iso) => ({ label: iso.slice(5, 10) }),
     );
     expect(series.map(({ label, value, breakBefore }) => [label, value, breakBefore])).toEqual([
       ['11-01', 10, false],

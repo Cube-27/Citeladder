@@ -89,11 +89,9 @@ export function VisibilityByTopic({
               </TableCell>
             </>
           ) : (
-            VALUE_KEYS.map((key) => (
-              <TableCell key={key} numeric>
-                <Absence state="not_run" label={READING_LABELS.not_run} />
-              </TableCell>
-            ))
+            <TableCell numeric colSpan={VALUE_KEYS.length}>
+              <Absence state="not_run" label={READING_LABELS.not_run} />
+            </TableCell>
           )}
         </TableRow>
       ))}

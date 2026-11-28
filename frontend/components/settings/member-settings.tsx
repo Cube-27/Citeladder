@@ -8,7 +8,6 @@ import { SettingsGroup } from '@/components/ui/setting-row';
 import { TextLink } from '@/components/ui/text-link';
 import { UserPlus } from '@/lib/icons';
 import { PLANS_HREF } from '@/lib/billing/plan-limit';
-import { pluralCount } from '@/lib/format';
 import { SearchField } from '@/components/ui/search-field';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
@@ -163,9 +162,7 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
       <SettingsGroup
         title="Members"
         region={false}
-        description={
-          membersQuery.data ? pluralCount(membersQuery.data.length, 'member') : undefined
-        }
+        count={membersQuery.data?.length}
         action={
           mayInvite ? (
             <Button type="button" variant="secondary" onClick={() => setInviteOpen(true)}>

@@ -1,12 +1,21 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
 
 import type { Audit } from '@citeladder/contracts';
 import { pageNumberControls } from '@/components/ui/pager';
 import { makeAudit as audit } from '@/test/fixtures/runs';
 import { renderWithProviders as render } from '@/test/render';
 
+import { DISPLAY_TIME_ZONE_COOKIE } from '@/lib/display-timezone';
 import { RunsTable, type RunsTablePage } from './runs-table';
+
+beforeEach(() => {
+  document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=UTC; Path=/`;
+});
+
+afterEach(() => {
+  document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=; Path=/; Max-Age=0`;
+});
 
 const TABLE: RunsTablePage = {
   sort: { key: 'created', descending: true },
@@ -29,18 +38,18 @@ describe('RunsTable', () => {
     renderTable(rows);
 
     const links = runLinks();
-    expect(links[0]).toHaveAccessibleName('Brand audit · Aug 1, 2026');
+    expect(links[0]).toHaveAccessibleName('Brand audit · Aug 1, 2026, 12:00 AM');
     expect(links[0]).toHaveAttribute('href', `/runs/${rows[0]!.id}`);
-    expect(links[1]).toHaveAccessibleName('Brand audit · Jul 30, 2026');
+    expect(links[1]).toHaveAccessibleName('Brand audit · Jul 30, 2026, 12:00 AM');
     expect(links[1]).toHaveAttribute('href', `/runs/${rows[1]!.id}`);
   });
 
   it.each([
-    [{ audit_scope: 'brand' }, 'Brand audit · Aug 1, 2026'],
-    [{ audit_scope: 'commerce' }, 'Commerce audit · Aug 1, 2026'],
+    [{ audit_scope: 'brand' }, 'Brand audit · Aug 1, 2026, 12:00 AM'],
+    [{ audit_scope: 'commerce' }, 'Commerce audit · Aug 1, 2026, 12:00 AM'],
     [
       { audit_scope: 'brand', parent_audit_id: '99999999-1111-4111-8111-111111111111' },
-      'Brand repair run · Aug 1, 2026',
+      'Brand repair run · Aug 1, 2026, 12:00 AM',
     ],
   ] as const)('distinguishes a run by what it measured (%o)', (overrides, name) => {
     renderTable([audit(1, overrides)]);

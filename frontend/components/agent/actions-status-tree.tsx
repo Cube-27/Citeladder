@@ -1,4 +1,4 @@
-import { GroupingRows } from '@/components/agent/actions-rows';
+import { ACTION_STATUS_TONE, GroupingRows } from '@/components/agent/actions-rows';
 import { useStatusTree } from '@/components/agent/use-actions-page';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -13,7 +13,6 @@ import {
   TreeQuiet,
   TreeStatusRow,
 } from '@/components/ui/work-tree';
-import type { StateDotTone } from '@/components/ui/state-dot';
 import type { GroupingRef, TreeGroup, TreeGrouping } from '@/lib/agent/action-tree';
 import { ACTION_GROUPING_LABEL, ACTION_STATUS_LABEL, treeGroupLabel } from '@/lib/agent/vocabulary';
 import type { ActionStatus, ActionTree } from '@/lib/api/actions';
@@ -29,13 +28,6 @@ export const levelKey = {
 };
 
 export const groupAnchor = (status: ActionStatus, group: string) => `actions-${status}-${group}`;
-
-const TONE: Record<ActionStatus, StateDotTone> = {
-  open: 'open',
-  in_progress: 'active',
-  done: 'done',
-  dismissed: 'declined',
-};
 
 const EMPTY: Record<ActionStatus, string> = {
   open: 'No new actions',
@@ -56,7 +48,7 @@ export function StatusSection({
     <section aria-label={ACTION_STATUS_LABEL[status]}>
       <TreeStatusRow
         open={open}
-        tone={TONE[status]}
+        tone={ACTION_STATUS_TONE[status]}
         name={ACTION_STATUS_LABEL[status]}
         count={shown}
         aria-label={[ACTION_STATUS_LABEL[status], shown].filter(Boolean).join(', ')}

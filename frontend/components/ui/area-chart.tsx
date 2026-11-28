@@ -64,7 +64,7 @@ import {
   useSeriesTones,
   type MarkerShape,
   type SeriesTone,
-} from '@/components/ui/step-chart-parts';
+} from '@/components/ui/series-palette';
 
 type Line = Readonly<{
   name: string;
@@ -162,16 +162,21 @@ export function AreaChart({
     <ChartFrame height={heightRole} summary={summarise(label, data, lines, shown)}>
       <div className="flex min-w-0 flex-col gap-4">
         {legend ? (
-          <ChartKey
-            eventsLabel={placed.length ? eventsLabel : undefined}
-            entries={lines.map((line) => ({
-              name: line.name,
-              mark: line.mark,
-              tone: line.tone,
-              shape: line.shape,
-              value: latestText(line),
-            }))}
-          />
+          <div className="flex min-w-0 items-start justify-between gap-4">
+            <ChartKey
+              eventsLabel={placed.length ? eventsLabel : undefined}
+              entries={lines.map((line) => ({
+                name: line.name,
+                mark: line.mark,
+                tone: line.tone,
+                shape: line.shape,
+                value: latestText(line),
+              }))}
+            />
+            {breakNote === 'hint' ? (
+              <ChartBreakNote data={data} lines={lines} placement="hint" bridged />
+            ) : null}
+          </div>
         ) : null}
         <AreaPlot
           label={label}
@@ -184,8 +189,10 @@ export function AreaChart({
           yFormat={yFormat}
           shown={shown}
         />
-        <ChartBreakNote data={data} lines={lines} placement={breakNote} bridged />
-        <EventLegend events={placed.map((event) => ({ ...event, x: 0 }))} shown={eventLegend} />
+        {breakNote === 'caption' ? (
+          <ChartBreakNote data={data} lines={lines} placement="caption" bridged />
+        ) : null}
+        <EventLegend events={placed} shown={eventLegend} />
       </div>
       {table}
     </ChartFrame>

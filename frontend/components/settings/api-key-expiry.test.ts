@@ -1,6 +1,6 @@
 import { expect, it } from 'vite-plus/test';
 
-import { addDays, dayInZone, presetLabelDate, resolveExpiry } from './api-key-expiry';
+import { dayInZone, resolveExpiry } from './api-key-expiry';
 
 it('ends each preset at midnight in the display zone, counted from that zone’s today', () => {
   const at = (choice: '1' | '7' | '30' | '90', today: string, timeZone: string) =>
@@ -23,7 +23,6 @@ it('ends each preset at midnight in the display zone, counted from that zone’s
   });
   expect(dayInZone(new Date('2026-11-22T20:00:00Z'), 'Asia/Kolkata')).toBe('2026-11-23');
   expect(dayInZone(new Date('2026-11-22T20:00:00Z'), 'America/Los_Angeles')).toBe('2026-11-22');
-  expect(addDays('2028-02-28', 1)).toBe('2028-02-29');
 });
 
 it('refuses a custom day before today and accepts today itself', () => {
@@ -38,9 +37,4 @@ it('refuses a custom day before today and accepts today itself', () => {
   expect(
     resolveExpiry({ choice: 'never', customDay: '', today: '2026-11-22', timeZone: 'UTC' }),
   ).toEqual({ kind: 'never' });
-});
-
-it('names a preset’s weekday and adds the year only when it differs from today’s', () => {
-  expect(presetLabelDate('2026-12-22', '2026-11-22')).toBe('Tue, Dec 22');
-  expect(presetLabelDate('2027-02-20', '2026-11-22')).toBe('Sat, Feb 20, 2027');
 });

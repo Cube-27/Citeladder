@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { SERIES_FILL, SERIES_STROKE, type SeriesTone } from '@/components/ui/step-chart-parts';
+import { SERIES_FILL, SERIES_STROKE, type SeriesTone } from '@/components/ui/series-palette';
 import { SERIES_WEIGHT } from '@/components/ui/chart-geometry';
 import { percentText } from '@/lib/format';
 

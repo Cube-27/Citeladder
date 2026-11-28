@@ -7,7 +7,7 @@ import {
   SERIES_STROKE,
   type MarkerShape,
   type SeriesTone,
-} from '@/components/ui/step-chart-parts';
+} from '@/components/ui/series-palette';
 import { CHART_KEY_GLYPH, SERIES_WEIGHT } from '@/components/ui/chart-geometry';
 import { Section, useOnPage } from '@/components/ui/section';
 import { SHEET_FACE } from '@/components/ui/slip';
@@ -25,16 +25,22 @@ const FRAME_HEIGHT = {
 export function ChartFrame({
   height,
   summary,
+  centred = false,
   children,
 }: Readonly<{
   height?: ChartHeight;
   summary?: string;
+  centred?: boolean;
   children: ReactNode;
 }>) {
   const frame = (
     <div
       data-chart-frame={height ?? 'auto'}
-      className={cn('grid min-w-0 *:min-w-0', height && FRAME_HEIGHT[height])}
+      className={cn(
+        'grid min-w-0 *:min-w-0',
+        height && FRAME_HEIGHT[height],
+        centred && 'place-items-center',
+      )}
     >
       {summary ? <p className="sr-only">{summary}</p> : null}
       {children}

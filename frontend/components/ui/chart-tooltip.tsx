@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import type { MarkerShape, SeriesTone } from '@/components/ui/step-chart-parts';
+import type { MarkerShape, SeriesTone } from '@/components/ui/series-palette';
 import { printed } from '@/components/ui/absence';
 import {
   CHART_MARKER,

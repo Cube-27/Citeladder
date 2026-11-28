@@ -12,6 +12,7 @@ import {
   StateHeadingLevelContext,
 } from '@/components/ui/state-heading-level';
 import { textRoleClass } from '@/components/ui/text-role';
+import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import './section.css';
 
@@ -110,13 +111,18 @@ export function SectionTitle({
       className={cn(textRoleClass(useContext(SectionTitleRoleContext)), truncate && 'truncate')}
     >
       {children}
-      {count === undefined ? null : (
-        <>
-          {' '}
-          <span className="text-ink-2">({count})</span>
-        </>
-      )}
+      <TitleCount count={count} />
     </Heading>
+  );
+}
+
+export function TitleCount({ count }: Readonly<{ count: number | undefined }>) {
+  if (count === undefined) return null;
+  return (
+    <>
+      {' '}
+      <span className="text-ink-2 tabular-nums">{formatCount(count)}</span>
+    </>
   );
 }
 

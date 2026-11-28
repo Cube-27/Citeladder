@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import type { StateDotTone } from '@/components/ui/state-dot';
 import { StatusMark } from '@/components/ui/status-mark';
 import { WorkRow, WorkRows, WorkRowsMore } from '@/components/ui/work-rows';
 import { actionTarget } from '@/lib/agent/action-title';
 import { groupingParams, type GroupingRef, type TreeGrouping } from '@/lib/agent/action-tree';
 import { approachLabel, familyLabel, IMPACT_LABEL, targetKindLabel } from '@/lib/agent/vocabulary';
-import { actionsQueries, type Action } from '@/lib/api/actions';
+import { actionsQueries, type Action, type ActionStatus } from '@/lib/api/actions';
 import { ACTIONS_GROUPING_PAGE_SIZE } from '@/lib/config/agent';
 import { formatCount, pluralCount } from '@/lib/format';
 import { firstSentence } from '@/lib/site-health/issues';
@@ -22,6 +23,13 @@ const SCOPE_BY_KIND: Readonly<Record<string, string>> = {
   query: '1 query',
   product: '1 product',
   category: '1 category',
+};
+
+export const ACTION_STATUS_TONE: Record<ActionStatus, StateDotTone> = {
+  open: 'open',
+  in_progress: 'active',
+  done: 'done',
+  dismissed: 'declined',
 };
 
 export function scopeLabel(action: Pick<Action, 'target_kind' | 'page_count'>): string {

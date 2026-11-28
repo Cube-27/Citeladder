@@ -1,10 +1,9 @@
 import { CHART_HALO } from '@/components/ui/chart-geometry';
-import type { TrendScale } from '@/components/ui/trend-geometry';
+import { LABEL_CHAR_WIDTH, type TrendScale } from '@/components/ui/trend-geometry';
 
 type LabelledLine = Readonly<{ name: string; values: readonly (number | null)[] }>;
 
 const END_LABEL_GAP = 14;
-const LABEL_CHAR_WIDTH = 7.4;
 
 export function LineEndLabels({
   lines,
