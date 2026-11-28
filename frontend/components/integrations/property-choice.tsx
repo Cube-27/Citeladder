@@ -1,24 +1,24 @@
-import { useMutation } from '@tanstack/react-query';
-import { StateBlock } from '@/components/ui/state-block';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
-import { Text } from '@/components/ui/typography';
-import { List, RefreshCw } from '@/lib/icons';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import {
-  integrationsMutations,
-  type IntegrationConnection,
-  type IntegrationProperty,
-  type IntegrationProvider,
+import { Stack } from '@/components/ui/layout';
+import { List } from '@/lib/icons';
+import type {
+  IntegrationConnection,
+  IntegrationProperty,
+  IntegrationProvider,
 } from '@/lib/api/integrations';
 
 import { PROVIDER_META } from '@/components/settings/grant-model';
 
 import { ownPropertiesFirst } from './data-sources';
-import { Notice } from '@/components/ui/notice';
+import {
+  PropertyDiscoveryState,
+  PropertyOptions,
+  PropertySaveFailure,
+  usePropertyDiscovery,
+} from './property-options';
 
 const onlyItem = <T,>(items: readonly T[]) => (items.length === 1 ? items[0] : undefined);
 
@@ -40,16 +40,10 @@ export function usePropertyChoice({
 }>): { action: ReactNode; body: ReactNode } {
   const source = PROVIDER_META[provider];
   const [showAll, setShowAll] = useState(false);
-  const discovery = useMutation(
-    integrationsMutations.discoverProperties(connection.workspace_id, connection.id),
-  );
+  const { discovery, select, pendingRef } = usePropertyDiscovery(connection);
   const discover = () => discovery.mutate(projectId);
-  const select = useMutation(
-    integrationsMutations.createMapping(connection.workspace_id, connection.id),
-  );
   const choose = (propertyRef: string) =>
     select.mutate({ provider, property_ref: propertyRef, project_id: projectId });
-  const pendingRef = select.isPending ? (select.variables?.property_ref ?? null) : null;
   const started = useRef(false);
   useEffect(() => {
     if (!autoStart || started.current) return;
@@ -57,21 +51,21 @@ export function usePropertyChoice({
     discovery.mutate(projectId);
   }, [autoStart, discovery, projectId]);
 
-  if (!discovery.isSuccess) return discoveryStatus({ noun: source.noun, discovery, discover });
-  const properties = ownPropertiesFirst(discovery.data);
-  if (properties.length === 0)
+  if (discovery.isIdle)
+    return {
+      action: (
+        <Button variant="secondary" onClick={discover}>
+          Choose {source.noun}
+        </Button>
+      ),
+      body: null,
+    };
+  if (!discovery.isSuccess || discovery.data.length === 0)
     return {
       action: null,
-      body: (
-        <Notice tone="info">
-          This account has no {source.noun}. Add and verify the site in {source.console}, then{' '}
-          <Button variant="quiet" onClick={discover}>
-            <Icon icon={RefreshCw} />
-            check again
-          </Button>
-        </Notice>
-      ),
+      body: <PropertyDiscoveryState provider={provider} discovery={discovery} onRetry={discover} />,
     };
+  const properties = ownPropertiesFirst(discovery.data);
   const suggested = suggestedProperty(provider, properties);
   const listed = !suggested || showAll;
   return {
@@ -90,27 +84,19 @@ export function usePropertyChoice({
       listed || select.isError ? (
         <Stack gap="compact">
           {listed ? (
-            <PropertyList
-              source={source}
+            <PropertyOptions
+              provider={provider}
               properties={properties}
+              selected=""
+              blocked={false}
               pendingRef={pendingRef}
               onSelect={choose}
             />
           ) : null}
-          <SaveFailure error={select.error} />
+          <PropertySaveFailure error={select.error} />
         </Stack>
       ) : null,
   };
-}
-
-function SaveFailure({ error }: Readonly<{ error: Error | null }>) {
-  if (!error) return null;
-  return (
-    <Notice
-      kind="mutation"
-      notice={mutationNoticeForError(error, { action: 'save the property' })}
-    />
-  );
 }
 
 function SuggestionButtons({
@@ -149,92 +135,5 @@ function SuggestionButtons({
         Use {suggestedLabel}
       </Button>
     </>
-  );
-}
-
-function discoveryStatus({
-  noun,
-  discovery,
-  discover,
-}: Readonly<{
-  noun: string;
-  discovery: { isIdle: boolean; isPending: boolean; error: unknown };
-  discover: () => void;
-}>): { action: ReactNode; body: ReactNode } {
-  if (discovery.isIdle)
-    return {
-      action: (
-        <Button variant="secondary" onClick={discover}>
-          Choose {noun}
-        </Button>
-      ),
-      body: null,
-    };
-  if (discovery.isPending)
-    return {
-      action: null,
-      body: (
-        <StateBlock
-          kind="loading"
-          label={`Loading your ${noun}s…`}
-          shape={{ kind: 'list', rows: 2 }}
-        />
-      ),
-    };
-  return {
-    action: null,
-    body: (
-      <Notice
-        kind="mutation"
-        notice={mutationNoticeForError(discovery.error, { action: `load your ${noun}s` })}
-        recovery={
-          <Button variant="secondary" onClick={discover}>
-            Try again
-          </Button>
-        }
-      />
-    ),
-  };
-}
-
-function PropertyList({
-  source,
-  properties,
-  pendingRef,
-  onSelect,
-}: Readonly<{
-  source: { noun: string; label: string };
-  properties: IntegrationProperty[];
-  pendingRef: string | null;
-  onSelect: (propertyRef: string) => void;
-}>) {
-  return (
-    <Stack as="ul" gap="tight" aria-label={`${source.noun}s`}>
-      {properties.map((property) => {
-        const foreign = property.matches_project === false;
-        return (
-          <Inline as="li" key={property.property_ref} gap="compact">
-            <span className="min-w-0 flex-1">
-              <Text variant="body" tone="ink-2" box="block" wrap="truncate">
-                {property.label}
-              </Text>
-              <Text variant="caption" box="block" wrap="truncate">
-                {foreign ? 'Belongs to a different site' : property.property_ref}
-              </Text>
-            </span>
-            <Button
-              variant="secondary"
-              disabled={foreign || pendingRef !== null}
-              pending={pendingRef === property.property_ref}
-              pendingLabel="Importing…"
-              onClick={() => onSelect(property.property_ref)}
-              aria-label={`Use ${property.label} for ${source.label}`}
-            >
-              Use
-            </Button>
-          </Inline>
-        );
-      })}
-    </Stack>
   );
 }
