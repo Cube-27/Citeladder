@@ -1,7 +1,7 @@
 import { cloneElement, type ComponentProps, type ReactElement, type ReactNode } from 'react';
 
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { ChevronRight, type IconGlyph } from '@/lib/icons';
 import type { Turnstile } from '@/lib/turnstile/use-turnstile';
 import { cn } from '@/lib/utils';
@@ -22,9 +22,9 @@ export function AuthForm({
   children,
 }: Readonly<{ onSubmit: NonNullable<ComponentProps<'form'>['onSubmit']>; children: ReactNode }>) {
   return (
-    <Stack as="form" gap="loose" noValidate onSubmit={onSubmit} data-auth-form="">
+    <form noValidate onSubmit={onSubmit} data-auth-form="" className="gap-loose flex flex-col">
       {children}
-    </Stack>
+    </form>
   );
 }
 

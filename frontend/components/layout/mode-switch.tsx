@@ -7,7 +7,7 @@ import { MODE_HOMES, navigationMode, type NavigationMode } from '@/lib/navigatio
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useNavScope } from '@/lib/project/project-context';
 
-export const MODES: readonly { mode: NavigationMode; label: string; icon: IconGlyph }[] = [
+const MODES: readonly { mode: NavigationMode; label: string; icon: IconGlyph }[] = [
   { mode: 'dashboard', label: 'Dashboard', icon: PanelsTopLeft },
   { mode: 'agent', label: 'Agent', icon: ICONS.agent },
 ];

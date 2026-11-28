@@ -170,10 +170,7 @@ function markOf(props: StatusMarkProps): Mark {
   }
 }
 
-export function ToneGlyph({
-  tone,
-  size = 'sm',
-}: Readonly<{ tone: StatusTone; size?: 'sm' | 'md' }>) {
+function ToneGlyph({ tone, size = 'sm' }: Readonly<{ tone: StatusTone; size?: 'sm' | 'md' }>) {
   return (
     <svg
       aria-hidden

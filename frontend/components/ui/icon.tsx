@@ -5,7 +5,6 @@ import { TEXT_TONE_CLASS, type TextTone } from '@/components/ui/text-role';
 import { cn } from '@/lib/utils';
 
 const ICON_SIZE = {
-  xs: 'size-3',
   text: 'my-0.75 size-3.5',
   field: 'my-0.5 size-4',
   flush: 'size-3.5',

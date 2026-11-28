@@ -82,7 +82,7 @@ function ActionPage({
         <PageSections>
           <TitledSection region title="Overview" description={suggested}>
             <Stack gap="item">
-              <Text as="p" wrap="words">
+              <Text as="p" variant="body" wrap="words">
                 {brief?.overview ?? withShortTarget(action.handoff.message, action)}
               </Text>
               <Inline gap="item" wrap>
@@ -99,7 +99,7 @@ function ActionPage({
           ) : null}
           {brief ? (
             <TitledSection region title="Why this matters">
-              <Text as="p" wrap="words">
+              <Text as="p" variant="body" wrap="words">
                 {brief.why}
               </Text>
             </TitledSection>
@@ -160,7 +160,7 @@ function StepList({ items }: Readonly<{ items: readonly string[] }>) {
   return (
     <Stack as="ul" gap="tight" list="disc">
       {items.map((item) => (
-        <Text as="li" key={item} wrap="words">
+        <Text as="li" key={item} variant="body" wrap="words">
           {item}
         </Text>
       ))}

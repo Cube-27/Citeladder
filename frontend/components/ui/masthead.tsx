@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
-import { Icon } from '@/components/ui/icon';
 import { MastheadOverflow, MastheadPrimarySlot } from '@/components/ui/masthead-actions';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { ChevronRight } from '@/lib/icons';
@@ -46,7 +45,7 @@ export function Masthead({
         {section ? (
           <span className="text-body text-ink-2 rail:flex hidden shrink-0 items-center gap-2">
             {section.title}
-            <Icon icon={ChevronRight} size="xs" />
+            <CrumbSeparator />
           </span>
         ) : null}
         {crumb ?? (
@@ -119,4 +118,8 @@ function useIsCut(ref: RefObject<HTMLElement | null>, text: string) {
     return () => observer.disconnect();
   }, [ref, text]);
   return cut;
+}
+
+export function CrumbSeparator() {
+  return <ChevronRight aria-hidden className="text-ink-2 block size-3 shrink-0" />;
 }
