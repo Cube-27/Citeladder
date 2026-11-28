@@ -151,12 +151,16 @@ export function ThreadLayout({
   children: ReactNode;
 }>) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <section ref={scrollRef} aria-label={scrollLabel} className="pb-workspace flex-1 p-1">
+    <div className="min-h-route-fill flex flex-col">
+      <section
+        ref={scrollRef}
+        aria-label={scrollLabel}
+        className="pb-workspace flex flex-1 flex-col p-1"
+      >
         <div
           data-page-content=""
           data-thread=""
-          className="gap-workspace flex w-full min-w-0 flex-col"
+          className="gap-workspace flex w-full min-w-0 flex-1 flex-col"
         >
           {children}
         </div>

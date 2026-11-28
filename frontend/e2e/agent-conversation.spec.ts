@@ -420,3 +420,29 @@ for (const width of [1280, 390]) {
     });
   }
 }
+
+test('a new chat centers its opening in the page both ways at 1280px', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await stubAuthedShell(page, [
+    ['**/api/v1/agent/skills', { skills: SKILLS, models: AGENT_MODELS, limits: LIMITS }],
+    [`**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`, actionsPage()],
+    [`**/api/v1/projects/${FIXTURE_PROJECT.id}/agent/chats?*`, { items: [], next_cursor: null }],
+  ]);
+  await page.goto(fixtureProjectPath('/agent'));
+  await expect(page.getByLabel('Message the agent')).toBeVisible();
+  const { thread, opening, viewport } = await page.evaluate(() => {
+    const host = document.querySelector('[data-thread]')!;
+    return {
+      thread: host.getBoundingClientRect().toJSON() as DOMRect,
+      opening: host.firstElementChild!.getBoundingClientRect().toJSON() as DOMRect,
+      viewport: window.innerHeight,
+    };
+  });
+  expect(thread.bottom).toBeGreaterThan(viewport - 64);
+  expect(
+    Math.abs(opening.top + opening.height / 2 - (thread.top + thread.height / 2)),
+  ).toBeLessThanOrEqual(2);
+  expect(
+    Math.abs(opening.left + opening.width / 2 - (thread.left + thread.width / 2)),
+  ).toBeLessThanOrEqual(2);
+});

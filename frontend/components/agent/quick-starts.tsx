@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { NewChatInput } from '@/components/agent/use-chat-turns';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Columns } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { Eye, FileText, Sparkles, TrendingUp, type IconGlyph } from '@/lib/icons';
 import { actionsQueries } from '@/lib/api/actions';
 import { AGENT_BRIEFING_ACTIONS } from '@/lib/config/agent';
@@ -55,9 +55,10 @@ export function QuickStarts({
   const top = actions.data?.items.slice(0, AGENT_BRIEFING_ACTIONS) ?? [];
   const locked = disabled || pending;
   return (
-    <Columns as="nav" aria-label="Quick starts" template="quarters">
+    <Inline as="nav" aria-label="Quick starts" wrap>
       <Button
         variant="secondary"
+        box="share"
         disabled={locked || actions.isPending}
         onClick={() =>
           onStart({
@@ -75,6 +76,7 @@ export function QuickStarts({
         <Button
           key={start.workflowId}
           variant="secondary"
+          box="share"
           disabled={locked}
           onClick={() =>
             onStart({
@@ -89,6 +91,6 @@ export function QuickStarts({
           {start.label}
         </Button>
       ))}
-    </Columns>
+    </Inline>
   );
 }
