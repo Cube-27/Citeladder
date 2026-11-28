@@ -76,7 +76,6 @@
 }
 
 :root[data-public-surface] {
-  --shadow-xs: 0 0 0 1px var(--color-rule);
   --color-secondary-edge: var(--color-control-line);
   --marketing-nav-offset: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
 }

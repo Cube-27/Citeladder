@@ -1,5 +1,8 @@
 import {
+  Children,
   createContext,
+  Fragment,
+  isValidElement,
   useContext,
   useId,
   type ComponentPropsWithoutRef,
@@ -11,6 +14,7 @@ import {
   SectionTitleRoleContext,
   StateHeadingLevelContext,
 } from '@/components/ui/state-heading-level';
+import { BusyRung } from '@/components/ui/rung-meter';
 import { textRoleClass } from '@/components/ui/text-role';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -24,12 +28,44 @@ export const useOnPage = () => useContext(SurfaceContext) === 'page';
 
 type SectionProps = Omit<ComponentPropsWithoutRef<'section'>, 'className' | 'style'> & {
   accent?: boolean;
+  tray?: boolean;
 };
 
-export function Section({ children, accent = false, ...props }: Readonly<SectionProps>) {
+type Tray = 'open' | 'head-only' | undefined;
+
+function shownChildren(children: ReactNode): ReactNode[] {
+  return Children.toArray(children).flatMap((child) => {
+    if (!isValidElement<{ children?: ReactNode }>(child)) return [child];
+    if (child.type === Fragment) return shownChildren(child.props.children);
+    return child.type === BusyRung ? [] : [child];
+  });
+}
+
+function opensWithHead(children: ReactNode): Tray {
+  const shown = shownChildren(children);
+  const [first] = shown;
+  if (!isValidElement<{ children?: ReactNode }>(first)) return undefined;
+  if (first.type === SectionHeader) return shown.length === 1 ? 'head-only' : 'open';
+  if (shown.length > 1) return undefined;
+  if (first.type === Section && opensWithHead(first.props.children)) return 'open';
+  return undefined;
+}
+
+function trayOf(children: ReactNode, tray: boolean | undefined): Tray {
+  if (tray === undefined) return opensWithHead(children);
+  return tray ? 'open' : undefined;
+}
+
+export function Section({ children, accent = false, tray, ...props }: Readonly<SectionProps>) {
   const onPage = useOnPage();
+  const shape = onPage ? trayOf(children, tray) : undefined;
   return (
-    <section {...props} data-panel={onPage ? 'card' : 'flat'} data-accent={accent ? '' : undefined}>
+    <section
+      {...props}
+      data-panel={onPage ? 'card' : 'flat'}
+      data-accent={accent ? '' : undefined}
+      data-tray={shape === 'open' ? '' : shape}
+    >
       <SurfaceContext value="surface">
         <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
       </SurfaceContext>

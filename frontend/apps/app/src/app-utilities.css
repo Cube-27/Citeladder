@@ -18,14 +18,8 @@
 @utility turn {
   transition: rotate var(--transition-duration-turn) var(--ease-standard);
 }
-@utility scrollbar-stable {
-  scrollbar-gutter: stable;
-}
 @utility controls-lg {
   --spacing-control-md: var(--spacing-control-lg);
-}
-@utility shadow-xs {
-  box-shadow: var(--shadow-xs);
 }
 @utility shadow-pop {
   box-shadow: var(--shadow-pop);

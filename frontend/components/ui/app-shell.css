@@ -1,0 +1,3 @@
+[data-app-surface] > aside {
+  box-shadow: inset calc(-1 * var(--rule-width)) 0 0 var(--color-rule);
+}

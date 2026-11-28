@@ -1,0 +1,96 @@
+.table-frame {
+  border: var(--rule-width) solid var(--color-rule);
+}
+
+:where(.surface-card, .surface-well, [data-overlay]) .table-frame {
+  border: 0;
+}
+
+:root:not([data-public-surface]) .table-frame {
+  --spacing-cell-y: 8px;
+  border: 0;
+}
+:root:not([data-public-surface]) .table-frame thead th {
+  height: var(--table-head-height);
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+  font-weight: var(--text-label--font-weight);
+  letter-spacing: var(--text-label--letter-spacing);
+  text-transform: none;
+  color: var(--text-color-ink-soft);
+  background: var(--color-table-head);
+  box-shadow: inset 0 calc(-1 * var(--rule-width)) 0 var(--color-rule);
+}
+:root:not([data-public-surface]) .table-frame tbody > tr > * {
+  background-color: var(--table-ground);
+}
+:root:not([data-public-surface]) .table-frame thead > tr {
+  height: auto;
+}
+:root:not([data-public-surface]) .table-frame thead th[aria-sort] {
+  color: var(--text-color-ink);
+}
+@media (hover: hover) and (pointer: fine) {
+  :root:not([data-public-surface]) .table-frame thead th:has(button:hover) {
+    color: var(--text-color-ink);
+  }
+}
+:root:not([data-public-surface]) .table-frame tbody :is(td, th) {
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+:root:not([data-public-surface]) .table-frame td.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.table-frame tbody > tr > :is(td, th) {
+  box-shadow: inset 0 calc(-1 * var(--rule-width)) 0 var(--color-rule);
+}
+.table-frame tbody > tr:last-child > :is(td, th) {
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root:not([data-public-surface]) .table-frame tbody > tr[data-pressable]:hover > * {
+    background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
+  }
+}
+:root:not([data-public-surface]) .table-frame tbody > tr[aria-selected='true'] > * {
+  background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
+}
+
+:root:not([data-public-surface]) .table-frame tbody > tr[data-you] > :first-child {
+  box-shadow:
+    inset var(--spacing-mark) 0 0 var(--color-accent),
+    inset 0 calc(-1 * var(--rule-width)) 0 var(--color-rule);
+}
+:root:not([data-public-surface]) .table-frame tbody > tr[data-you]:last-child > :first-child {
+  box-shadow: inset var(--spacing-mark) 0 0 var(--color-accent);
+}
+
+:root:not([data-public-surface])
+  .table-frame
+  tbody
+  td
+  :is([data-button-variant], [role='combobox']) {
+  margin-block: min(
+    0px,
+    calc((var(--spacing-row) - 2 * var(--spacing-cell-y) - var(--spacing-control-md)) / 2)
+  );
+}
+
+.table-frame tr:focus-visible {
+  outline-offset: calc(-1 * var(--focus-width));
+}
+
+:root:not([data-public-surface]) .table-frame tbody td:not([data-tone]) {
+  color: var(--text-color-ink-soft);
+}
+:root:not([data-public-surface]) .table-frame :is(thead, tbody) > tr > :not(:last-child) {
+  box-shadow:
+    inset calc(-1 * var(--rule-width)) 0 0 var(--color-edge-cell),
+    inset 0 calc(-1 * var(--rule-width)) 0 var(--color-rule);
+}
+:root:not([data-public-surface]) .table-frame tbody > tr:last-child > :not(:last-child) {
+  box-shadow: inset calc(-1 * var(--rule-width)) 0 0 var(--color-edge-cell);
+}

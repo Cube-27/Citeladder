@@ -21,6 +21,7 @@ import {
 } from '@/lib/icons';
 import { setSidebarCollapsed, useSidebarCollapsed } from '@/lib/sidebar-width';
 import { cn } from '@/lib/utils';
+import './sidebar.css';
 
 export function SidebarFrame({
   ident,

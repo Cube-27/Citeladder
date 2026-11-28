@@ -45,6 +45,7 @@ import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navig
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
+import './visibility-trends.css';
 
 export type Metric = (typeof VISIBILITY_METRICS)[number]['value'];
 

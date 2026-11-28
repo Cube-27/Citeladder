@@ -1,0 +1,4 @@
+:root:not([data-public-surface]) [data-panel='card'] > header:first-child > #insights-headline {
+  font-size: calc(var(--type-base) + 2 * var(--type-step));
+  line-height: calc(var(--type-base) + 5.5 * var(--type-step));
+}

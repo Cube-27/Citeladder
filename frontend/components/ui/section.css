@@ -126,6 +126,108 @@
   grid-column: 1 / -1;
 }
 
+:root:not([data-public-surface]) :is([data-panel='card'], [data-panel-frame]) {
+  --card-edge: var(--color-edge-card);
+  --card-frame: 0px;
+  position: relative;
+  box-shadow: none;
+}
+:root:not([data-public-surface]) :is([data-panel='card'], [data-panel-frame])::after {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--card-frame));
+  z-index: 2;
+  border: var(--rule-width) solid var(--card-edge);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+:root:not([data-public-surface]) [data-tray] {
+  border: var(--spacing-tray-frame) solid var(--color-tray);
+  border-top-width: 0;
+  border-radius: var(--radius-tray);
+  --card-edge: transparent;
+  --card-frame: var(--spacing-tray-frame);
+}
+:root:not([data-public-surface]) [data-tray='head-only'] {
+  padding-bottom: 0;
+}
+:root:not([data-public-surface])
+  :is(
+    [data-tray] > header,
+    [data-tray] > [data-panel='flat']:only-child > header:first-child,
+    [data-tray] > [data-slot-host]:only-child > [data-tab-head]:first-child
+  ) {
+  --text-heading: var(--text-label);
+  --text-heading--line-height: var(--text-label--line-height);
+  --text-title: var(--text-label);
+  --text-title--line-height: var(--text-label--line-height);
+  position: relative;
+  z-index: 1;
+  margin: calc(-1 * var(--spacing-panel-inset)) calc(-1 * var(--spacing-panel-inset)) 0;
+  padding: var(--spacing-tray-head-top) var(--spacing-tray-head-end) var(--spacing-tray-head-bottom)
+    var(--spacing-tray-head-start);
+  background: var(--color-tray);
+}
+:root:not([data-public-surface])
+  :is(
+    [data-tray] > header,
+    [data-tray] > [data-panel='flat']:only-child > header:first-child,
+    [data-tray] > [data-slot-host]:only-child > [data-tab-head]:first-child
+  )::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  inset-inline: 0;
+  height: var(--radius-tray-inner);
+  background:
+    radial-gradient(
+        circle at 100% 100%,
+        transparent calc(var(--radius-tray-inner) - var(--rule-width)),
+        var(--color-tray) var(--radius-tray-inner)
+      )
+      left top / var(--radius-tray-inner) var(--radius-tray-inner) no-repeat,
+    radial-gradient(
+        circle at 0 100%,
+        transparent calc(var(--radius-tray-inner) - var(--rule-width)),
+        var(--color-tray) var(--radius-tray-inner)
+      )
+      right top / var(--radius-tray-inner) var(--radius-tray-inner) no-repeat;
+  pointer-events: none;
+}
+:root:not([data-public-surface]) [data-tray='head-only'] > header::after {
+  display: none;
+}
+:root:not([data-public-surface])
+  :is(
+    [data-tray] > header + [data-bleed],
+    [data-tray] > header + [data-panel='flat'] > [data-bleed]:first-child,
+    [data-tray] > [data-panel='flat']:only-child > header:first-child + [data-bleed],
+    [data-tray]
+      > [data-panel='flat']:only-child
+      > header:first-child
+      + [data-panel='flat']
+      > [data-bleed]:first-child,
+    [data-tray]
+      > [data-slot-host]:only-child
+      > [data-tab-head]:first-child
+      ~ [role='tabpanel']
+      > [data-panel='flat']:first-child
+      > [data-bleed]:first-child
+  ) {
+  margin-top: calc(-1 * var(--spacing-card));
+  border-top-width: 0;
+}
+
+:root:not([data-public-surface]) [data-section-description] > span:has(> button) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+:root:not([data-public-surface]) [data-section-description] button[data-button-variant] {
+  margin-block: calc((var(--spacing-body-line) - var(--spacing-control-md)) / 2);
+}
+
 @media (forced-colors: active) {
   :is([data-panel='card'], [data-panel-frame], [data-main-column], .shadow-card):not(
     :focus-visible

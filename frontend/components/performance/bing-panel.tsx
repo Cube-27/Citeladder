@@ -25,7 +25,7 @@ export function BingPanel({
   const warm = useWarmDimensionTable(projectId);
 
   return (
-    <Section aria-label="Bing performance" data-testid="bing-panel">
+    <Section aria-label="Bing performance" data-testid="bing-panel" tray>
       <Tabs
         heading={<SectionTitle>Bing</SectionTitle>}
         value={dimension}

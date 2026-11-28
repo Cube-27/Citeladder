@@ -1,0 +1,9 @@
+:root:not([data-public-surface]) [data-fact-list='ruled'] {
+  container-type: inline-size;
+}
+@container (max-width: 24rem) {
+  :root:not([data-public-surface]) [data-fact-list='ruled'] > div {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--spacing);
+  }
+}

@@ -12,6 +12,7 @@ import { MastheadOverflow, MastheadPrimarySlot } from '@/components/ui/masthead-
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { ChevronRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
+import './masthead.css';
 
 const MASTHEAD_LABELLED = 'shrink-0 justify-start';
 

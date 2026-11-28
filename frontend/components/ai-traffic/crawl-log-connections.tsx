@@ -166,7 +166,7 @@ function Connections({
   );
   if (!showHeader) return body;
   return (
-    <Section id="crawl-log-connections" aria-label="Crawl log connections">
+    <Section id="crawl-log-connections" aria-label="Crawl log connections" tray>
       <ConnectionsHead empty={sources.data?.items.length === 0} connect={connect} />
       {body}
     </Section>

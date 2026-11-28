@@ -38,7 +38,7 @@ export function SourceUrlDetail({
 
   return (
     <SectionStack>
-      <Section aria-busy={query.isFetching}>
+      <Section aria-busy={query.isFetching} tray>
         <BusyRung active={query.isFetching} label="Updating source" />
         <PageIdentity title={title} url={url} />
         {query.isError ? (

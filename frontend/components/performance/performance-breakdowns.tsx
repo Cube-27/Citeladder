@@ -41,7 +41,7 @@ export function PerformanceBreakdowns({
   return (
     <>
       {hasSearchConsole ? (
-        <Section aria-labelledby="performance-breakdowns">
+        <Section aria-labelledby="performance-breakdowns" tray>
           <Tabs
             heading={<SectionTitle id="performance-breakdowns">Breakdowns</SectionTitle>}
             value={dimension}
