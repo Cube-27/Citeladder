@@ -189,6 +189,7 @@
   --spacing-shell-inset: 0px;
   --spacing-panel-inset: var(--spacing-shell-inset);
   --spacing-band: 8px;
+  --spacing-rhythm: 12px;
   --spacing-flow-gap: 48px;
   --spacing-section-rail: 192px;
   --spacing-tray-inset: 2px;

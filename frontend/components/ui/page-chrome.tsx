@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 
 export type PageWidth = 'full' | 'narrow' | 'detail' | 'reading' | 'fill';
 
+export type PageVariant = 'page' | 'thread';
+
 const PAGE_START: Record<PageWidth, string | false> = {
   fill: false,
   full: 'page-start-full',
@@ -14,13 +16,17 @@ const PAGE_START: Record<PageWidth, string | false> = {
   reading: 'page-start-reading',
 };
 
-const PAGE_COLUMN: Record<PageWidth, string | false> = {
+const PAGE_MEASURE: Record<PageWidth, string | false> = {
   fill: false,
-  full: 'ms-[var(--page-start,0px)] w-full max-w-app',
-  narrow: 'ms-[var(--page-start,0px)] w-full max-w-page',
-  detail: 'ms-[var(--page-start,0px)] w-full max-w-detail',
-  reading: 'ms-[var(--page-start,0px)] w-full max-w-reading',
+  full: 'max-w-app',
+  narrow: 'max-w-page',
+  detail: 'max-w-detail',
+  reading: 'max-w-reading',
 };
+
+function pageColumn(width: PageWidth) {
+  return width !== 'fill' && cn('ms-[var(--page-start,0px)] w-full', PAGE_MEASURE[width]);
+}
 
 export function PageWidthFrame({
   width,
@@ -50,8 +56,8 @@ export function PageHeadingRow({
       data-page-heading=""
       className={cn(
         'flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 pt-page-block',
-        strips && 'pb-3',
-        PAGE_COLUMN[width],
+        strips && 'pb-rhythm',
+        pageColumn(width),
       )}
     >
       {children}
@@ -97,16 +103,16 @@ export function PageFilterBand({ children }: Readonly<{ children: ReactNode }>) 
 
 export function PageBody({
   width,
-  end,
+  variant,
   children,
-}: Readonly<{ width: PageWidth; end: 'page' | 'thread'; children: ReactNode }>) {
+}: Readonly<{ width: PageWidth; variant: PageVariant; children: ReactNode }>) {
   return (
     <div
       data-page-body=""
       className={cn(
-        'flex min-w-0 flex-1 flex-col pt-3',
-        PAGE_COLUMN[width],
-        end === 'thread' ? 'pb-1' : 'pb-6',
+        'flex min-w-0 flex-1 flex-col pt-rhythm',
+        pageColumn(width),
+        variant === 'thread' ? 'pb-1' : 'pb-6',
       )}
     >
       {children}
