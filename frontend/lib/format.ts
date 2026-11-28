@@ -174,15 +174,6 @@ export function formatCount(value: number): string {
   return numberFormat.format(value);
 }
 
-const compactFormat = new Intl.NumberFormat('en-US', {
-  notation: 'compact',
-  maximumFractionDigits: 0,
-});
-
-export function formatCompactCount(value: number): string {
-  return compactFormat.format(value);
-}
-
 export function pluralCount(count: number, noun: string): string {
   return `${formatCount(count)} ${noun}${count === 1 ? '' : 's'}`;
 }

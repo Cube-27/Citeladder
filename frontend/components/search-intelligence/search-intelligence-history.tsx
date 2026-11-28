@@ -9,7 +9,7 @@ import {
   searchIntelligenceQueries,
   type SearchIntelligenceDataset,
 } from '@/lib/api/search-intelligence';
-import { formatCompactCount, formatCount, formatMonth, formatWindowDate } from '@/lib/format';
+import { formatCount, formatMonth, formatWindowDate } from '@/lib/format';
 import { isIsoDay } from '@/lib/iso-day';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
@@ -105,7 +105,7 @@ function HistoryBody({
           label="Saved monthly backlink totals"
           name="Backlinks"
           data={points((row) => row.backlinks)}
-          yFormat={formatCompactCount}
+          yFormat={compactCount}
           format={formatCount}
           you={false}
         />
@@ -119,13 +119,17 @@ function HistoryBody({
           name="New backlinks"
           data={points((row) => row.new)}
           series={[{ label: 'Lost backlinks', values: data.map((row) => row.lost) }]}
-          yFormat={formatCompactCount}
+          yFormat={compactCount}
           format={formatCount}
           you={false}
         />
       </Stack>
     </AppGrid>
   );
+}
+
+function compactCount(value: number): string {
+  return Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 0 }).format(value);
 }
 
 function numeric(value: unknown): number | null {
