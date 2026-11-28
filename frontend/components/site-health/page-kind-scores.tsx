@@ -12,7 +12,6 @@ import {
   type ChecksRun,
 } from '@/lib/site-health/status';
 import { formatCount, formatPercent } from '@/lib/format';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 function emptyState(unmeasured: boolean, rowCount: number) {
   if (rowCount > 0) return undefined;
@@ -40,49 +39,44 @@ export function PageKindScores({
   };
 
   return (
-    <Section data-testid="page-kind-scores">
-      <SectionHeader>
-        <SectionTitle>Scores by page kind</SectionTitle>
-      </SectionHeader>
-      <DataTable
-        label="Scores by page kind"
-        columns={weighting ? COLUMNS : COLUMNS.filter((column) => column.key !== 'share')}
-        state={emptyState(summary === null, rows.length)}
-      >
-        {rows.map((row) => (
-          <TableRow key={row.page_kind}>
-            <TableCell className="whitespace-nowrap">
-              <PageKindBadge pageKind={row.page_kind} />
-            </TableCell>
-            {weighting ? (
-              <TableCell numeric>{printed(formatPercent(share(row.page_kind)))}</TableCell>
-            ) : null}
-            <TableCell numeric>{formatCount(row.analyzed_count)}</TableCell>
-            <TableCell numeric tone={mutedWhenMissing(row.web_fundamentals_score)}>
-              <MeasurementValue
-                score={row.web_fundamentals_score}
-                checks={row.web_fundamentals_checks}
-                state={row.web_fundamentals_state}
-              />
-            </TableCell>
-            <TableCell numeric tone={mutedWhenMissing(row.aeo_readiness_score)}>
-              <MeasurementValue
-                score={row.aeo_readiness_score}
-                checks={row.aeo_readiness_checks}
-                state={row.aeo_measurement_state}
-              />
-            </TableCell>
-            <TableCell numeric>
-              {row.aeo_measurement_coverage === null ? (
-                <Absence state="not_measured" />
-              ) : (
-                formatPercent(row.aeo_measurement_coverage)
-              )}
-            </TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </Section>
+    <DataTable
+      title="Scores by page kind"
+      columns={weighting ? COLUMNS : COLUMNS.filter((column) => column.key !== 'share')}
+      state={emptyState(summary === null, rows.length)}
+    >
+      {rows.map((row) => (
+        <TableRow key={row.page_kind}>
+          <TableCell className="whitespace-nowrap">
+            <PageKindBadge pageKind={row.page_kind} />
+          </TableCell>
+          {weighting ? (
+            <TableCell numeric>{printed(formatPercent(share(row.page_kind)))}</TableCell>
+          ) : null}
+          <TableCell numeric>{formatCount(row.analyzed_count)}</TableCell>
+          <TableCell numeric tone={mutedWhenMissing(row.web_fundamentals_score)}>
+            <MeasurementValue
+              score={row.web_fundamentals_score}
+              checks={row.web_fundamentals_checks}
+              state={row.web_fundamentals_state}
+            />
+          </TableCell>
+          <TableCell numeric tone={mutedWhenMissing(row.aeo_readiness_score)}>
+            <MeasurementValue
+              score={row.aeo_readiness_score}
+              checks={row.aeo_readiness_checks}
+              state={row.aeo_measurement_state}
+            />
+          </TableCell>
+          <TableCell numeric>
+            {row.aeo_measurement_coverage === null ? (
+              <Absence state="not_measured" />
+            ) : (
+              formatPercent(row.aeo_measurement_coverage)
+            )}
+          </TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }
 

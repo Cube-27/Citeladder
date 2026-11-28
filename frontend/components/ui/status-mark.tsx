@@ -170,14 +170,24 @@ function markOf(props: StatusMarkProps): Mark {
   }
 }
 
+export function ToneGlyph({
+  tone,
+  size = 'sm',
+}: Readonly<{ tone: StatusTone; size?: 'sm' | 'md' }>) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 12 12"
+      className={cn(size === 'md' ? 'size-4' : 'size-3', 'shrink-0', TONE_INK[tone])}
+    >
+      {TONE_SHAPE[tone]}
+    </svg>
+  );
+}
+
 function MarkGlyph({ tone, glyph }: Mark) {
   if (glyph === 'live') return <Spinner />;
-  if (glyph === 'dot')
-    return (
-      <svg aria-hidden viewBox="0 0 12 12" className={cn('size-3 shrink-0', TONE_INK[tone])}>
-        {TONE_SHAPE[tone]}
-      </svg>
-    );
+  if (glyph === 'dot') return <ToneGlyph tone={tone} />;
   return <PriorityBars filled={glyph.bars} tone={tone} />;
 }
 

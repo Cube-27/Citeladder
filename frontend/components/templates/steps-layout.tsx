@@ -1,11 +1,16 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
-import { RouteFill, StepsNav, StepsRowMark, StepsScroller } from '@/components/ui/record-chrome';
+import {
+  RouteFill,
+  StepsBody,
+  StepsNav,
+  StepsRowMark,
+  StepsScroller,
+} from '@/components/ui/record-chrome';
 import { Pressable } from '@/components/ui/pressable';
 import { FloatingBar } from '@/components/ui/selection-dock';
 import { SidebarRowFace, SidebarRowLabel } from '@/components/ui/sidebar';
-import { Check } from '@/lib/icons';
-import { Icon } from '@/components/ui/icon';
+import { ToneGlyph } from '@/components/ui/status-mark';
 
 export type StepItem<T extends string> = Readonly<{ value: T; label: string }>;
 
@@ -15,6 +20,7 @@ export function StepsLayout<T extends string>({
   current,
   onStep,
   note,
+  narrow = false,
   footerStart,
   footerEnd,
   children,
@@ -24,6 +30,7 @@ export function StepsLayout<T extends string>({
   current: T;
   onStep: (step: T) => void;
   note?: ReactNode;
+  narrow?: boolean;
   footerStart: ReactNode;
   footerEnd: ReactNode;
   children: ReactNode;
@@ -50,9 +57,9 @@ export function StepsLayout<T extends string>({
             </li>
           ))}
         </StepsNav>
-        <section aria-label={steps[index]?.label} className="min-w-0 flex-1">
+        <StepsBody label={steps[index]?.label} narrow={narrow}>
           {children}
-        </section>
+        </StepsBody>
       </StepsScroller>
       <FloatingBar place="flow" data-page-band="action-bar">
         {footerStart}
@@ -72,7 +79,7 @@ function StepRow<T extends string>({
   const face = (
     <>
       <StepsRowMark state={stepState(position, current)}>
-        {done ? <Icon icon={Check} size="flush" /> : position + 1}
+        {done ? <ToneGlyph tone="positive" size="md" /> : position + 1}
       </StepsRowMark>
       <SidebarRowLabel muted={position > current}>{step.label}</SidebarRowLabel>
     </>

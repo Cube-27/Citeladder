@@ -7,17 +7,11 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Button } from '@/components/ui/button';
 import { Delta } from '@/components/ui/delta';
 import { Icon } from '@/components/ui/icon';
-import { Inline } from '@/components/ui/layout';
-import { Section } from '@/components/ui/section';
 import { ReorderList } from '@/components/ui/reorder-list';
-import { TextLink } from '@/components/ui/text-link';
-import { Text } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { pluralCount } from '@/lib/format';
 import type { CommandCenter, Project } from '@citeladder/contracts';
 import { comparisonBasis } from '@citeladder/contracts/comparison-reason';
-import { DisplayTime } from '@/components/ui/display-time';
-import { EngineStack } from '@/components/ui/engine-mark';
 
 import { ProjectControls } from './dashboard-controls';
 import { formatRank } from '@/lib/visibility/dashboard';
@@ -26,45 +20,6 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { StateBlock } from '@/components/ui/state-block';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { WidgetFrame } from './widget-frame';
-
-function websiteHref(website: string): string | null {
-  const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(website) ? website : `https://${website}`;
-  if (!URL.canParse(candidate)) return null;
-  const url = new URL(candidate);
-  return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : null;
-}
-
-export function ProjectMeta({ data }: Readonly<{ data: CommandCenter }>) {
-  const website = data.project.website_url;
-  const measurement = data.measurement;
-  if (!website && !measurement) return null;
-  const href = website ? websiteHref(website) : null;
-  const shown = website?.replace(/^https?:\/\//i, '').replace(/\/$/, '');
-  return (
-    <Section>
-      <Inline as="p" gap="meta">
-        {href ? (
-          <TextLink variant="external" text="caption" tone="muted" href={href} box="shrink">
-            <span className="truncate" title={shown}>
-              {shown}
-            </span>
-          </TextLink>
-        ) : null}
-        {website && !href ? (
-          <Text variant="caption" wrap="truncate" title={shown}>
-            {shown}
-          </Text>
-        ) : null}
-        {measurement ? (
-          <Text variant="caption">
-            Tracked <DisplayTime value={measurement.completed_at} /> ·{' '}
-            <EngineStack engines={measurement.logical_engines} />
-          </Text>
-        ) : null}
-      </Inline>
-    </Section>
-  );
-}
 
 export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
   const facts = data.facts;

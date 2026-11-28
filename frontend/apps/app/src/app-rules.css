@@ -17,24 +17,6 @@
   }
 }
 
-[data-sidebar-scroll][data-fade-bottom] {
-  mask-image: linear-gradient(to bottom, black calc(100% - 32px), transparent);
-}
-[data-sidebar-scroll][data-fade-top] {
-  mask-image: linear-gradient(to top, black calc(100% - 32px), transparent);
-}
-[data-sidebar-scroll][data-fade-top][data-fade-bottom] {
-  mask-image: linear-gradient(
-    to bottom,
-    transparent,
-    black 32px,
-    black calc(100% - 32px),
-    transparent
-  );
-}
-[data-sidebar-scroll]:has(:focus-visible) {
-  mask-image: none;
-}
 [data-sidebar-group] + [data-sidebar-group] {
   margin-top: calc(var(--spacing) * -2);
 }

@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { SectionStack } from '@/components/ui/section';
-import { SettingField, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
+import { Section, SectionStack } from '@/components/ui/section';
+import { SettingField, SettingRow, SettingRows } from '@/components/ui/setting-row';
 import { SplitBar } from '@/components/ui/split-bar';
 import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -101,7 +101,7 @@ function PersonaChoices({
     );
   const full = selected.length >= max;
   return (
-    <SettingRows density="roomy" label="Personas">
+    <Stack as="fieldset" aria-label="Personas" gap="tight">
       {choices.map((persona) => {
         const checked = selected.includes(persona);
         return (
@@ -118,7 +118,7 @@ function PersonaChoices({
           />
         );
       })}
-    </SettingRows>
+    </Stack>
   );
 }
 
@@ -152,7 +152,7 @@ function SeedList({
     onChange({ ...settings, unticked });
   };
   return (
-    <SettingRows density="roomy" label="Search queries">
+    <Stack as="fieldset" aria-label="Search queries">
       {topics.flatMap((topic) => {
         const own = queries.filter((query) => query.topic_id === topic.id);
         if (!own.length) return [];
@@ -179,7 +179,7 @@ function SeedList({
           </Stack>,
         ];
       })}
-    </SettingRows>
+    </Stack>
   );
 }
 
@@ -230,30 +230,31 @@ export function BuilderDistributionStep({
   return (
     <SectionStack>
       {notices}
-      <SettingsGroup title="What to generate">
-        <SegmentedControl<GenerationMode>
-          ariaLabel="What to generate"
-          value={mode}
-          options={MODE_OPTIONS}
-          onChange={onModeChange}
-        />
-      </SettingsGroup>
-      {mode === 'brand' ? (
-        <SettingsGroup
-          title="Size"
-          status={
-            <Text variant="caption" numeric>
-              {`AI credits: up to ${formatCount(limits.brand_generation_calls)} model calls`}
-            </Text>
-          }
-        >
-          <SettingRows density="roomy">
+      <Section>
+        <SettingRows density="roomy">
+          <SettingRow
+            label="What to generate"
+            description={
+              mode === 'brand'
+                ? `AI credits: up to ${formatCount(limits.brand_generation_calls)} model calls`
+                : undefined
+            }
+            action={
+              <SegmentedControl<GenerationMode>
+                ariaLabel="What to generate"
+                value={mode}
+                options={MODE_OPTIONS}
+                onChange={onModeChange}
+              />
+            }
+          />
+          {mode === 'brand' ? (
             <CountField settings={settings} onChange={onChange} max={limits.brand_prompts_max} />
-          </SettingRows>
-        </SettingsGroup>
-      ) : (
-        <MarketSettings {...props} />
-      )}
+          ) : (
+            <MarketSettings {...props} />
+          )}
+        </SettingRows>
+      </Section>
     </SectionStack>
   );
 }
@@ -289,21 +290,23 @@ function MarketSettings({
     });
   return (
     <>
-      <SettingsGroup title="Size and share">
-        <SettingRows density="roomy">
-          <CountField settings={settings} onChange={onChange} max={limits.generation_count_max} />
+      <CountField settings={settings} onChange={onChange} max={limits.generation_count_max} />
+      <SettingRow
+        label="Branded share"
+        wide
+        control={
           <ShareMix settings={settings} onChange={onChange} hasCompetitors={hasCompetitors} />
-        </SettingRows>
-      </SettingsGroup>
-      <SettingsGroup
-        title="Intent mix"
+        }
+      />
+      <SettingRow
+        label="Intent mix"
+        wide
         action={
           <Button variant="quiet" onClick={resetIntent}>
             Reset
           </Button>
         }
-      >
-        <SettingRows density="roomy">
+        control={
           <SplitBar
             label="Intent mix"
             segments={INTENT_SEGMENTS}
@@ -319,38 +322,40 @@ function MarketSettings({
               })
             }
           />
-        </SettingRows>
-      </SettingsGroup>
-      <SettingsGroup
-        title="Personas"
-        status={
-          <Text variant="caption" numeric>
-            {`${formatCount(settings.personas.length)} of ${formatCount(limits.distribution_personas_max)}`}
-          </Text>
         }
-      >
-        <PersonaChoices
-          choices={personaChoices}
-          selected={settings.personas}
-          max={limits.distribution_personas_max}
-          onChange={(personas) => onChange({ ...settings, personas })}
-        />
-      </SettingsGroup>
-      <SettingsGroup title="Search data">
-        {seeds.data ? (
-          <>
+      />
+      <SettingRow
+        label="Personas"
+        wide
+        description={`${formatCount(settings.personas.length)} of ${formatCount(limits.distribution_personas_max)}`}
+        control={
+          <PersonaChoices
+            choices={personaChoices}
+            selected={settings.personas}
+            max={limits.distribution_personas_max}
+            onChange={(personas) => onChange({ ...settings, personas })}
+          />
+        }
+      />
+      <SettingRow
+        label="Search data"
+        action={
+          seeds.data ? (
             <SegmentedControl<SeedChoice>
               ariaLabel="Search data source"
               value={seedSourceOf(settings, seeds.data)}
               options={sources.map((source) => ({ value: source, label: SOURCE_LABELS[source] }))}
               onChange={(seedSource) => onChange({ ...settings, seedSource, unticked: new Set() })}
             />
-            <SeedList seeds={seeds.data} settings={settings} topics={topics} onChange={onChange} />
-          </>
+          ) : undefined
+        }
+      >
+        {seeds.data ? (
+          <SeedList seeds={seeds.data} settings={settings} topics={topics} onChange={onChange} />
         ) : (
           seeds.status
         )}
-      </SettingsGroup>
+      </SettingRow>
     </>
   );
 }

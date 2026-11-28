@@ -57,8 +57,7 @@ export function QuickStarts({
   return (
     <Inline as="nav" aria-label="Quick starts" wrap>
       <Button
-        variant="secondary"
-        box="share"
+        variant="quiet"
         disabled={locked || actions.isPending}
         onClick={() =>
           onStart({
@@ -75,8 +74,7 @@ export function QuickStarts({
       {QUICK_STARTS.map((start) => (
         <Button
           key={start.workflowId}
-          variant="secondary"
-          box="share"
+          variant="quiet"
           disabled={locked}
           onClick={() =>
             onStart({

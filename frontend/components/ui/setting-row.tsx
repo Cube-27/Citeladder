@@ -81,11 +81,13 @@ export function SettingRow({
   value,
   action,
   control,
+  wide = false,
   children,
 }: Readonly<{
   label: ReactNode;
   description?: ReactNode;
   control?: ReactNode;
+  wide?: boolean;
   value?: ReactNode;
   action?: ReactNode;
   children?: ReactNode;
@@ -103,7 +105,11 @@ export function SettingRow({
             {action}
           </div>
         ) : null}
-        {control ? <div className="grid w-80 max-w-full min-w-0 *:w-full">{control}</div> : null}
+        {control ? (
+          <div className={cn('grid max-w-full min-w-0 *:w-full', wide ? 'w-120' : 'w-80')}>
+            {control}
+          </div>
+        ) : null}
       </div>
       {children}
     </div>

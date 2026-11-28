@@ -278,7 +278,7 @@ describe('PageKindScores', () => {
         dashboard={dashboard(null)}
       />,
     );
-    expect(screen.getByTestId('page-kind-scores')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Scores by page kind' })).toBeInTheDocument();
     expect(screen.getByText('About / Contact')).toBeInTheDocument();
   });
 });
