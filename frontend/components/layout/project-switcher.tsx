@@ -23,6 +23,7 @@ import {
 import { useProjectContext } from '@/lib/project/project-context';
 
 import { useProjectCreation } from '@/components/layout/use-project-creation';
+import { TitleCaption } from '@/components/ui/title-caption';
 
 export function ProjectSwitcher() {
   const router = useNavigate();
@@ -127,12 +128,10 @@ export function ProjectSwitcher() {
               disabled={!canAddProject}
               onSelect={() => router(newProjectDestination(activeWorkspaceId))}
             >
-              <span className="grid min-w-0 flex-1">
-                <span className="truncate">New project</span>
-                {remainingProjectSlots === 0 && (
-                  <Text variant="caption">Project limit reached</Text>
-                )}
-              </span>
+              <TitleCaption
+                title="New project"
+                caption={remainingProjectSlots === 0 ? 'Project limit reached' : null}
+              />
             </MenuItem>
           </>
         ) : null}
