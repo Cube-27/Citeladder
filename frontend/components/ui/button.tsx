@@ -66,6 +66,7 @@ const BUTTON_BOX = {
   float: 'pointer-events-auto',
   middle: 'align-middle',
   fill: 'w-full',
+  share: 'flex-1',
   'rail-hidden': 'rail:hidden',
   'rail-hidden-fixed': 'rail:hidden shrink-0',
   corner: 'absolute top-6 right-6',

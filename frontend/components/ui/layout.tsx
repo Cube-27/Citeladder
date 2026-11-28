@@ -207,7 +207,6 @@ const COLUMN_TEMPLATE = {
   'rail-panel': 'desktop:grid-cols-label-value',
   'halves-desktop': 'desktop:grid-cols-2',
   two: 'grid-cols-2',
-  quarters: 'grid-cols-2 desktop:grid-cols-4',
   record: 'column-split:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
 } as const;
 
