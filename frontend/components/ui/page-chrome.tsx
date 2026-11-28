@@ -151,21 +151,19 @@ export function ThreadLayout({
   children: ReactNode;
 }>) {
   return (
-    <div className="gap-workspace flex h-[calc(100dvh_-_var(--route-chrome-height)_+_var(--spacing-page-block))] min-h-0 flex-col">
-      <section
-        ref={scrollRef}
-        aria-label={scrollLabel}
-        className="scrollbar-stable min-h-0 flex-1 overflow-y-auto overscroll-contain p-1"
-      >
+    <div className="flex min-h-0 flex-1 flex-col">
+      <section ref={scrollRef} aria-label={scrollLabel} className="pb-workspace flex-1 p-1">
         <div
           data-page-content=""
           data-thread=""
-          className="gap-workspace flex min-h-full w-full min-w-0 flex-col"
+          className="gap-workspace flex w-full min-w-0 flex-col"
         >
           {children}
         </div>
       </section>
-      {composer ? <div className="w-full min-w-0">{composer}</div> : null}
+      {composer ? (
+        <div className="bg-page z-sticky sticky bottom-0 w-full min-w-0">{composer}</div>
+      ) : null}
     </div>
   );
 }

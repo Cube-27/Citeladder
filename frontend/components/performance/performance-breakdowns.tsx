@@ -1,6 +1,6 @@
 import { BingPanel } from './bing-panel';
 import { DimensionTable, useWarmDimensionTable } from './dimension-table';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionTitle } from '@/components/ui/section';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import type { PerformanceDashboard, PerformanceDimension } from '@/lib/api/performance';
 import {
@@ -42,10 +42,8 @@ export function PerformanceBreakdowns({
     <>
       {hasSearchConsole ? (
         <Section aria-labelledby="performance-breakdowns">
-          <SectionHeader>
-            <SectionTitle id="performance-breakdowns">Breakdowns</SectionTitle>
-          </SectionHeader>
           <Tabs
+            heading={<SectionTitle id="performance-breakdowns">Breakdowns</SectionTitle>}
             value={dimension}
             onValueChange={onDimensionChange}
             items={DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}

@@ -11,16 +11,17 @@ export function useFollowLatest() {
   const jumpToLatest = () => {
     following.current = true;
     setShowJump(false);
-    if (scrollRef.current) lastTop.current = pinToEnd(scrollRef.current);
+    if (scrollRef.current) lastTop.current = pinToEnd(scroller(scrollRef.current));
   };
 
   useLayoutEffect(() => {
-    if (scrollRef.current) lastTop.current = pinToEnd(scrollRef.current);
+    if (scrollRef.current) lastTop.current = pinToEnd(scroller(scrollRef.current));
   }, []);
 
   useEffect(() => {
-    const region = scrollRef.current;
-    if (!region) return;
+    const content = scrollRef.current;
+    if (!content) return;
+    const region = scroller(content);
     const onScroll = () => {
       const top = region.scrollTop;
       const distance = distanceFromEnd(region);
@@ -36,7 +37,8 @@ export function useFollowLatest() {
     region.addEventListener('scroll', onScroll, { passive: true });
     const observer = new ResizeObserver(onResize);
     observer.observe(region);
-    if (region.firstElementChild) observer.observe(region.firstElementChild);
+    observer.observe(content);
+    if (content.firstElementChild) observer.observe(content.firstElementChild);
     return () => {
       region.removeEventListener('scroll', onScroll);
       observer.disconnect();
@@ -44,6 +46,18 @@ export function useFollowLatest() {
   }, []);
 
   return { scrollRef, showJump, jumpToLatest };
+}
+
+function scrolls(element: HTMLElement) {
+  const { overflowY } = getComputedStyle(element);
+  return overflowY === 'auto' || overflowY === 'scroll';
+}
+
+function scroller(from: HTMLElement): HTMLElement {
+  for (let node: HTMLElement | null = from; node; node = node.parentElement) {
+    if (scrolls(node)) return node;
+  }
+  return from;
 }
 
 function pinToEnd(region: HTMLElement) {

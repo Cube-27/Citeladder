@@ -6,6 +6,7 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
+import { createPortal } from 'react-dom';
 
 import { BusyRung } from '@/components/ui/rung-meter';
 import {
@@ -32,6 +33,7 @@ import {
 import { TABLE_DEFAULT_PAGE_SIZE, TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 import { useScrollFrame, type ScrollFrameState } from '@/components/ui/scroll-edges';
 import { Table } from '@/components/ui/table';
+import { TabHeadSlotContext } from '@/components/ui/tab-head-slot';
 import { StateBlock } from '@/components/ui/state-block';
 import { StateHeadingLevelContext, type HeadingLevel } from '@/components/ui/state-heading-level';
 
@@ -323,36 +325,59 @@ function DataTableHeader({
   actions?: ReactNode;
   toolbar?: TableToolbarProps;
 }>) {
+  const tabHead = useContext(TabHeadSlotContext);
   const shown = hasHeadControls({ ...toolbar, actions: toolbar?.actions || actions });
-  if (!title && !description && !shown && !toolbar?.search) return null;
-  return (
-    <SectionHeader
-      data-data-table-header=""
-      search={toolbar?.search}
+  const controls = shown ? (
+    <HeadControls
+      {...toolbar}
       actions={
-        shown ? (
-          <HeadControls
-            {...toolbar}
-            actions={
-              <>
-                {toolbar?.actions}
-                {actions}
-              </>
-            }
-          />
-        ) : undefined
-      }
-    >
-      {title || description ? (
         <>
-          {title ? (
-            <SectionTitle id={headingId} level={level === 3 ? 3 : 2} truncate>
-              {title}
-            </SectionTitle>
-          ) : null}
-          {description ? <SectionDescription>{description}</SectionDescription> : null}
+          {toolbar?.actions}
+          {actions}
         </>
+      }
+    />
+  ) : undefined;
+  const titled = Boolean(title || description);
+  if (tabHead !== null && !titled)
+    return <LiftedHeader slot={tabHead} controls={controls} search={toolbar?.search} />;
+  if (!titled && !shown && !toolbar?.search) return null;
+  return (
+    <SectionHeader data-data-table-header="" search={toolbar?.search} actions={controls}>
+      {titled ? (
+        <HeaderText title={title} headingId={headingId} level={level} description={description} />
       ) : null}
     </SectionHeader>
+  );
+}
+
+function LiftedHeader({
+  slot,
+  controls,
+  search,
+}: Readonly<{ slot: HTMLElement; controls?: ReactNode; search?: TableToolbarProps['search'] }>) {
+  return (
+    <>
+      {controls ? createPortal(controls, slot) : null}
+      {search ? <SectionHeader data-data-table-header="" search={search} /> : null}
+    </>
+  );
+}
+
+function HeaderText({
+  title,
+  headingId,
+  level,
+  description,
+}: Readonly<{ title?: string; headingId: string; level: HeadingLevel; description?: ReactNode }>) {
+  return (
+    <>
+      {title ? (
+        <SectionTitle id={headingId} level={level === 3 ? 3 : 2} truncate>
+          {title}
+        </SectionTitle>
+      ) : null}
+      {description ? <SectionDescription>{description}</SectionDescription> : null}
+    </>
   );
 }

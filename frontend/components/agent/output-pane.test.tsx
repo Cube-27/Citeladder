@@ -99,7 +99,6 @@ describe('a document’s sources', () => {
         onRevise={() => {}}
       />,
     );
-    expect(screen.getByText('Document 2')).toBeVisible();
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Sources' }));
     expect(screen.getByText('This revision cites no CiteLadder records.')).toBeVisible();
     const web = screen.getByRole('region', { name: 'Web sources' });

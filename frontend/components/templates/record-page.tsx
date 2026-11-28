@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 
 import { Columns, Stack } from '@/components/ui/layout';
 import { PageSections } from '@/components/ui/page-chrome';
-import { ActionBar, RecordBody } from '@/components/ui/record-chrome';
+import { RecordBody } from '@/components/ui/record-chrome';
+import { FloatingBar } from '@/components/ui/selection-dock';
 
 import { PageFrame, type PageFrameSlots } from './page-frame';
 
@@ -38,7 +39,11 @@ export function RecordPage({
           )}
         </PageSections>
       </RecordBody>
-      {actionBar ? <ActionBar sticky>{actionBar}</ActionBar> : null}
+      {actionBar ? (
+        <FloatingBar place="sticky" data-page-band="action-bar">
+          {actionBar}
+        </FloatingBar>
+      ) : null}
     </PageFrame>
   );
 }

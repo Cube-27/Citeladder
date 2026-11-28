@@ -20,23 +20,6 @@ export function RecordBody({
   );
 }
 
-export function ActionBar({
-  sticky = false,
-  children,
-}: Readonly<{ sticky?: boolean; children: ReactNode }>) {
-  return (
-    <div
-      data-page-band="action-bar"
-      className={cn(
-        'bg-raised border-rule rounded-card shadow-pop mt-workspace min-h-filter-bar px-card flex min-w-0 items-center gap-2 border py-2',
-        sticky ? 'z-sticky bottom-gutter sticky flex-nowrap justify-end' : 'shrink-0 flex-wrap',
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-
 export function RouteFill({ children }: Readonly<{ children: ReactNode }>) {
   return <div className="h-route-fill flex min-h-0 min-w-0 flex-col">{children}</div>;
 }

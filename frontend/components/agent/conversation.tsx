@@ -19,10 +19,10 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { TextLink } from '@/components/ui/text-link';
+import { ProjectLink } from '@/components/ui/project-link';
 import { Text } from '@/components/ui/typography';
 import { JumpList } from '@/components/ui/workspace';
-import { Pencil, RotateCcw } from '@/lib/icons';
+import { ArrowRight, Pencil, RotateCcw, Sparkles } from '@/lib/icons';
 import { scrollBehavior } from '@/lib/accessibility/use-reduced-motion';
 import { documentAnchor, latestOutput, outputPlacements } from '@/lib/agent/documents';
 import { citedActions } from '@/lib/agent/evidence';
@@ -132,23 +132,25 @@ export function Conversation({
       {documents(unplaced)}
       {pendingMessage ? <PendingMessage text={pendingMessage} /> : null}
       <LiveActivity detail={detail} />
-      <TurnActions
-        detail={detail}
-        canSend={canSend}
-        onRetry={onRetry}
-        onEdit={onRecover}
-        hasDraft={hasDraft}
-      />
-      {output && canSend && hasFreshDeliverable(detail, output) ? (
-        <FollowUps
-          kind={output.kind}
-          title={output.latest_revision.title}
-          actionId={detail.chat.action_id}
-          outputId={output.id}
-          revisionId={output.latest_revision.id}
-          onRefine={onRefine}
+      <Inline data-turn-footer="" wrap gap="tight" hideEmpty>
+        <TurnActions
+          detail={detail}
+          canSend={canSend}
+          onRetry={onRetry}
+          onEdit={onRecover}
+          hasDraft={hasDraft}
         />
-      ) : null}
+        {output && canSend && hasFreshDeliverable(detail, output) ? (
+          <FollowUps
+            kind={output.kind}
+            title={output.latest_revision.title}
+            actionId={detail.chat.action_id}
+            outputId={output.id}
+            revisionId={output.latest_revision.id}
+            onRefine={onRefine}
+          />
+        ) : null}
+      </Inline>
     </AgentThread>
   );
 }
@@ -235,8 +237,8 @@ function TurnActions({
   const ended = ['failed', 'cancelled', 'stopped_at_limit'].includes(kind);
   if (!ended && kind !== 'succeeded') return null;
   return (
-    <Inline wrap>
-      <Button variant="secondary" onClick={() => onRetry(request)}>
+    <>
+      <Button variant="quiet" onClick={() => onRetry(request)}>
         <Icon icon={RotateCcw} />
         {ended ? 'Try again' : 'Regenerate'}
       </Button>
@@ -244,7 +246,7 @@ function TurnActions({
         <Icon icon={Pencil} />
         {hasDraft ? 'Replace draft with last request' : 'Edit last request'}
       </Button>
-    </Inline>
+    </>
   );
 }
 
@@ -429,35 +431,34 @@ function FollowUps({
   });
   if (!presentation) return null;
   return (
-    <Stack gap="compact">
-      <Inline as="fieldset" aria-label="Suggested follow-ups" wrap>
-        <Text as="legend" variant="caption">
-          Add a suggestion to your message:
-        </Text>
+    <>
+      <Inline as="fieldset" aria-label="Suggested follow-ups" wrap gap="tight">
         {presentation.refinements.map((instruction) => (
-          <Button key={instruction} variant="secondary" onClick={() => onRefine(instruction)}>
+          <Button key={instruction} variant="quiet" onClick={() => onRefine(instruction)}>
+            <Icon icon={Sparkles} />
             {instruction}
           </Button>
         ))}
       </Inline>
       {next.length > 0 ? (
-        <Inline as="nav" aria-label="Next steps" wrap>
-          <Text variant="caption">Next, in a new chat:</Text>
+        <Inline as="nav" aria-label="Next steps" wrap gap="tight">
           {next.map(({ workflow, prompt }) => (
-            <TextLink
-              key={workflow.id}
-              href={agentHandoffHref({
-                actionId,
-                prompt,
-                workflowId: workflow.id,
-                outputRevision: { outputId, revisionId },
-              })}
-            >
-              {workflow.label}
-            </TextLink>
+            <Button key={workflow.id} asChild variant="quiet">
+              <ProjectLink
+                href={agentHandoffHref({
+                  actionId,
+                  prompt,
+                  workflowId: workflow.id,
+                  outputRevision: { outputId, revisionId },
+                })}
+              >
+                {workflow.label}
+                <Icon icon={ArrowRight} />
+              </ProjectLink>
+            </Button>
           ))}
         </Inline>
       ) : null}
-    </Stack>
+    </>
   );
 }

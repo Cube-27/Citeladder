@@ -265,12 +265,12 @@ describe('ChatScreen implementation declaration', () => {
     expect(
       within(pane).queryByRole('button', { name: 'Mark implemented' }),
     ).not.toBeInTheDocument();
-    expect(within(pane).getByRole('button', { name: 'Keep with this Action' })).toBeEnabled();
+    expect(within(pane).getByRole('button', { name: 'Keep with Action' })).toBeEnabled();
     await user.click(within(pane).getByRole('button', { name: 'Link to /pricing?plan=pro' }));
 
     expect(await within(pane).findByRole('button', { name: 'Mark implemented' })).toBeVisible();
     expect(
-      within(pane).queryByRole('button', { name: 'Keep with this Action' }),
+      within(pane).queryByRole('button', { name: 'Keep with Action' }),
     ).not.toBeInTheDocument();
     expect(posted).toEqual([{ decision: 'link' }]);
   });

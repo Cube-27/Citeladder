@@ -1,5 +1,5 @@
 import { Slot } from '@radix-ui/react-slot';
-import type { ReactElement, ReactNode } from 'react';
+import type { ComponentPropsWithoutRef, ReactElement, ReactNode } from 'react';
 
 import { POP_FACE } from '@/components/ui/slip';
 
@@ -47,9 +47,7 @@ export function DockLabel({ children }: Readonly<{ children: ReactNode }>) {
 export function PageDock({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
     <DockLayer>
-      <DockBar label={label} span>
-        {children}
-      </DockBar>
+      <DockBar label={label}>{children}</DockBar>
     </DockLayer>
   );
 }
@@ -61,19 +59,41 @@ function DockLayer({ children }: Readonly<{ children: ReactNode }>) {
 function DockBar({
   label,
   slidesIn,
-  span = false,
   children,
-}: Readonly<{ label: string; slidesIn?: boolean; span?: boolean; children: ReactNode }>) {
+}: Readonly<{ label: string; slidesIn?: boolean; children: ReactNode }>) {
   return (
-    <div
+    <FloatingBar
+      place="overlay"
       role="toolbar"
       aria-label={label}
       data-selection-dock={slidesIn ? '' : undefined}
-      className={cn(
-        POP_FACE,
-        'pointer-events-auto absolute bottom-0 flex items-center gap-1 p-2',
-        span ? 'inset-x-0 justify-end' : 'max-w-viewport-fit left-1/2 -translate-x-1/2',
-      )}
+    >
+      {children}
+    </FloatingBar>
+  );
+}
+
+const BAR_PLACE = {
+  overlay: 'max-w-viewport-fit pointer-events-auto absolute bottom-0 left-1/2 -translate-x-1/2',
+  sticky: 'mt-workspace mx-auto max-w-full z-sticky bottom-gutter sticky',
+  flow: 'mt-workspace mx-auto max-w-full shrink-0 flex-wrap justify-center',
+} as const;
+
+export function FloatingBar({
+  place,
+  children,
+  ...props
+}: Readonly<
+  Omit<ComponentPropsWithoutRef<'div'>, 'className' | 'style'> & {
+    place: keyof typeof BAR_PLACE;
+    'data-page-band'?: string;
+    'data-selection-dock'?: string;
+  }
+>) {
+  return (
+    <div
+      {...props}
+      className={cn(POP_FACE, 'flex w-fit min-w-0 items-center gap-1 p-2', BAR_PLACE[place])}
     >
       {children}
     </div>

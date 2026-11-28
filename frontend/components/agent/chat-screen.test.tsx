@@ -90,7 +90,7 @@ describe('ChatScreen', () => {
     renderChat();
 
     const pane = await screen.findByRole('region', { name: 'Pricing page edits' });
-    expect(within(pane).getByText('Revision 1')).toBeVisible();
+    expect(within(pane).getByText(/Revision 1/)).toBeVisible();
     expect(await screen.findByText('Skill: Search Console optimization')).toBeVisible();
 
     await user.click(within(pane).getByRole('button', { name: 'Edit' }));
@@ -99,7 +99,7 @@ describe('ChatScreen', () => {
     await user.type(body, 'New title tag.');
     await user.click(within(pane).getByRole('button', { name: 'Save as new revision' }));
 
-    expect(await within(pane).findByText('Revision 2')).toBeVisible();
+    expect(await within(pane).findByText(/Revision 2/)).toBeVisible();
     expect(edits).toEqual([
       { base_revision_id: REV1, title: 'Pricing page edits', body: 'New title tag.' },
     ]);
