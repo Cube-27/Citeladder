@@ -379,14 +379,20 @@ export function Tabs<T extends string>({
   );
 }
 
+const TAB_PANEL_BOX = {
+  block: undefined,
+  shrink: 'min-w-0',
+  'fill-column': 'flex min-h-0 flex-1 flex-col',
+} as const;
+
 export function TabPanel({
   value,
-  className,
+  box = 'block',
   children,
   forceMount,
 }: Readonly<{
   value: string;
-  className?: string;
+  box?: keyof typeof TAB_PANEL_BOX;
   children: ReactNode;
   forceMount?: true;
 }>) {
@@ -399,7 +405,7 @@ export function TabPanel({
       hidden={activeValue !== value}
       data-slot-host={inPanel ? '' : undefined}
       tabIndex={-1}
-      className={cn('outline-none', className)}
+      className={cn('outline-none', TAB_PANEL_BOX[box])}
     >
       {children}
     </TabsPrimitive.Content>

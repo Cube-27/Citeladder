@@ -5,7 +5,7 @@ import { buttonClasses, type ButtonVariant } from '@/components/ui/button';
 import type { SuggestionHighlight } from '@/lib/agent/page-workspace';
 
 export type HighlightAct = 'apply' | 'dismiss';
-export type HighlightSet = Readonly<{
+type HighlightSet = Readonly<{
   items: readonly SuggestionHighlight[];
   actionable: boolean;
 }>;

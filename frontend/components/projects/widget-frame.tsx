@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 
-export type WidgetLink = Readonly<{ href: string; label: string; name?: string }>;
+type WidgetLink = Readonly<{ href: string; label: string; name?: string }>;
 
 type WidgetFill = 'figure' | 'chart' | 'list';
 

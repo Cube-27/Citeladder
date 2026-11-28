@@ -1,5 +1,4 @@
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { PromptGenerateResponse } from '@citeladder/contracts';
 import { admissionDropSummary } from '@/lib/prompts/admission';
 import { Notice } from '@/components/ui/notice';
@@ -69,5 +68,5 @@ export function GenerateErrorAlert({
         The AI provider call failed or returned unusable output. Try again in a moment.
       </Notice>
     );
-  return <Notice kind="mutation" notice={mutationNoticeForError(error, { action })} />;
+  return <Notice kind="mutation" error={error} act={action} />;
 }

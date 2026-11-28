@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { SectionStack } from '@/components/ui/section';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { promptsQueries } from '@/lib/api/prompts';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
@@ -52,12 +51,7 @@ export function BusinessMapTab({
   };
   return (
     <SectionStack>
-      {business.save.error ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(business.save.error, { action: 'save the business map' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={business.save.error} act="save the business map" />
       {mayEdit ? <SuggestionsNotice {...editor} /> : null}
       <OfferingsGrid {...editor} saved={map} />
       <BusinessFacts {...editor} context={profile.business_context} />

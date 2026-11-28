@@ -9,10 +9,9 @@ import { Notice } from '@/components/ui/notice';
 import { SectionStack } from '@/components/ui/section';
 import { SettingField, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { PromptFormLimits } from '@citeladder/contracts';
 
-export type BusinessStepLimits = Pick<
+type BusinessStepLimits = Pick<
   PromptFormLimits,
   'context_list_max_entries' | 'run_context_max_chars'
 >;
@@ -56,14 +55,7 @@ export function BuilderBusinessStep({
   };
   return (
     <SectionStack>
-      {business.save.error ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(business.save.error, {
-            action: 'save your business details',
-          })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={business.save.error} act="save your business details" />
       <SuggestionsNotice {...editor} />
       <OfferingsGrid {...editor} saved={map} />
       <BusinessFacts {...editor} context={profile.business_context} />

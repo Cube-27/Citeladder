@@ -6,7 +6,6 @@ import { ConfirmDialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Text } from '@/components/ui/typography';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { SubscriptionStatus } from '@citeladder/contracts/billing';
 import { Notice } from '@/components/ui/notice';
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
@@ -179,7 +178,8 @@ function ResumeNotice({
       {cancellation.resumeError ? (
         <Notice
           kind="mutation"
-          notice={mutationNoticeForError(cancellation.resumeError, { action: 'resume the plan' })}
+          error={cancellation.resumeError}
+          act="resume the plan"
           onRetry={cancellation.resume}
         />
       ) : null}
@@ -261,14 +261,7 @@ function CancelDialog({
       pending={cancellation.pending}
       onCancel={() => cancellation.setOpen(false)}
     >
-      {cancellation.error ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(cancellation.error, {
-            action: 'schedule the cancellation',
-          })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={cancellation.error} act="schedule the cancellation" />
     </ConfirmDialog>
   );
 }

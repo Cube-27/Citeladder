@@ -6,7 +6,7 @@ import { readErrorProps } from '@/components/ui/notice';
 import { SectionStack } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { VisibilityEmptyState, type EmptyPage } from '@/components/visibility/empty-state';
-import { useVisibilityFilterMenu } from '@/components/visibility/visibility-toolbar';
+import { placesTopic, useVisibilityFilterMenu } from '@/components/visibility/visibility-toolbar';
 import { topicsQueries } from '@/lib/api/topics';
 import type { VisibilityView } from '@/lib/visibility/dashboard';
 import type {
@@ -67,9 +67,11 @@ export function useSelectionPageFilters({
   filters: Filters;
   queries: Queries;
 }>): readonly FilterDefinition[] {
-  const topicsQuery = useQuery(
-    topicsQueries.list({ workspaceId: queries.workspaceId, projectId: queries.projectId }),
-  );
+  const topical = placesTopic(view);
+  const topicsQuery = useQuery({
+    ...topicsQueries.list({ workspaceId: queries.workspaceId, projectId: queries.projectId }),
+    enabled: topical,
+  });
   return useVisibilityFilterMenu({
     view,
     runs: queries.runPicker,
@@ -92,8 +94,8 @@ export function useSelectionPageFilters({
     markets: queries.markets,
     market: filters.market,
     onChangeMarket: filters.setMarket,
-    topics: topicsQuery.data ?? [],
-    topic: filters.topic,
-    onChangeTopic: filters.setTopic,
+    ...(topical
+      ? { topics: topicsQuery.data ?? [], topic: filters.topic, onChangeTopic: filters.setTopic }
+      : {}),
   });
 }

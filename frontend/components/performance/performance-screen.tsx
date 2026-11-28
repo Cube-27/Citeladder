@@ -22,7 +22,7 @@ import { useRangeProjection } from './use-range-projection';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { ReportPage } from '@/components/templates/report-page';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { FilterControls, type FilterBarProps } from '@/components/ui/filter-bar';
+import { HeadControls, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChartNoAxesColumn } from '@/lib/icons';
 import { integrationsQueries } from '@/lib/api/integrations';
@@ -165,12 +165,7 @@ function SearchConsoleWorkspace({
   return (
     <Section aria-labelledby="performance-search-console">
       <SectionHeader
-        actions={
-          <FilterControls
-            align="end"
-            filters={[granularityFilter(granularity, onGranularityChange)]}
-          />
-        }
+        actions={<HeadControls filters={[granularityFilter(granularity, onGranularityChange)]} />}
       >
         <SectionTitle id="performance-search-console">Google Search</SectionTitle>
       </SectionHeader>

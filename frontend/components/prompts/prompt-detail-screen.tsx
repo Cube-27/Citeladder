@@ -13,7 +13,6 @@ import { marketFilter } from '@/components/visibility/visibility-toolbar';
 import { ArchiveRestore } from '@/lib/icons';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { httpErrorStatus } from '@/lib/api/errors';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { promptsMutations } from '@/lib/api/prompts';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { optionalStringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
@@ -142,12 +141,7 @@ function ArchivedNotice({
       >
         Runs no longer ask this prompt.
       </Notice>
-      {restore.error ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(restore.error, { action: 'restore the prompt' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={restore.error} act="restore the prompt" />
     </Stack>
   );
 }

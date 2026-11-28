@@ -30,7 +30,7 @@ const PLACEMENT = {
 
 export type BrandMarkPlacement = keyof typeof PLACEMENT;
 
-type LogoSource = Readonly<{
+export type LogoSource = Readonly<{
   kind?: 'logo';
   name: string;
   logoUrl?: string | null;

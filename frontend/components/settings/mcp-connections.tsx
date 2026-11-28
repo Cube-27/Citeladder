@@ -13,7 +13,6 @@ import { Text } from '@/components/ui/typography';
 import { SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { ICONS, Trash2 } from '@/lib/icons';
 import type { McpConnection } from '@citeladder/contracts/mcp';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { mcpConnectionMutations, mcpConnectionQueries } from '@/lib/api/mcp-connections';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice } from '@/components/ui/notice';
@@ -169,12 +168,7 @@ function RevokeDialog({
       pending={revoke.isPending}
       onCancel={close}
     >
-      {revoke.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(revoke.error, { action: 'revoke the connection' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={revoke.error} act="revoke the connection" />
     </ConfirmDialog>
   );
 }

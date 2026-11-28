@@ -17,7 +17,6 @@ import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import type { ApiKey, ApiKeyList } from '@citeladder/contracts/api-keys';
 import { KeyRound, MoreHorizontal, Trash2, XCircle } from '@/lib/icons';
 import { apiKeyMutations, apiKeyQueries } from '@/lib/api/api-keys';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { formatCount } from '@/lib/format';
 import { API_HOST_ORIGIN } from '@/lib/config/api-host';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
@@ -288,14 +287,11 @@ export function ApiKeys() {
             body: (
               <Stack gap="compact">
                 <p>{requestBody(pending)}</p>
-                {mutation.isError ? (
-                  <Notice
-                    kind="mutation"
-                    notice={mutationNoticeForError(mutation.error, {
-                      action: REQUEST_COPY[pending.kind].action,
-                    })}
-                  />
-                ) : null}
+                <Notice
+                  kind="mutation"
+                  error={mutation.error}
+                  act={REQUEST_COPY[pending.kind].action}
+                />
               </Stack>
             ),
           }

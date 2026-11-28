@@ -10,7 +10,7 @@ import { StateBlock } from '@/components/ui/state-block';
 
 const PROVIDER_SETTINGS = '/settings?tab=providers';
 
-export type ResearchTab = 'overview' | 'keywords' | 'backlinks';
+type ResearchTab = 'overview' | 'keywords' | 'backlinks';
 
 const TAB_EMPTY: Readonly<Record<ResearchTab, string>> = {
   overview: 'See where you rank and where competitors outrank you',

@@ -20,7 +20,6 @@ import {
   measurementLegLabel,
 } from '@/lib/agent/vocabulary';
 import type { ActionDeclaration, MeasurementLeg } from '@/lib/api/actions';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { siteHealthMutations } from '@/lib/api/site-health-queries';
 import { promptHistoryHref } from '@/lib/prompts/history';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -242,7 +241,8 @@ function RunCrawl({ workspaceId }: Readonly<{ workspaceId: string }>) {
       {start.isError ? (
         <Notice
           kind="mutation"
-          notice={mutationNoticeForError(start.error, { action: 'start a crawl' })}
+          error={start.error}
+          act="start a crawl"
           onRetry={() => start.mutate({ project_id: activeProjectId })}
         />
       ) : null}

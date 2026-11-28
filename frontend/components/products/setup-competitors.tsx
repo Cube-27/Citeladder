@@ -6,7 +6,6 @@ import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { TextLink } from '@/components/ui/text-link';
 import { Users } from '@/lib/icons';
 import { commerceMutations } from '@/lib/api/commerce';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import type { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 
@@ -93,22 +92,8 @@ export function SetupCompetitors({
           </Notice>
         ),
       )}
-      {discovery.discover.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(discovery.discover.error, {
-            action: 'start competitor discovery',
-          })}
-        />
-      ) : null}
-      {decide.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(decide.error, {
-            action: 'save the competitor decision',
-          })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={discovery.discover.error} act="start competitor discovery" />
+      <Notice kind="mutation" error={decide.error} act="save the competitor decision" />
       <CompetitorRows
         query={query}
         rows={rows}

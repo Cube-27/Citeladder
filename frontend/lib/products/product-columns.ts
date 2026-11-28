@@ -44,8 +44,6 @@ const missing = (state: MissingState, note?: string): ProductCell => ({
   ...(note ? { note } : {}),
 });
 
-export const formatRate = (value: number) => formatPercent(value);
-
 const figureCell = (value: number | null, format: (value: number) => string): ProductCell =>
   value === null ? missing('unavailable') : { kind: 'value', text: format(value) };
 
@@ -76,11 +74,11 @@ function merchantList(row: CommerceProductRow): ProductCell {
 export function productCell(row: CommerceProductRow, key: ProductColumnKey): ProductCell {
   switch (key) {
     case 'visibility':
-      return figureCell(row.visibility, formatRate);
+      return figureCell(row.visibility, formatPercent);
     case 'appearances':
       return { kind: 'value', text: formatCount(row.appearances) };
     case 'win_rate':
-      return figureCell(row.win_rate, formatRate);
+      return figureCell(row.win_rate, formatPercent);
     case 'position':
       return figureCell(row.position, formatMean);
     case 'mentioned_price':

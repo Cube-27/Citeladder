@@ -2,14 +2,14 @@ import type { ReactNode } from 'react';
 
 import type { SiteIssue } from '@citeladder/contracts';
 
-import { IssueSeverityMark } from '@/components/site-health/issue-metadata';
+import { IssueSeverityMark } from '@/components/site-health/issue-severity-mark';
 import type { DataTableColumn } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { absent, formatCount, type Formatted } from '@/lib/format';
 import { issueTitle } from '@/lib/site-health/issues';
 
-export type IssueRowFacts = Pick<
+type IssueRowFacts = Pick<
   SiteIssue,
   | 'group_id'
   | 'rule_id'

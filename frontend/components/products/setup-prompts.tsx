@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 
-import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Textarea } from '@/components/ui/textarea';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { MessageSquare } from '@/lib/icons';
 import { commerceMutations } from '@/lib/api/commerce';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -22,6 +20,7 @@ import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/proj
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { PromptApproval } from './prompt-approval';
 
 const HERO_COUNT = 3;
 
@@ -89,12 +88,7 @@ export function SetupPrompts({
       >
         <SectionTitle level={level}>Prompts that measure it</SectionTitle>
       </SectionHeader>
-      {generate.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(generate.error, { action: 'generate the prompts' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={generate.error} act="generate the prompts" />
       {failed ? <Notice tone="negative">The buyer-prompt update failed. Try again.</Notice> : null}
       {shortfall !== null ? (
         <Notice tone="info">
@@ -246,17 +240,11 @@ function PromptRows({
           key={row.id}
           title={row.text}
           meta={
-            onToggle ? (
-              <Button
-                variant="secondary"
-                disabled={pending}
-                onClick={() => onToggle(row.id, !row.enabled)}
-              >
-                {row.enabled ? 'Disable' : 'Approve'}
-              </Button>
-            ) : (
-              <Tag>{row.enabled ? 'Approved' : 'Not approved'}</Tag>
-            )
+            <PromptApproval
+              enabled={row.enabled}
+              disabled={pending}
+              onDecide={onToggle ? (approved) => onToggle(row.id, approved) : undefined}
+            />
           }
         />
       ))}

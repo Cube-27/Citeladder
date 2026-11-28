@@ -3,10 +3,14 @@ import { describe, expect, it } from 'vite-plus/test';
 import { ApiError } from '@/lib/api/errors';
 
 import {
+  addCompetitor,
   brandStepSchema,
+  editCompetitor,
   normalizeWebsiteUrl,
   onboardingErrorMessage,
+  toggleCompetitor,
   type BrandStepValues,
+  type ReviewCompetitor,
 } from './forms';
 
 const brand: BrandStepValues = {
@@ -79,5 +83,44 @@ describe('onboardingErrorMessage', () => {
     });
     expect(onboardingErrorMessage(timeout)).toMatch(/still working/i);
     expect(onboardingErrorMessage(timeout)).not.toMatch(/couldn’t finish/i);
+  });
+});
+
+describe('competitor review reducers', () => {
+  const rival = (id: string, selected: boolean): ReviewCompetitor => ({
+    id,
+    name: id,
+    aliases: [],
+    domains: [`${id}.com`, `old-${id}.com`],
+    selected,
+  });
+  const items = [rival('a', true), rival('b', false)];
+
+  it('selects a competitor only while the maximum leaves room, and always deselects', () => {
+    const picks = (next: ReviewCompetitor[]) => next.map((item) => item.selected);
+    expect([
+      picks(toggleCompetitor(items, { index: 1, maximum: 1 })),
+      picks(toggleCompetitor(items, { index: 1, maximum: 2 })),
+      picks(toggleCompetitor(items, { index: 0, maximum: 1 })),
+    ]).toEqual([
+      [true, false],
+      [true, true],
+      [false, false],
+    ]);
+  });
+
+  it('puts the edited domain first without repeating it', () => {
+    expect(editCompetitor(items, { index: 0, name: 'Acme', domain: 'old-a.com' })[0]).toEqual({
+      ...items[0],
+      name: 'Acme',
+      domains: ['old-a.com'],
+    });
+  });
+
+  it('adds a selected blank competitor only below the maximum', () => {
+    expect(addCompetitor(items, 1)).toBe(items);
+    expect(addCompetitor(items, 2).slice(2)).toEqual([
+      expect.objectContaining({ name: '', domains: [], selected: true }),
+    ]);
   });
 });

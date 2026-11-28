@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { Button } from '@/components/ui/button';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Inline } from '@/components/ui/layout';
 import { SectionBleed } from '@/components/ui/section';
@@ -96,12 +95,7 @@ export function SearchIntelligenceCitationMatcher({
     );
   return (
     <>
-      {derive.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(derive.error, { action: 'compare the cited sources' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={derive.error} act="compare the cited sources" />
       {lists.length > 1 ? (
         <Select
           ariaLabel="Website"

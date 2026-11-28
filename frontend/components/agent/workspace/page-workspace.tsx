@@ -314,7 +314,7 @@ function WorkspaceLayout({
   composer: ReactNode;
 }>) {
   const railPanels = RAIL_TABS.map((value) => (
-    <TabPanel key={value} value={value} className="flex min-h-0 flex-1 flex-col">
+    <TabPanel key={value} value={value} box="fill-column">
       {value === 'chat' ? conversation : <EditorRailPanel>{panels[value]}</EditorRailPanel>}
     </TabPanel>
   ));
@@ -348,7 +348,7 @@ function WorkspaceLayout({
           />
         }
       >
-        <TabPanel value="page" forceMount className="flex min-h-0 flex-1 flex-col">
+        <TabPanel value="page" forceMount box="fill-column">
           {page}
         </TabPanel>
         {tabs.stackTab === 'page' ? null : <EditorRail foot={composer}>{railPanels}</EditorRail>}

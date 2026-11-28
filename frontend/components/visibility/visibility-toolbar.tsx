@@ -96,6 +96,10 @@ export function useVisibilityFilterMenu(props: ToolbarProps): FilterDefinition[]
   return [...pick(row), ...pick(inFilters).map((filter) => ({ ...filter, inFilters: true }))];
 }
 
+export function placesTopic(view: VisibilityView) {
+  return placement(view).row.includes('topic');
+}
+
 type FilterId =
   | 'market'
   | 'measurement'
@@ -113,7 +117,9 @@ function placement(view: VisibilityView): Readonly<{
   const tail = ['prompt', 'outcome', 'granularity'] as const;
   if (view === 'insights')
     return { row: ['measurement', 'engine', 'market', 'cohort', 'topic'], inFilters: tail };
-  if (view === 'competitors' || view === 'competitor' || view === 'perception')
+  if (view === 'perception')
+    return { row: ['measurement', 'engine', 'market', 'cohort'], inFilters: [] };
+  if (view === 'competitors' || view === 'competitor')
     return { row: ['measurement', 'engine', 'market', 'topic', 'cohort'], inFilters: tail };
   return { row: ['measurement', 'engine', 'cohort', 'topic'], inFilters: ['market', ...tail] };
 }

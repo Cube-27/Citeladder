@@ -23,7 +23,6 @@ import {
 import { OverviewPanel } from '@/components/site-health/overview-panel';
 import { PageDrawerHost } from '@/components/site-health/page-drawer';
 import { useSetUrlParams, useUrlParam } from '@/lib/navigation/url-params';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { warmQuery } from '@/lib/api/query-client';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
@@ -296,18 +295,16 @@ function SiteHealthNotices({
       {mutationsAllowed && screen.createMutation.isError ? (
         <Notice
           kind="mutation"
-          notice={mutationNoticeForError(screen.createMutation.error, {
-            action: 'start a crawl',
-          })}
+          error={screen.createMutation.error}
+          act="start a crawl"
           onRetry={screen.retryStart}
         />
       ) : null}
       {mutationsAllowed && screen.cancelMutation.isError ? (
         <Notice
           kind="mutation"
-          notice={mutationNoticeForError(screen.cancelMutation.error, {
-            action: 'stop the crawl',
-          })}
+          error={screen.cancelMutation.error}
+          act="stop the crawl"
           onRetry={screen.cancelCrawl}
         />
       ) : null}

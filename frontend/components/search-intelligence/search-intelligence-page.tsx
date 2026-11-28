@@ -102,7 +102,7 @@ export function SearchIntelligencePage() {
         tabs={<TabRow items={SEARCH_INTELLIGENCE_TABS} ariaLabel="Keyword research views" />}
         filters={tab === 'demand' ? demandControls(demand) : research.filters}
       >
-        <TabPanel value="demand" className="min-w-0">
+        <TabPanel value="demand" box="shrink">
           <SectionStack>
             <DemandPanel demand={demand} />
           </SectionStack>
@@ -116,7 +116,7 @@ export function SearchIntelligencePage() {
 
 function statePanels(render: (tab: Tab) => ReactNode) {
   return RESEARCH_TABS.map((value) => (
-    <TabPanel key={value} value={value} className="min-w-0">
+    <TabPanel key={value} value={value} box="shrink">
       {render(value)}
     </TabPanel>
   ));
@@ -378,7 +378,7 @@ function ResearchPanels({
 }>) {
   return (
     <>
-      <TabPanel value="overview" className="min-w-0">
+      <TabPanel value="overview" box="shrink">
         <SearchIntelligenceOverview
           datasets={datasets}
           backlinkFigures={backlinkFigures}
@@ -388,7 +388,7 @@ function ResearchPanels({
         />
       </TabPanel>
       {RESEARCH_TABS.filter((value) => value !== 'overview').map((value) => (
-        <TabPanel key={value} value={value} className="min-w-0">
+        <TabPanel key={value} value={value} box="shrink">
           {collection?.tab === value ? (
             <SearchIntelligenceCollection
               collection={collection}

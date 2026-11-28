@@ -7,7 +7,10 @@ import { TEXT_TONE_CLASS, type TextTone } from '@/components/ui/text-role';
 import { Tooltip } from '@/components/ui/tooltip';
 
 import { humanizeApiError } from '@/lib/api/errors';
-import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
+import {
+  mutationNoticeForError,
+  type MutationNotice as MutationNoticeData,
+} from '@/lib/api/mutation-notice';
 import { isPlanLimit, PLANS_HREF } from '@/lib/billing/plan-limit';
 import { CircleAlert, CircleCheck, Info, TriangleAlert, type IconGlyph } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -32,13 +35,14 @@ type MessageNotice = Readonly<{
   className?: string;
 }>;
 
-type MutationFailure = Readonly<{
-  kind: 'mutation';
-  notice: MutationNoticeData;
-  onRetry?: () => void;
-  recovery?: ReactNode;
-  className?: string;
-}>;
+type MutationFailure = Readonly<
+  {
+    kind: 'mutation';
+    onRetry?: () => void;
+    recovery?: ReactNode;
+    className?: string;
+  } & ({ notice: MutationNoticeData } | { error: unknown; act: string })
+>;
 
 type ReadFailure = Readonly<{
   kind: 'read';
@@ -144,7 +148,15 @@ function NoticeAction({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-function MutationFailureNotice({ notice, onRetry, recovery, className }: MutationFailure) {
+function failureNotice(props: MutationFailure): MutationNoticeData | null {
+  if ('notice' in props) return props.notice;
+  return props.error == null ? null : mutationNoticeForError(props.error, { action: props.act });
+}
+
+function MutationFailureNotice(props: MutationFailure) {
+  const { onRetry, recovery, className } = props;
+  const notice = failureNotice(props);
+  if (!notice) return null;
   let action: ReactNode = recovery ?? null;
   if (action === null && notice.retryable && onRetry)
     action = (

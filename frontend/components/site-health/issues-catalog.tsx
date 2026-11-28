@@ -6,7 +6,7 @@ import { IssuesExport } from '@/components/site-health/issues-export';
 import { Inline } from '@/components/ui/layout';
 import { IssuePage, PendingIssuePage, type IssueHead } from '@/components/site-health/issue-page';
 import { ISSUE_COLUMNS, IssueRow } from '@/components/site-health/issue-rows';
-import { pageKindFilter } from '@/components/site-health/page-kind-select';
+import { pageKindFilter } from '@/components/site-health/page-kind-filter';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { DataTable, type DataTableColumn, type DataTablePager } from '@/components/ui/data-table';
 import { InfoHint } from '@/components/ui/info-hint';

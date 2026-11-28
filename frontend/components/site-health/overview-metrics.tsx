@@ -6,7 +6,7 @@ import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { formatCount } from '@/lib/format';
 import { Text } from '@/components/ui/typography';
 
-export type AuditMetric = {
+type AuditMetric = {
   title: string;
   value: number | null;
   valueUnit?: 'score' | 'percent' | 'count';

@@ -6,7 +6,7 @@ import { Absence } from '@/components/ui/absence';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { GridTableSkeleton, RankLegend, RankTable } from '@/components/ui/heat-table';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { Select } from '@/components/ui/select';
+import { FilterChoice, HeadControls } from '@/components/ui/filter-bar';
 import { MATRIX_DIMENSIONS, RANKING_DIMENSIONS } from '@/lib/config/visibility';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { formatRate } from '@/lib/visibility/dashboard';
@@ -67,11 +67,10 @@ export function TopRankings({
     <Section aria-labelledby="insights-rankings">
       <SectionHeader
         actions={
-          <Select
-            ariaLabel="Rank by"
-            value={by}
-            options={RANKING_DIMENSIONS}
-            onValueChange={setBy}
+          <HeadControls
+            view={
+              <FilterChoice label="Rank" value={by} options={RANKING_DIMENSIONS} onChange={setBy} />
+            }
           />
         }
       >

@@ -1,6 +1,6 @@
 import type { AgentMessage } from '@/lib/api/agent';
 
-export type TurnPart =
+type TurnPart =
   | Readonly<{ kind: 'steps'; steps: AgentMessage['steps'] }>
   | Readonly<{ kind: 'text'; markdown: string }>
   | Readonly<{ kind: 'evidence'; refs: AgentMessage['evidence_refs'] }>

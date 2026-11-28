@@ -7,7 +7,7 @@ import { useProjectCreation } from '@/components/layout/use-project-creation';
 import type { Project } from '@citeladder/contracts';
 import { ChevronDown, Pencil, Plus } from '@/lib/icons';
 import { newProjectDestination } from '@/lib/navigation/project-destination';
-import { Text } from '@/components/ui/typography';
+import { TitleCaption } from '@/components/ui/title-caption';
 
 export function ProjectControls({
   activeProject,
@@ -39,10 +39,10 @@ export function ProjectControls({
             disabled={!canAddProject}
             onSelect={() => router(newProjectDestination(activeWorkspaceId))}
           >
-            <span className="grid min-w-0 flex-1">
-              <span>Add project</span>
-              {remainingProjectSlots === 0 && <Text variant="caption">Project limit reached</Text>}
-            </span>
+            <TitleCaption
+              title="Add project"
+              caption={remainingProjectSlots === 0 ? 'Project limit reached' : null}
+            />
           </MenuItem>
         ) : null}
       </MenuContent>

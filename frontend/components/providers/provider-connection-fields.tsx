@@ -1,7 +1,6 @@
 import { AppGrid } from '@/components/ui/app-grid';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { useProviderConnection } from '@/lib/providers/use-provider-connection';
 import { Notice } from '@/components/ui/notice';
 
@@ -72,12 +71,7 @@ export function ProviderConnectionFields({
         <ApiKeyField state={state} />
       )}
 
-      {saveMutation.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(saveMutation.error, { action: 'save the connection' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={saveMutation.error} act="save the connection" />
 
       {testResult ? (
         <Notice tone={testResult.status === 'ok' ? 'positive' : 'negative'}>

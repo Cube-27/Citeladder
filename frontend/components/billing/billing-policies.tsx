@@ -1,5 +1,5 @@
 import type { BillingCatalog } from '@/lib/api/billing';
-import { websiteHref } from '@/lib/config/app-link';
+import { websiteUrl } from '@/lib/config/app-link';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { contactSalesHref } from '@/lib/config/contact-sales';
 
@@ -10,10 +10,8 @@ import { Text } from '@/components/ui/typography';
 
 function PolicyLink({ path, children }: Readonly<{ path: `/${string}`; children: string }>) {
   return (
-    <TextLink asChild variant="external" text="inherit">
-      <a href={websiteHref(path)} target="_blank" rel="noreferrer" className="whitespace-nowrap">
-        {children}
-      </a>
+    <TextLink variant="external" text="inherit" box="nowrap" href={websiteUrl(path)}>
+      {children}
     </TextLink>
   );
 }
@@ -35,7 +33,7 @@ export function BillingSupport({
   contact,
 }: Readonly<{ contact: BillingCatalog['support_contact'] }>) {
   const email = contact?.email || PARENT_COMPANY.email;
-  const url = contactSalesHref(contact?.contact_url, websiteHref('/contact'));
+  const url = contactSalesHref(contact?.contact_url, websiteUrl('/contact'));
   return (
     <SettingsGroup title="Billing help">
       <SettingRows>
@@ -51,10 +49,8 @@ export function BillingSupport({
         <SettingRow
           label="Contact"
           value={
-            <TextLink asChild variant="external" text="inherit">
-              <a href={url} target="_blank" rel="noreferrer" className="whitespace-nowrap">
-                contact form
-              </a>
+            <TextLink variant="external" text="inherit" box="nowrap" href={url}>
+              contact form
             </TextLink>
           }
         />

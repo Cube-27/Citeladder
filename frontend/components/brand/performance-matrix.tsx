@@ -10,9 +10,8 @@ import {
   type HeatValue,
 } from '@/components/ui/heat-table';
 import { InfoHint } from '@/components/ui/info-hint';
-import { FilterChoice } from '@/components/ui/filter-bar';
+import { FilterChoice, HeadControls } from '@/components/ui/filter-bar';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { Select } from '@/components/ui/select';
 import { StateBlock } from '@/components/ui/state-block';
 import { Text } from '@/components/ui/typography';
 import { ExportAction } from '@/components/ui/export-action';
@@ -139,46 +138,53 @@ export function PerformanceMatrix({
     <Section aria-labelledby="insights-matrix">
       <SectionHeader
         actions={
-          <>
-            <FilterChoice
-              label="Metric"
-              value={metric}
-              options={MATRIX_METRICS}
-              onChange={setMetric}
-            />
-            {metric === 'avg_position' ? (
-              <InfoHint label="Position">{POSITION_HINT}</InfoHint>
-            ) : null}
-            <Select
-              ariaLabel="Rows"
-              value={rows}
-              options={options(columns)}
-              onValueChange={setRows}
-            />
-            <Text variant="caption">vs</Text>
-            <Select
-              ariaLabel="Columns"
-              value={columns}
-              options={options(rows)}
-              onValueChange={setColumns}
-            />
-            <Button
-              onClick={() =>
-                setUrlParams({
-                  matrix_rows: rowsCodec.serialize(columns),
-                  matrix_columns: columnsCodec.serialize(rows),
-                })
-              }
-            >
-              Switch axis
-            </Button>
-            <ExportAction
-              scope="table"
-              formats={['csv']}
-              disabled={!readings.length}
-              onExport={async () => exportCsv()}
-            />
-          </>
+          <HeadControls
+            view={
+              <>
+                <FilterChoice
+                  label="Metric"
+                  value={metric}
+                  options={MATRIX_METRICS}
+                  onChange={setMetric}
+                />
+                {metric === 'avg_position' ? (
+                  <InfoHint label="Position">{POSITION_HINT}</InfoHint>
+                ) : null}
+                <FilterChoice
+                  label="Rows"
+                  value={rows}
+                  options={options(columns)}
+                  onChange={setRows}
+                />
+                <Text variant="caption">vs</Text>
+                <FilterChoice
+                  label="Columns"
+                  value={columns}
+                  options={options(rows)}
+                  onChange={setColumns}
+                />
+                <Button
+                  variant="quiet"
+                  onClick={() =>
+                    setUrlParams({
+                      matrix_rows: rowsCodec.serialize(columns),
+                      matrix_columns: columnsCodec.serialize(rows),
+                    })
+                  }
+                >
+                  Switch axis
+                </Button>
+              </>
+            }
+            actions={
+              <ExportAction
+                scope="table"
+                formats={['csv']}
+                disabled={!readings.length}
+                onExport={async () => exportCsv()}
+              />
+            }
+          />
         }
       >
         <SectionTitle id="insights-matrix">Performance matrix</SectionTitle>

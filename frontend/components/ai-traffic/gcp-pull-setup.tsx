@@ -6,7 +6,6 @@ import { gcpSetupCommands } from '@/lib/ai-traffic/gcp-commands';
 import { verificationFailureLabel } from '@/lib/ai-traffic/vocabulary';
 import { GCP_PULL_SETUP } from '@/lib/config/crawl-logs';
 import { Button } from '@/components/ui/button';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -104,7 +103,8 @@ export function GcpSourceSetup({
       {verify.isError ? (
         <Notice
           kind="mutation"
-          notice={mutationNoticeForError(verify.error, { action: 'verify the subscription' })}
+          error={verify.error}
+          act="verify the subscription"
           onRetry={() => verify.mutate(source.id)}
         />
       ) : null}
@@ -168,9 +168,8 @@ function SinkFilterUpdate({
       {confirmFilter.isError ? (
         <Notice
           kind="mutation"
-          notice={mutationNoticeForError(confirmFilter.error, {
-            action: 'confirm the sink filter',
-          })}
+          error={confirmFilter.error}
+          act="confirm the sink filter"
           onRetry={() => confirmFilter.mutate(source.id)}
         />
       ) : null}

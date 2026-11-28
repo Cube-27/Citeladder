@@ -10,7 +10,6 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { useToast } from '@/components/ui/toast';
 import { Text } from '@/components/ui/typography';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations, projectQueries } from '@/lib/api/projects';
 import { formatCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -84,12 +83,7 @@ function PromptPicker({
     return <StateBlock kind="empty" inline message="No active prompts in this project." />;
   return (
     <>
-      {save.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(save.error, { action: 'save the prompts' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={save.error} act="save the prompts" />
       <Stack gap="workspace">
         {byTopic(list.prompts).map(([topic, prompts]) => (
           <Stack key={topic ?? ''} gap="compact">

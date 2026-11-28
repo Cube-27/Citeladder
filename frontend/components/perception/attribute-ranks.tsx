@@ -4,6 +4,8 @@ import type { PerceptionResponse } from '@citeladder/contracts/visibility-percep
 import { IconButton } from '@/components/ui/button';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { InfoHint } from '@/components/ui/info-hint';
+import { HeadControls } from '@/components/ui/filter-bar';
+import { Inline } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/typography';
 import { RankBarList } from '@/components/ui/polarity-bars';
@@ -42,16 +44,22 @@ export function AttributeRanks({ categories }: Readonly<{ categories: readonly C
     <Section aria-label="Ranked attributes">
       <SectionHeader
         actions={
-          <>
-            <SegmentedControl
-              value={order}
-              onChange={setOrder}
-              ariaLabel="Order attributes"
-              options={orders.map((value) => ({ value, label: ORDER_LABEL[value] }))}
-            />
-            <InfoHint label="About attributes">Labelled points per category</InfoHint>
-            <Text variant="caption">Points</Text>
-          </>
+          <HeadControls
+            view={
+              <SegmentedControl
+                value={order}
+                onChange={setOrder}
+                ariaLabel="Order attributes"
+                options={orders.map((value) => ({ value, label: ORDER_LABEL[value] }))}
+              />
+            }
+            actions={
+              <>
+                <InfoHint label="About attributes">Labelled points per category</InfoHint>
+                <Text variant="caption">Points</Text>
+              </>
+            }
+          />
         }
       >
         <SectionTitle>Ranked attributes</SectionTitle>
@@ -66,13 +74,13 @@ export function AttributeRanks({ categories }: Readonly<{ categories: readonly C
         }))}
       />
       {ranked.length > SHOWN ? (
-        <span className="flex justify-center">
+        <Inline justify="center">
           <IconButton
             icon={all ? Minimize2 : Maximize2}
             label={all ? 'Show fewer' : `Show all ${ranked.length}`}
             onClick={() => setAll(!all)}
           />
-        </span>
+        </Inline>
       ) : null}
     </Section>
   );

@@ -148,10 +148,19 @@ describe('useVisibilityFilterMenu', () => {
     expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
     unmount();
 
-    const perception = renderRow({ view: 'perception', selectionMode: 'run', cohort: 'all' });
+    const perception = renderRow({
+      view: 'perception',
+      selectionMode: 'run',
+      cohort: 'all',
+      ...markets,
+      topics: TOPICS,
+      onChangeTopic: vi.fn(),
+      onChangeOutcome: vi.fn(),
+    });
     expect(rowChips()).toEqual([
       'Measurement: Latest run',
       'Engines: All engines',
+      'Market: United States',
       'Prompts: All prompts',
     ]);
     expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();

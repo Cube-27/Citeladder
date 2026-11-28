@@ -13,7 +13,6 @@ import AccountSecurity from '@/components/settings/account-security';
 import { TabPanel, TabRail, TabsRoot } from '@/components/ui/tabs';
 import { SettingsPage } from '@/components/templates/settings-page';
 import { projectMutations } from '@/lib/api/projects';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useSessionUser } from '@/lib/auth/session-guard';
 import { useEntitlement, useManagedPlan } from '@/lib/billing/entitlement-context';
 import { PROJECT_DELETION_CAPABILITY } from '@/lib/config/billing';
@@ -74,12 +73,7 @@ function ProjectDeletionControls() {
   return (
     <>
       <SettingsGroup title="Delete project">
-        {deleteMutation.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(deleteMutation.error, { action: 'delete the project' })}
-          />
-        ) : null}
+        <Notice kind="mutation" error={deleteMutation.error} act="delete the project" />
         {activeProject ? (
           <SettingRows>
             <SettingRow
@@ -142,7 +136,7 @@ export function SettingsScreen() {
           section: 'reading',
         }}
       >
-        <TabPanel value="account" forceMount className="data-[state=inactive]:hidden">
+        <TabPanel value="account" forceMount>
           <SectionStack>
             <SettingsGroup title="Profile">
               <SettingRows>
@@ -156,14 +150,14 @@ export function SettingsScreen() {
           </SectionStack>
         </TabPanel>
 
-        <TabPanel value="workspace" forceMount className="data-[state=inactive]:hidden">
+        <TabPanel value="workspace" forceMount>
           <SectionStack>
             <WorkspacePanel />
             <ProjectDeletionControls />
           </SectionStack>
         </TabPanel>
 
-        <TabPanel value="providers" forceMount className="data-[state=inactive]:hidden">
+        <TabPanel value="providers" forceMount>
           <ProviderSettings />
         </TabPanel>
 

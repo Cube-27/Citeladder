@@ -16,7 +16,7 @@ import type {
 import { MessageSquare } from '@/lib/icons';
 import { newPlanCheckoutClosed } from '@/lib/billing/catalog';
 import type { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
-import { websiteHref } from '@/lib/config/app-link';
+import { websiteUrl } from '@/lib/config/app-link';
 import { contactSalesHref } from '@/lib/config/contact-sales';
 import { Button } from '@/components/ui/button';
 import { StateBlock } from '@/components/ui/state-block';
@@ -85,7 +85,7 @@ export function ChoosePlan({
               <ExternalHttpLink
                 href={contactSalesHref(
                   catalog.support_contact?.contact_url ?? null,
-                  new URL(websiteHref('/contact'), 'https://citeladder.com').href,
+                  websiteUrl('/contact'),
                 )}
               >
                 Contact us

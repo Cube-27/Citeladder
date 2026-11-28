@@ -8,7 +8,6 @@ import { Section, SectionBleed, SectionStack } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { ChevronDown, Plus, RotateCcw, Sparkles, Tags, Trash2 } from '@/lib/icons';
 import { isImeComposing } from '@/lib/accessibility/ime';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { TopicRow } from '@/lib/prompts/builder-topics';
 
 import { GenerateErrorAlert } from './generation-alerts';
@@ -90,12 +89,7 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
       {topics.preview.error ? (
         <GenerateErrorAlert error={topics.preview.error} action="propose topics" />
       ) : null}
-      {topics.confirm.error ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(topics.confirm.error, { action: 'confirm the topics' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={topics.confirm.error} act="confirm the topics" />
       {topics.problem ? <Notice tone="warning">{topics.problem}</Notice> : null}
       <Section>
         <Inline wrap justify="end">

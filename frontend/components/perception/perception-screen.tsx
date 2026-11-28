@@ -14,8 +14,11 @@ import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
 import { VisibilityEmptyState } from '@/components/visibility/empty-state';
 import { AnalysisRead, SelectionGate } from '@/components/visibility/selection-gate';
-import { selectionPageState } from '@/components/visibility/selection-page';
-import { useVisibilityFilterMenu } from '@/components/visibility/visibility-toolbar';
+import {
+  selectionPageFilterBar,
+  selectionPageState,
+  useSelectionPageFilters,
+} from '@/components/visibility/selection-page';
 import { availabilityLabel } from '@/lib/format';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useBrandFacts } from '@/lib/project/use-brand-facts';
@@ -32,7 +35,6 @@ const TAB_CODEC = stringUrlCodec<PerceptionTab>(
   'brand',
 );
 
-type Filters = ReturnType<typeof useVisibilityFilters>;
 type Queries = ReturnType<typeof useVisibilityQueries>;
 
 export function PerceptionScreen() {
@@ -47,8 +49,9 @@ export function PerceptionScreen() {
   const perception = usePerception({ filters, queries, open: reads && tab === 'brand' });
   const accuracy = useAccuracy({ filters, queries, open: reads && pilot });
   const factViews = useFactViews({ filters, queries, accuracy, open: tab === 'fact-checking' });
-  const pageFilters = usePageFilters(filters, queries);
-  const ready = selectionPageState(queries) === null;
+  const pageFilters = useSelectionPageFilters({ view: 'perception', filters, queries });
+  const state = selectionPageState(queries);
+  const ready = state === null;
   const brandFact = pilot ? settledFactFigure(accuracy, () => setTab('fact-checking')) : undefined;
   const view =
     tab === 'fact-checking' ? (
@@ -61,7 +64,7 @@ export function PerceptionScreen() {
       <ReportPage
         tabs={<TabRow items={items} ariaLabel="Perception views" />}
         actions={probeControls.actions ?? null}
-        filters={ready && !probe ? { filters: pageFilters } : undefined}
+        filters={probe ? undefined : selectionPageFilterBar(state, pageFilters)}
       >
         {probe ? null : <RunBanner queries={queries} />}
         <TabPanel value={tab}>
@@ -163,28 +166,4 @@ function PageState({ queries }: Readonly<{ queries: Queries }>) {
       />
     );
   return <VisibilityEmptyState activeRun={queries.activeRun ?? null} page="perception" />;
-}
-
-function usePageFilters(filters: Filters, queries: Queries) {
-  return useVisibilityFilterMenu({
-    view: 'perception',
-    runs: queries.runPicker,
-    selectedRunId: filters.selectedRunId,
-    onSelectMeasurement: filters.selectMeasurement,
-    engine: filters.engine,
-    onChangeEngine: filters.setEngine,
-    promptOptions: queries.promptOptions,
-    promptId: filters.promptId,
-    onChangePrompt: filters.setPromptId,
-    range: filters.range,
-    onSelectPeriod: filters.selectPeriod,
-    granularity: filters.granularity,
-    onChangeGranularity: filters.setGranularity,
-    cohort: filters.cohort,
-    onChangeCohort: filters.setCohort,
-    selectionMode: queries.selectionMode,
-    markets: queries.markets,
-    market: filters.market,
-    onChangeMarket: filters.setMarket,
-  });
 }

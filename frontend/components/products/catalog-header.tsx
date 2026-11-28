@@ -10,7 +10,6 @@ import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
 import { RefreshCw } from '@/lib/icons';
 import { followCatalogAnalysis } from '@/lib/api/commerce';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount, pluralCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -241,9 +240,8 @@ function CatalogNotices({
   return (
     <Notice
       kind="mutation"
-      notice={mutationNoticeForError(refreshError, {
-        action: 'refresh Site health progress',
-      })}
+      error={refreshError}
+      act="refresh Site health progress"
       recovery={
         <Button type="button" variant="secondary" onClick={onRefresh}>
           Refresh again

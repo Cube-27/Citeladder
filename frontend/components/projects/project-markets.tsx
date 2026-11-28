@@ -8,7 +8,6 @@ import { Columns, Inline } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { X } from '@/lib/icons';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
 import { Notice } from '@/components/ui/notice';
@@ -84,9 +83,8 @@ export function ProjectMarkets({
       {failed ? (
         <Notice
           kind="mutation"
-          notice={mutationNoticeForError(failed, {
-            action: add.error ? 'add the market' : 'remove the market',
-          })}
+          error={failed}
+          act={add.error ? 'add the market' : 'remove the market'}
         />
       ) : null}
     </Section>

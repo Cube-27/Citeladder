@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { PageDrawerHost } from '@/components/site-health/page-drawer';
 import { ReportPage } from '@/components/templates/report-page';
-import { IssueSeverityMark } from '@/components/site-health/issue-metadata';
+import { IssueSeverityMark } from '@/components/site-health/issue-severity-mark';
 import { formatCount, formatPercent } from '@/lib/format';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pager } from '@/components/ui/pager';

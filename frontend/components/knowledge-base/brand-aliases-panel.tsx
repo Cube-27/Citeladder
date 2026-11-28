@@ -10,7 +10,6 @@ import { Notice } from '@/components/ui/notice';
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { Tag } from '@/components/ui/tag';
 import { Check } from '@/lib/icons';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
 
 export function BrandAliasesPanel({
@@ -27,12 +26,7 @@ export function BrandAliasesPanel({
   return (
     <>
       <SettingsGroup title="Aliases">
-        {save.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(save.error, { action: 'save the aliases' })}
-          />
-        ) : null}
+        <Notice kind="mutation" error={save.error} act="save the aliases" />
         <SettingRows label="Aliases">
           {aliases.map((alias, index) => (
             <EditableNameRow

@@ -15,7 +15,6 @@ import { Icon } from '@/components/ui/icon';
 import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { StateBlock } from '@/components/ui/state-block';
 import { ConfirmDialog, Dialog, type ConfirmRequest } from '@/components/ui/dialog';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { DisplayTime } from '@/components/ui/display-time';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
@@ -143,10 +142,7 @@ function Connections({
         onClose={() => setRotating(null)}
       />
       {mutation.isError && !open ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(mutation.error, { action: 'update the crawl-log source' })}
-        />
+        <Notice kind="mutation" error={mutation.error} act="update the crawl-log source" />
       ) : null}
       <Dialog
         open={open}
@@ -228,12 +224,7 @@ function SetupAvailability({ model }: Readonly<{ model: ReturnType<typeof useCra
   if (sources.data.availability === 'available') return <CrawlLogSetup model={model} />;
   return (
     <>
-      {mutation.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(mutation.error, { action: 'update the crawl-log source' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={mutation.error} act="update the crawl-log source" />
       <CrawlLogAvailabilityNotice
         availability={sources.data.availability}
         workspaceId={model.workspaceId}
@@ -400,12 +391,7 @@ function RotateToken({ source, projectId, workspaceId, onClose }: RotateTokenPro
         )
       }
     >
-      {rotate.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(rotate.error, { action: 'rotate the token' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={rotate.error} act="rotate the token" />
       {rotate.isSuccess ? <IssuedToken issued={{ ...rotate.data, setup: source.setup }} /> : null}
     </Dialog>
   );

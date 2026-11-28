@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/section';
 import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
-import { PerceptionState } from '@/components/visibility/visibility-perception';
+import { PerceptionState } from '@/components/perception/perception-state';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { availabilityLabel, formatDisplayDate, formatDisplayShortDate } from '@/lib/format';
 import { BRAND_PROMPTS_HREF } from '@/lib/prompts/routes';

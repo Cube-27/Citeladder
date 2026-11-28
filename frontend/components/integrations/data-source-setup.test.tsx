@@ -214,7 +214,7 @@ describe('DataSourceSetup', () => {
     renderSetup({ role: 'member' });
 
     const setup = await screen.findByTestId('data-source-setup');
-    expect(await within(setup).findByText('Ask a workspace owner or admin')).toBeInTheDocument();
+    expect(await within(setup).findByText('Ask a workspace owner or admin.')).toBeInTheDocument();
     expect(within(setup).queryByRole('button', { name: 'Connect Google' })).toBeNull();
   });
 

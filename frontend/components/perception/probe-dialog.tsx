@@ -15,7 +15,6 @@ import { Inline } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { TextLink } from '@/components/ui/text-link';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { probeMutations, probeQueries, refreshProbeStatus } from '@/lib/api/probes';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { PLANS_HREF } from '@/lib/billing/plan-limit';
@@ -108,12 +107,7 @@ export function ProbeDialog({
         </>
       }
     >
-      {pending.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(pending.error, { action: copy.action })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={pending.error} act={copy.action} />
       {short ? (
         <Notice tone="warning" action={<TextLink href={PLANS_HREF}>See plans</TextLink>}>
           Not enough AI credits.

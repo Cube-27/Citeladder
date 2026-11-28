@@ -11,7 +11,6 @@ import {
   joinProviderLabels,
   type GrantFamily,
 } from '@/components/settings/grant-model';
-import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { ClampText } from '@/components/ui/clamp-text';
 import { Icon } from '@/components/ui/icon';
@@ -27,6 +26,11 @@ import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useSetUrlParams, useUrlParam, useUrlSearch } from '@/lib/navigation/url-params';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
+
+import {
+  CONNECT_ADMIN_ONLY,
+  ConnectProviderButton,
+} from '@/components/settings/connect-provider-button';
 
 import { usePropertyChoice } from './property-choice';
 import { oauthErrorMessage, useDataSources, type SourceStep } from './data-sources';
@@ -136,26 +140,6 @@ function setupTitle(
   return 'Data sources';
 }
 
-function ConnectButton({
-  family,
-  label,
-  onConnect,
-}: Readonly<{ family: GrantFamily; label?: string; onConnect: () => void }>) {
-  if (label)
-    return (
-      <Button variant="secondary" onClick={onConnect}>
-        {label}
-      </Button>
-    );
-  if (family === 'google') return <ActionButton action="connectGoogle" onClick={onConnect} />;
-  return (
-    <Button variant="secondary" onClick={onConnect}>
-      <Icon icon={Plug} />
-      Connect {FAMILY_META[family].title}
-    </Button>
-  );
-}
-
 function ConnectRow({
   family,
   providers,
@@ -176,9 +160,9 @@ function ConnectRow({
       status={required ? 'Not connected' : 'Optional'}
       action={
         canManage ? (
-          <ConnectButton family={family} onConnect={() => startConnect(family)} />
+          <ConnectProviderButton family={family} onConnect={() => startConnect(family)} />
         ) : (
-          <Text variant="caption">Ask a workspace owner or admin</Text>
+          <Text variant="caption">{CONNECT_ADMIN_ONLY}</Text>
         )
       }
     />
@@ -245,7 +229,7 @@ function SourceRow({
     return (
       <RowFrame Icon={source.Icon} title={source.label} status={status}>
         <Text as="p" variant="caption">
-          Ask a workspace owner or admin to choose it.
+          {CONNECT_ADMIN_ONLY}
         </Text>
       </RowFrame>
     );
@@ -310,7 +294,7 @@ function UnconnectedState({
   const action =
     canManage && lead ? (
       <>
-        <ConnectButton family={lead} label={connect} onConnect={() => startConnect(lead)} />
+        <ConnectProviderButton family={lead} label={connect} onConnect={() => startConnect(lead)} />
         {rest.slice(0, 1).map((family) => (
           <Button key={family} variant="quiet" onClick={() => startConnect(family)}>
             <Icon icon={Plug} />
@@ -319,7 +303,7 @@ function UnconnectedState({
         ))}
       </>
     ) : (
-      <Text variant="caption">Ask a workspace owner or admin to connect it.</Text>
+      <Text variant="caption">{CONNECT_ADMIN_ONLY}</Text>
     );
   return <StateBlock kind="empty" icon={icon} heading={heading} action={action} />;
 }
