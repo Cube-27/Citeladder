@@ -30,7 +30,7 @@ export function PaneBlock({
   );
 }
 
-export type JumpItem = Readonly<{ key: string | number; label: ReactNode; onJump: () => void }>;
+type JumpItem = Readonly<{ key: string | number; label: ReactNode; onJump: () => void }>;
 
 export function JumpList({
   label,

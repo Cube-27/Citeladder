@@ -2,7 +2,7 @@ import { useContext, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { PageOpenContext, pageHref } from '@/components/site-health/page-open-context';
-import { Labelled } from '@/components/ui/reading-page';
+import { TitledSection } from '@/components/ui/section';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LinkRow, LinkRows } from '@/components/ui/link-rows';
 import { Text } from '@/components/ui/typography';
@@ -49,7 +49,7 @@ export function ActionUrls({
     else void extra.fetchNextPage();
   };
   return (
-    <Labelled title={`URLs · ${formatCount(first.total)}`} bare>
+    <TitledSection region title={`URLs · ${formatCount(first.total)}`}>
       <LinkRows
         label="URLs"
         more={
@@ -91,7 +91,7 @@ export function ActionUrls({
           );
         })}
       </LinkRows>
-    </Labelled>
+    </TitledSection>
   );
 }
 

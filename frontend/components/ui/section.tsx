@@ -259,17 +259,20 @@ export function TitledSection({
   title,
   description,
   actions,
+  region = false,
   children,
 }: Readonly<{
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  region?: boolean;
   children: ReactNode;
 }>) {
+  const titleId = useId();
   return (
-    <Section>
+    <Section aria-labelledby={region ? titleId : undefined}>
       <SectionHeader actions={actions}>
-        <SectionTitle>{title}</SectionTitle>
+        <SectionTitle id={region ? titleId : undefined}>{title}</SectionTitle>
         {description ? <SectionDescription>{description}</SectionDescription> : null}
       </SectionHeader>
       {children}

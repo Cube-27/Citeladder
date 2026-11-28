@@ -12,7 +12,7 @@ import { FloatingBar } from '@/components/ui/selection-dock';
 import { SidebarRowFace, SidebarRowLabel } from '@/components/ui/sidebar';
 import { ToneGlyph } from '@/components/ui/status-mark';
 
-export type StepItem<T extends string> = Readonly<{ value: T; label: string }>;
+type StepItem<T extends string> = Readonly<{ value: T; label: string }>;
 
 export function StepsLayout<T extends string>({
   label,
