@@ -197,12 +197,11 @@ function NativeButton({
   );
 }
 
-const EMPHASIS: Record<'demote' | 'promote', Partial<Record<ButtonVariant, ButtonVariant>>> = {
-  demote: { primary: 'secondary' },
-  promote: { secondary: 'primary' },
-};
+type Emphasis = Partial<Record<ButtonVariant, ButtonVariant>>;
 
-export const ButtonEmphasis = createContext<keyof typeof EMPHASIS | null>(null);
+export const DEMOTE: Emphasis = { primary: 'secondary' };
+export const PROMOTE: Emphasis = { secondary: 'primary' };
+export const ButtonEmphasis = createContext<Emphasis | null>(null);
 
 type SlotClass = { className?: string };
 
@@ -212,8 +211,7 @@ function SlotMergedButton({
   variant = 'secondary',
   ...props
 }: Readonly<ButtonProps & SlotClass>) {
-  const emphasis = useContext(ButtonEmphasis);
-  const shown: ButtonVariant = (emphasis && EMPHASIS[emphasis][variant]) || variant;
+  const shown = useContext(ButtonEmphasis)?.[variant] ?? variant;
   const className = cn(slotClass, box && BUTTON_BOX[box]) || undefined;
   return props.asChild ? (
     <SlottedButton {...props} variant={shown} className={className} />

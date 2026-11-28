@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 
-import { Button, ButtonEmphasis } from '@/components/ui/button';
+import { Button, ButtonEmphasis, PROMOTE } from '@/components/ui/button';
 import { usePageEmptyOfferRegister } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { Section, useOnPage } from '@/components/ui/section';
@@ -178,18 +178,6 @@ function FramedState({
   );
 }
 
-function OfferedAction({ action, offers }: Readonly<{ action: ReactNode; offers: boolean }>) {
-  if (!offers) return action;
-  const group = isValidElement<{ children?: ReactNode }>(action) && action.type === Fragment;
-  const [lead, ...rest] = Children.toArray(group ? action.props.children : action);
-  return (
-    <>
-      <ButtonEmphasis value="promote">{lead}</ButtonEmphasis>
-      {rest}
-    </>
-  );
-}
-
 const isFigures = (shape: LoadingShape | undefined) => shape?.kind === 'figures';
 
 function InlineEmptyView({ message, icon: Glyph, action, compact = false }: InlineEmpty) {
@@ -283,7 +271,7 @@ function EmptyBody({
   heading,
   description,
   action,
-  offers = false,
+  offers,
   actionNote,
   headingLevel,
 }: Readonly<{
@@ -296,6 +284,8 @@ function EmptyBody({
   headingLevel: HeadingLevel;
 }>) {
   const Heading = HEADING_TAG[headingLevel];
+  const group = isValidElement<{ children?: ReactNode }>(action) && action.type === Fragment;
+  const [lead, ...rest] = Children.toArray(group ? action.props.children : action);
   return (
     <div className="flex flex-col items-center text-center">
       <span aria-hidden data-icon-tile="" className="text-ink-2">
@@ -309,7 +299,8 @@ function EmptyBody({
       ) : null}
       {action ? (
         <div className="mt-[var(--state-action-gap,var(--spacing-loose))] flex flex-wrap items-center justify-center gap-2">
-          <OfferedAction action={action} offers={offers} />
+          <ButtonEmphasis value={offers ? PROMOTE : null}>{lead}</ButtonEmphasis>
+          {rest}
         </div>
       ) : null}
       {actionNote ? (
