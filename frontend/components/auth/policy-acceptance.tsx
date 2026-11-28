@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { FirstFrame, GateHold } from '@/components/layout/first-frame';
+import { PageFrame } from '@/components/templates/page-frame';
 import { policyMutations, policyQueries } from '@/lib/api/policies';
 import { revisionChanged, sessionLacksTerms } from '@/lib/auth/terms-consent';
 import { useSignOutForChangedTerms } from '@/lib/auth/use-sign-out-for-changed-terms';
@@ -21,14 +22,16 @@ export function PolicyAcceptanceGate({ children }: Readonly<{ children: ReactNod
   if (policy.kind === 'failed') {
     return (
       <FirstFrame>
-        <StateBlock
-          kind="error"
-          error={policy.error}
-          title="Couldn't open this workspace"
-          fallback="We could not open this workspace."
-          onRetry={policy.retry}
-          pending={policy.retrying}
-        />
+        <PageFrame>
+          <StateBlock
+            kind="error"
+            error={policy.error}
+            title="Couldn't open this workspace"
+            fallback="We could not open this workspace."
+            onRetry={policy.retry}
+            pending={policy.retrying}
+          />
+        </PageFrame>
       </FirstFrame>
     );
   }

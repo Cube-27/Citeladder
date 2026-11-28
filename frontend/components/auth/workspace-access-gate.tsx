@@ -18,6 +18,7 @@ import { websiteHref } from '@/lib/config/app-link';
 import { signOut } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
 import { FirstFrame, GateHold } from '@/components/layout/first-frame';
+import { PageFrame } from '@/components/templates/page-frame';
 import { HOME_PATH } from '@/lib/navigation/app-routes';
 import { useSelectWorkspace, workspaceDestination } from '@/lib/navigation/project-destination';
 import { NoticeScreen } from '@/components/templates/notice-page';
@@ -139,14 +140,16 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   if (failure) {
     return (
       <FirstFrame>
-        <StateBlock
-          kind="error"
-          title="Couldn't load workspace access"
-          error={failure.error}
-          fallback="The request failed or timed out."
-          onRetry={retry}
-          pending={access.isFetching}
-        />
+        <PageFrame>
+          <StateBlock
+            kind="error"
+            title="Couldn't load workspace access"
+            error={failure.error}
+            fallback="The request failed or timed out."
+            onRetry={retry}
+            pending={access.isFetching}
+          />
+        </PageFrame>
       </FirstFrame>
     );
   }

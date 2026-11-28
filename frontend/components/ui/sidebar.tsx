@@ -237,9 +237,8 @@ export function SidebarModeSegment({
   const Root = asChild ? Slot : 'span';
   const shape = rail
     ? RAIL_BUTTON
-    : 'focus-ring text-label text-ink rounded-tray-item relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-3 transition-colors';
-  const currentFill = rail ? cn('text-ink', CURRENT_FILL) : 'text-ink bg-nav-current shadow-card';
-  return <Root {...props} className={cn(shape, current ? currentFill : AT_REST)} />;
+    : 'focus-ring text-label text-ink rounded-tray-item relative flex h-full min-w-0 flex-1 basis-0 items-center justify-center px-2 transition-colors';
+  return <Root {...props} className={cn(shape, current ? CURRENT_TILE : AT_REST)} />;
 }
 
 export function SidebarFootList({

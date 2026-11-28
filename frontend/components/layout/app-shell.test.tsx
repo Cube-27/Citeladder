@@ -10,6 +10,7 @@ import { focusByKeyboard } from '@/test/keyboard-focus';
 import { renderWithProviders } from '@/test/render';
 
 import { AppShell } from './app-shell';
+import { ShellFallback } from './shell-fallback';
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
@@ -115,7 +116,7 @@ describe('AppShell resizable sidebar', () => {
       await user.click(handle);
       widths.push(handle.getAttribute('aria-valuenow'));
     }
-    expect(widths).toEqual(['224', '288', '360', '200']);
+    expect(widths).toEqual(['240', '288', '360', '200']);
 
     fireEvent.pointerDown(handle, { button: 0, pointerId: 5, clientX: 200 });
     fireEvent.pointerMove(handle, { pointerId: 5, clientX: 250 });
@@ -191,6 +192,25 @@ describe('AppShell resizable sidebar', () => {
     await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
     focusByKeyboard(account());
     expect(await screen.findByRole('tooltip')).toHaveTextContent('test.user@example.test');
+  });
+});
+
+describe('ShellFallback', () => {
+  it('paints the live shell, skip link and current row included, with the sidebar inert', () => {
+    renderWithProviders(<ShellFallback />, { initialEntries: ['/site'] });
+
+    expect(screen.getByRole('link', { name: 'Skip to main content' })).toHaveAttribute(
+      'href',
+      '#main',
+    );
+    const sidebar = screen.getByRole('complementary', { name: 'Sidebar' });
+    expect(sidebar).toHaveAttribute('inert');
+    expect(within(sidebar).getByRole('link', { name: 'Site health' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(sidebar).getByRole('navigation', { name: 'Workspace' })).toBeVisible();
+    expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).not.toBeInTheDocument();
   });
 });
 

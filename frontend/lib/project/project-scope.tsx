@@ -41,6 +41,15 @@ export function useOptionalProjectContext(): ProjectContextValue | null {
   return useContext(ProjectContext);
 }
 
+const NO_SCOPE = { activeProjectId: null, activeWorkspaceId: null, activeProject: null } as const;
+
+export function useNavScope(): Pick<
+  ProjectContextValue,
+  'activeProjectId' | 'activeWorkspaceId' | 'activeProject'
+> {
+  return useOptionalProjectContext() ?? NO_SCOPE;
+}
+
 export function useActiveProject(): Project | null {
   return useProjectContext().activeProject;
 }

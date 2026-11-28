@@ -23,10 +23,13 @@ function useFrameState(): { width: string | undefined; state: 'collapsed' | 'exp
   };
 }
 
+export type ShellState = 'live' | 'loading' | 'held';
+
 export function AppShellFrame({
+  state: shellState = 'live',
   sidebar,
   children,
-}: Readonly<{ sidebar: ReactNode; children: ReactNode }>) {
+}: Readonly<{ state?: ShellState; sidebar: ReactNode; children: ReactNode }>) {
   const sidebarId = useId();
   const { width, state } = useFrameState();
   const [shownState, setShownState] = useState(state);
@@ -42,38 +45,22 @@ export function AppShellFrame({
       data-sidebar-toggled={toggled || undefined}
       className={FRAME}
       style={{ '--spacing-sidebar': width, '--spacing-sidebar-compact': width }}
+      aria-busy={shellState === 'loading' || undefined}
     >
       <a href="#main" className="skip-link">
         Skip to main content
       </a>
-      <aside id={sidebarId} aria-label="Sidebar" className={SIDEBAR_COLUMN}>
+      <aside
+        id={sidebarId}
+        aria-label="Sidebar"
+        className={SIDEBAR_COLUMN}
+        inert={shellState !== 'live'}
+      >
         {sidebar}
-        {state === 'expanded' ? <SidebarResizeHandle sidebarId={sidebarId} /> : null}
+        {shellState === 'live' && state === 'expanded' ? (
+          <SidebarResizeHandle sidebarId={sidebarId} />
+        ) : null}
       </aside>
-      <main id="main" tabIndex={-1} data-main-column="" className={PANEL}>
-        <div className={PAGE}>{children}</div>
-      </main>
-    </div>
-  );
-}
-
-export function AppShellPlaceholder({
-  busy,
-  sidebar,
-  children,
-}: Readonly<{ busy: boolean; sidebar: ReactNode; children: ReactNode }>) {
-  const { width, state } = useFrameState();
-  return (
-    <div
-      data-app-surface=""
-      data-sidebar-state={state}
-      className={FRAME}
-      style={{ '--spacing-sidebar': width, '--spacing-sidebar-compact': width }}
-      aria-busy={busy || undefined}
-    >
-      <div className={SIDEBAR_COLUMN} inert>
-        {sidebar}
-      </div>
       <main id="main" tabIndex={-1} data-main-column="" className={PANEL}>
         <div className={PAGE}>{children}</div>
       </main>
