@@ -6,7 +6,12 @@ import { pageStatusBadgeValue } from '@/lib/site-health/status';
 import { competitorState } from '@/components/products/commerce-format';
 import { StatusMark, type StatusMarkProps } from './status-mark';
 
-type Case = [label: string, props: Omit<StatusMarkProps, 'children'>, tone: string];
+type MarkProps = StatusMarkProps extends infer Props
+  ? Props extends unknown
+    ? Omit<Props, 'children'>
+    : never
+  : never;
+type Case = [label: string, props: MarkProps, tone: string];
 
 const CASES: readonly Case[] = [
   ['run completed', { variant: 'run-status', value: 'completed' }, 'positive'],
