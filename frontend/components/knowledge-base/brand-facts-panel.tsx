@@ -83,10 +83,7 @@ export function BrandFactsPanel({
       }
     >
       {change.isError && !retiring ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(change.error, { action: 'update the fact' })}
-        />
+        <Notice kind="mutation" error={change.error} act={'update the fact'} />
       ) : null}
       <DataTable
         label="Brand facts"
@@ -147,12 +144,7 @@ export function BrandFactsPanel({
             question: 'Retire fact',
             body: (
               <>
-                {change.isError ? (
-                  <Notice
-                    kind="mutation"
-                    notice={mutationNoticeForError(change.error, { action: 'retire the fact' })}
-                  />
-                ) : null}
+                <Notice kind="mutation" error={change.error} act={'retire the fact'} />
                 {retiring.statement}
               </>
             ),

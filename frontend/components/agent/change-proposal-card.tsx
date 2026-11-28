@@ -9,7 +9,6 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { Text } from '@/components/ui/typography';
 import { agentMutations, type AgentMessage } from '@/lib/api/agent';
 import { httpErrorStatus } from '@/lib/api/errors';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 type ChangeProposal = Extract<AgentMessage['proposals'][number], { kind: 'change' }>;
@@ -38,13 +37,7 @@ function Refusal({
   error,
   refusal,
 }: Readonly<{ error: Error | null; refusal: ChangeProposal['refusal'] }>) {
-  if (error)
-    return (
-      <Notice
-        kind="mutation"
-        notice={mutationNoticeForError(error, { action: 'make this change' })}
-      />
-    );
+  if (error) return <Notice kind="mutation" error={error} act={'make this change'} />;
   if (!refusal) return null;
   return (
     <Text as="p" variant="caption">

@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/menu';
 import { Notice } from '@/components/ui/notice';
 import { Ellipsis } from '@/lib/icons';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { probeMutations } from '@/lib/api/probes';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 
@@ -67,12 +66,7 @@ export function ObjectionActions({
           </MenuItem>
         </MenuContent>
       </Menu>
-      {failed ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(failed.mutation.error, { action: failed.action })}
-        />
-      ) : null}
+      {failed ? <Notice kind="mutation" error={failed.mutation.error} act={failed.action} /> : null}
       <Dialog
         open={renaming !== null}
         onOpenChange={(open) => (open ? undefined : closeRename())}
@@ -98,12 +92,7 @@ export function ObjectionActions({
           </>
         }
       >
-        {rename.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(rename.error, { action: 'rename the objection' })}
-          />
-        ) : null}
+        <Notice kind="mutation" error={rename.error} act={'rename the objection'} />
         <Input
           aria-label="Objection name"
           value={renaming ?? ''}

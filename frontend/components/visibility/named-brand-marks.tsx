@@ -1,10 +1,7 @@
 import type { NamedBrand } from '@citeladder/contracts';
 
 import { Absence } from '@/components/ui/absence';
-import { BrandMark } from '@/components/ui/brand-mark';
-import { Inline } from '@/components/ui/layout';
-import { Tooltip } from '@/components/ui/tooltip';
-import { Text } from '@/components/ui/typography';
+import { MarkStack } from '@/components/ui/mark-stack';
 
 export function NamedBrandMarks({
   brands,
@@ -12,31 +9,14 @@ export function NamedBrandMarks({
   answers,
 }: Readonly<{ brands: readonly NamedBrand[]; total: number; answers: string }>) {
   if (!brands.length) return <Absence state="none" />;
-  const overflow = total - brands.length;
   return (
-    <Inline as="span" gap="tight">
-      {brands.map((brand) => (
-        <Tooltip
-          key={`${brand.kind}:${brand.name}`}
-          content={`${brand.name}: named in ${brand.responses} of ${answers}`}
-        >
-          <span className="inline-flex">
-            <span className="sr-only">{brand.name}</span>
-            <BrandMark
-              name={brand.name}
-              logoUrl={brand.logo_url}
-              websiteUrl={brand.website}
-              placement="inline"
-            />
-          </span>
-        </Tooltip>
-      ))}
-      {overflow > 0 ? (
-        <Text variant="caption" numeric>
-          +{overflow}
-          <span className="sr-only"> more</span>
-        </Text>
-      ) : null}
-    </Inline>
+    <MarkStack
+      marks={brands.map((brand) => ({
+        key: `${brand.kind}:${brand.name}`,
+        tip: `${brand.name}: named in ${brand.responses} of ${answers}`,
+        mark: { name: brand.name, logoUrl: brand.logo_url, websiteUrl: brand.website },
+      }))}
+      more={total - brands.length}
+    />
   );
 }

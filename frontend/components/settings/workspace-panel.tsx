@@ -6,7 +6,6 @@ import { ConfirmDialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { SettingRow, SettingRows, SettingsGroup } from '@/components/ui/setting-row';
 import { LogOut } from '@/lib/icons';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { restartAt } from '@/lib/auth/account-transition';
 import { workspacesApi } from '@/lib/api/workspaces';
 import { WORKSPACE_CHOOSER_PATH } from '@/lib/project/bootstrap';
@@ -46,12 +45,7 @@ export function WorkspacePanel() {
       {mayManage ? <MemberSettings mayInvite={mayInvite} /> : null}
 
       <SettingsGroup title="Leave workspace">
-        {leave.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(leave.error, { action: 'leave the workspace' })}
-          />
-        ) : null}
+        <Notice kind="mutation" error={leave.error} act={'leave the workspace'} />
         <SettingRows>
           <SettingRow
             label={activeWorkspace.name}

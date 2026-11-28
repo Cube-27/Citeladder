@@ -7,7 +7,6 @@ import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { Text } from '@/components/ui/typography';
 import { commerceMutations } from '@/lib/api/commerce';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { pluralCount } from '@/lib/format';
 import { buyerStageLabels } from '@/lib/prompts/forms';
 import { useGenerateBuyerPrompts } from '@/lib/products/use-generate-buyer-prompts';
@@ -106,18 +105,8 @@ export function CategoryMatrixSheet({
       }
     >
       <>
-        {generate.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(generate.error, { action: 'generate shopping prompts' })}
-          />
-        ) : null}
-        {decide.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(decide.error, { action: 'update the shopping prompt' })}
-          />
-        ) : null}
+        <Notice kind="mutation" error={generate.error} act={'generate shopping prompts'} />
+        <Notice kind="mutation" error={decide.error} act={'update the shopping prompt'} />
         <Text as="p" variant="body" tone="ink-2" aria-label="Matrix coverage">
           {coverage.contexts.length
             ? `${pluralCount(coverage.contexts.length, 'context')} × ${pluralCount(coverage.stages.length, 'stage')} (${coverage.filledCells} of ${coverage.contexts.length * coverage.stages.length} filled) · ${coverage.branded.length} branded`

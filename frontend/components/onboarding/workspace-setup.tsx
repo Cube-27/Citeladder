@@ -9,7 +9,6 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { authQueries } from '@/lib/api/auth';
 import { useSignOutForChangedTerms } from '@/lib/auth/use-sign-out-for-changed-terms';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { workspaceMutations } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -99,12 +98,7 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
             )}
           </Field>
         </form>
-        {create.error ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(create.error, { action: 'create the workspace' })}
-          />
-        ) : null}
+        <Notice kind="mutation" error={create.error} act={'create the workspace'} />
       </SetupStep>
     </SetupPage>
   );

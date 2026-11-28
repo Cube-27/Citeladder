@@ -27,7 +27,6 @@ import {
   type ApiKeyScope,
 } from '@citeladder/contracts/api-keys';
 import { apiKeyMutations } from '@/lib/api/api-keys';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
@@ -286,12 +285,7 @@ export function CreateKeyDialog({
               error={expiry.kind === 'invalid' ? expiry.message : undefined}
             />
           </Stack>
-          {create.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(create.error, { action: 'create the API key' })}
-            />
-          ) : null}
+          <Notice kind="mutation" error={create.error} act={'create the API key'} />
         </>
       )}
     </Dialog>

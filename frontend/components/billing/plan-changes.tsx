@@ -12,7 +12,6 @@ import type {
   CatalogPlan,
   SelfServePlanKey,
 } from '@/lib/api/billing';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   formatMoney,
   isSelfServeKey,
@@ -76,12 +75,7 @@ export function PlanChanges({
   return (
     <CardGroup id="change-plan" title="Change plan">
       {controls.downgradeError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(controls.downgradeError, {
-            action: 'schedule the downgrade',
-          })}
-        />
+        <Notice kind="mutation" error={controls.downgradeError} act={'schedule the downgrade'} />
       ) : null}
       <CardRow>
         {cards.map(({ plan, option }) => (

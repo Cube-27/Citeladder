@@ -15,7 +15,6 @@ import {
 import { StateBlock } from '@/components/ui/state-block';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { Project } from '@citeladder/contracts';
 import { BUYER_TYPE_CHOICES, MARKET_SCOPE_CHOICES } from '@/lib/project/identity-facets';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -26,12 +25,7 @@ import { Notice } from '@/components/ui/notice';
 
 function ProfileSaveNotices({ form }: Readonly<{ form: BrandProfileForm }>) {
   if (form.error)
-    return (
-      <Notice
-        kind="mutation"
-        notice={mutationNoticeForError(form.error, { action: 'save the brand profile' })}
-      />
-    );
+    return <Notice kind="mutation" error={form.error} act={'save the brand profile'} />;
   return form.notice ? <Notice tone="positive">{form.notice}</Notice> : null;
 }
 

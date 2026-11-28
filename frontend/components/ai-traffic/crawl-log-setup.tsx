@@ -17,7 +17,6 @@ import { Field } from '@/components/ui/field';
 import { Columns, Stack } from '@/components/ui/layout';
 import { Text } from '@/components/ui/typography';
 import { RadioGroup } from '@/components/ui/radio-group';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { CopyButton } from '@/components/ui/copy-button';
 import { TextLink } from '@/components/ui/text-link';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -70,10 +69,7 @@ export function CrawlLogSetup({
         {fields}
       </Columns>
       {mutation.isError && mutation.variables.kind === 'create' ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(mutation.error, { action: 'set up the crawl-log source' })}
-        />
+        <Notice kind="mutation" error={mutation.error} act={'set up the crawl-log source'} />
       ) : null}
       {setup === 'upload' ? <UploadForm model={model} /> : null}
     </>
@@ -290,7 +286,8 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
       {upload.isError ? (
         <Notice
           kind="mutation"
-          notice={mutationNoticeForError(upload.error, { action: 'upload the log file' })}
+          error={upload.error}
+          act={'upload the log file'}
           recovery={
             progress ? (
               <Button variant="secondary" onClick={() => upload.mutate(progress.uploadId)}>

@@ -12,7 +12,6 @@ import {
   type IntegrationProperty,
   type IntegrationProvider,
 } from '@/lib/api/integrations';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { RefreshCw } from '@/lib/icons';
 
 import { ownPropertiesFirst } from './data-sources';
@@ -54,7 +53,8 @@ export function PropertyDiscoveryState({
     return (
       <Notice
         kind="mutation"
-        notice={mutationNoticeForError(discovery.error, { action: `load your ${source.noun}s` })}
+        error={discovery.error}
+        act={`load your ${source.noun}s`}
         recovery={
           <Button variant="secondary" onClick={onRetry}>
             Try again
@@ -119,10 +119,5 @@ export function PropertyOptions({
 
 export function PropertySaveFailure({ error }: Readonly<{ error: Error | null }>) {
   if (!error) return null;
-  return (
-    <Notice
-      kind="mutation"
-      notice={mutationNoticeForError(error, { action: 'save the property' })}
-    />
-  );
+  return <Notice kind="mutation" error={error} act={'save the property'} />;
 }

@@ -12,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 import { X } from '@/lib/icons';
 import { commerceMutations } from '@/lib/api/commerce';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import {
@@ -84,12 +83,7 @@ function ProductEditDrawer({
       }
     >
       {invalid ? <Notice tone="negative">{invalid}</Notice> : null}
-      {save.error ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(save.error, { action: 'save the product' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={save.error} act={'save the product'} />
       <form
         noValidate
         onSubmit={(event) => {
@@ -156,12 +150,7 @@ function AddToTrackingButton({
       >
         {approve.isPending ? 'Adding…' : 'Add to tracking'}
       </Button>
-      {approve.error ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(approve.error, { action: 'add the product to tracking' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={approve.error} act={'add the product to tracking'} />
     </Stack>
   );
 }
@@ -218,14 +207,11 @@ export function ProductCatalogControls({
             {ARCHIVED_NOTE}
           </Notice>
         ) : null}
-        {lifecycle.error ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(lifecycle.error, {
-              action: `${lifecycleLabel.toLowerCase()} the product`,
-            })}
-          />
-        ) : null}
+        <Notice
+          kind="mutation"
+          error={lifecycle.error}
+          act={`${lifecycleLabel.toLowerCase()} the product`}
+        />
       </>
     ) : null;
   const actions = (

@@ -9,7 +9,6 @@ import {
   type ChangePasswordFormValues,
 } from '@/lib/auth/forms';
 import { passwordHint } from '@/lib/config/auth';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { restartAt } from '@/lib/auth/account-transition';
 import { ActionButton } from '@/components/ui/actions';
@@ -165,11 +164,7 @@ function ConnectGoogle({
 function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Error | null>> }>) {
   return Object.entries(errors).map(([name, error]) =>
     error ? (
-      <Notice
-        kind="mutation"
-        key={name}
-        notice={mutationNoticeForError(error, { action: 'update your sign-in settings' })}
-      />
+      <Notice kind="mutation" key={name} error={error} act={'update your sign-in settings'} />
     ) : null,
   );
 }

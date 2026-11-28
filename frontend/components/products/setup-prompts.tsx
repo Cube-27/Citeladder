@@ -8,7 +8,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { MessageSquare } from '@/lib/icons';
 import { commerceMutations } from '@/lib/api/commerce';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { LaunchDialog } from '@/components/runs/launch-dialog';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -89,12 +88,7 @@ export function SetupPrompts({
       >
         <SectionTitle level={level}>Prompts that measure it</SectionTitle>
       </SectionHeader>
-      {generate.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(generate.error, { action: 'generate the prompts' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={generate.error} act={'generate the prompts'} />
       {failed ? <Notice tone="negative">The buyer-prompt update failed. Try again.</Notice> : null}
       {shortfall !== null ? (
         <Notice tone="info">

@@ -17,7 +17,6 @@ import { Text } from '@/components/ui/typography';
 import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { X } from '@/lib/icons';
 import { commerceMutations } from '@/lib/api/commerce';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { downloadCsv } from '@/lib/csv/download';
 import { READ_FAILED_MESSAGE, readCsvFileText } from '@/lib/csv/read-file-text';
 import { pluralCount } from '@/lib/format';
@@ -219,12 +218,7 @@ function SourceStep({
         </TabPanel>
       </Tabs>
       {readError ? <Notice tone="negative">{readError}</Notice> : null}
-      {stageError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(stageError, { action: 'read the products' })}
-        />
-      ) : null}
+      {stageError ? <Notice kind="mutation" error={stageError} act={'read the products'} /> : null}
     </>
   );
 }
@@ -328,12 +322,7 @@ export function AddProductsDialog({
     body = (
       <>
         <CategoryReview stage={staged} unticked={unticked} onToggle={toggle} />
-        {apply.error ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(apply.error, { action: 'import the products' })}
-          />
-        ) : null}
+        <Notice kind="mutation" error={apply.error} act={'import the products'} />
       </>
     );
     footer = (

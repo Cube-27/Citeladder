@@ -19,7 +19,6 @@ import { useToast } from '@/components/ui/toast';
 import type { ObservedCompetitor } from '@citeladder/contracts';
 import { UserPlus, X } from '@/lib/icons';
 import { brandDiscoveryQueries } from '@/lib/api/brand-discoveries';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { visibilityMutations } from '@/lib/api/visibility-queries';
 import { formatCount, pluralCount } from '@/lib/format';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -152,7 +151,8 @@ function DecisionFailure({
   return (
     <Notice
       kind="mutation"
-      notice={mutationNoticeForError(mutation.error, { action })}
+      error={mutation.error}
+      act={action}
       onRetry={() => mutation.mutate(candidateId)}
     />
   );

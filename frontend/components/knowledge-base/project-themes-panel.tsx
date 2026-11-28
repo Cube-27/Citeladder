@@ -5,7 +5,6 @@ import { Absence } from '@/components/ui/absence';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { SettingRows } from '@/components/ui/setting-row';
 import { StateBlock } from '@/components/ui/state-block';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { themeMutations, themeQueries } from '@/lib/api/project-themes';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 
@@ -36,12 +35,7 @@ export function ProjectThemesPanel({
     );
   return (
     <>
-      {failed ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(failed.mutation.error, { action: failed.action })}
-        />
-      ) : null}
+      {failed ? <Notice kind="mutation" error={failed.mutation.error} act={failed.action} /> : null}
       <SettingRows label="Themes">
         {themes.data.map((theme) => (
           <EditableNameRow

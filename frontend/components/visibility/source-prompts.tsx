@@ -1,7 +1,5 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
 
-import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { EngineBrandMark } from '@/components/ui/engine-mark';
 import { Icon } from '@/components/ui/icon';
@@ -11,7 +9,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { queryTableState } from '@/components/ui/state-block';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
-import { Tooltip } from '@/components/ui/tooltip';
+import { MarkStack } from '@/components/ui/mark-stack';
 import { Text } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import type {
@@ -158,20 +156,18 @@ function MentionChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>)
   const named = [...new Map(item.mentions.map((one) => [one.name, one])).values()];
   if (!named.length) return <ObservedNone />;
   return (
-    <ChipRow overflow={named.length - MAX_CHIPS}>
-      {named.slice(0, MAX_CHIPS).map((mention) => (
-        <Tooltip key={`${mention.kind}:${mention.name}`} content={mention.name}>
-          <span className="inline-flex">
-            <BrandMark
-              name={mention.name || 'Brand'}
-              logoUrl={mention.logo_url}
-              websiteUrl={mention.website_url}
-              placement="inline"
-            />
-          </span>
-        </Tooltip>
-      ))}
-    </ChipRow>
+    <MarkStack
+      marks={named.slice(0, MAX_CHIPS).map((mention) => ({
+        key: `${mention.kind}:${mention.name}`,
+        tip: mention.name,
+        mark: {
+          name: mention.name || 'Brand',
+          logoUrl: mention.logo_url,
+          websiteUrl: mention.website_url,
+        },
+      }))}
+      more={named.length - MAX_CHIPS}
+    />
   );
 }
 
@@ -179,32 +175,13 @@ function SourceChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) 
   const hosts = [...new Set(item.citations.flatMap((citation) => hostOf(citation.url) || []))];
   if (!hosts.length) return <ObservedNone />;
   return (
-    <ChipRow overflow={hosts.length - MAX_CHIPS}>
-      {hosts.slice(0, MAX_CHIPS).map((host) => (
-        <Tooltip key={host} content={host}>
-          <span className="inline-flex">
-            <BrandMark
-              name={host}
-              websiteUrl={`https://${host}`}
-              placement="inline"
-              entity="site"
-            />
-          </span>
-        </Tooltip>
-      ))}
-    </ChipRow>
-  );
-}
-
-function ChipRow({ children, overflow }: Readonly<{ children: ReactNode; overflow: number }>) {
-  return (
-    <Inline as="span" gap="tight">
-      {children}
-      {overflow > 0 ? (
-        <Text variant="caption" numeric>
-          +{overflow}
-        </Text>
-      ) : null}
-    </Inline>
+    <MarkStack
+      marks={hosts.slice(0, MAX_CHIPS).map((host) => ({
+        key: host,
+        tip: host,
+        mark: { name: host, websiteUrl: `https://${host}`, entity: 'site' },
+      }))}
+      more={hosts.length - MAX_CHIPS}
+    />
   );
 }

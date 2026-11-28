@@ -3,7 +3,6 @@ import { useState } from 'react';
 
 import { ConnectionRow } from '@/components/settings/integration-connection-row';
 import { ConfirmDialog } from '@/components/ui/dialog';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   FAMILY_META,
   isGrantGone,
@@ -157,14 +156,7 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
         pending={disconnect.isPending}
         onCancel={() => setOpen(false)}
       >
-        {disconnect.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(disconnect.error, {
-              action: 'disconnect the integration',
-            })}
-          />
-        ) : null}
+        <Notice kind="mutation" error={disconnect.error} act={'disconnect the integration'} />
       </ConfirmDialog>
     </>
   );

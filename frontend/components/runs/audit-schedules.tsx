@@ -20,7 +20,6 @@ import type {
   PromptSet,
 } from '@citeladder/contracts';
 import { auditScheduleCadenceSchema } from '@citeladder/contracts';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Text } from '@/components/ui/typography';
 import { Inline, Stack, Columns } from '@/components/ui/layout';
@@ -232,15 +231,12 @@ function ScheduleForm({
         </FormRow>
         <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
       </SettingRows>
-      {createMutation.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(createMutation.error, {
-            action: 'schedule the audit',
-          })}
-          onRetry={createSchedule}
-        />
-      ) : null}
+      <Notice
+        kind="mutation"
+        error={createMutation.error}
+        act={'schedule the audit'}
+        onRetry={createSchedule}
+      />
     </Section>
   );
 }
@@ -359,11 +355,5 @@ function ScheduleRow({
 
 function ResumeNotice({ error, onRetry }: Readonly<{ error: Error | null; onRetry: () => void }>) {
   if (!error) return null;
-  return (
-    <Notice
-      kind="mutation"
-      notice={mutationNoticeForError(error, { action: 'resume the schedule' })}
-      onRetry={onRetry}
-    />
-  );
+  return <Notice kind="mutation" error={error} act={'resume the schedule'} onRetry={onRetry} />;
 }

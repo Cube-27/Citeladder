@@ -9,7 +9,6 @@ import {
 } from '@/lib/ai-traffic/use-traffic-data';
 import { ReportPage } from '@/components/templates/report-page';
 import { TabsRoot, TabPanel, TabRow, type TabRowProps } from '@/components/ui/tabs';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { AiReferralsScreen } from './referrals-screen';
 import { clearTrafficFilters, TrafficExport, trafficFilters } from './traffic-controls';
 import { TrafficOverview, TrafficCrawlers, TrafficActivity } from './traffic-views';
@@ -194,7 +193,8 @@ function TrafficStatus({ model }: Readonly<{ model: ReturnType<typeof useTraffic
   return exporting.isError ? (
     <Notice
       kind="mutation"
-      notice={mutationNoticeForError(exporting.error, { action: 'export AI traffic' })}
+      error={exporting.error}
+      act={'export AI traffic'}
       onRetry={() => exporting.mutate()}
     />
   ) : null;

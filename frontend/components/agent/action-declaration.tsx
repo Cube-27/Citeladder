@@ -17,7 +17,6 @@ import { newIdempotencyKey } from '@/lib/agent/idempotency';
 import { contentGapCheckPreview, measurementLegLabel } from '@/lib/agent/vocabulary';
 import { actionsMutations, actionsQueries, type ActionDetail } from '@/lib/api/actions';
 import { agentMutations, type AgentOutput } from '@/lib/api/agent';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   declarationDays,
   declaredInstant,
@@ -164,15 +163,12 @@ export function useMarkImplemented({
           Declared once.
         </Text>
       ) : null}
-      {declare.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(declare.error, {
-            action: 'declare this Action implemented',
-          })}
-          onRetry={submit}
-        />
-      ) : null}
+      <Notice
+        kind="mutation"
+        error={declare.error}
+        act={'declare this Action implemented'}
+        onRetry={submit}
+      />
     </Dialog>
   );
   return { start, dialog };
@@ -348,14 +344,7 @@ function TargetChoice({
           Keep with Action
         </Button>
       </Inline>
-      {choose.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(choose.error, {
-            action: 'choose where this document belongs',
-          })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={choose.error} act={'choose where this document belongs'} />
     </Stack>
   );
 }

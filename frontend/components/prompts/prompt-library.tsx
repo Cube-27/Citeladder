@@ -99,12 +99,7 @@ function clearWhenNarrowed(tabRows: number, clear: () => void) {
 
 function ToggleFailure({ toggle }: Readonly<{ toggle: { isError: boolean; error: unknown } }>) {
   if (!toggle.isError) return null;
-  return (
-    <Notice
-      kind="mutation"
-      notice={mutationNoticeForError(toggle.error, { action: 'turn the prompt on or off' })}
-    />
-  );
+  return <Notice kind="mutation" error={toggle.error} act={'turn the prompt on or off'} />;
 }
 
 function FiguresFailure({ measurements }: Readonly<{ measurements: PromptMeasurements }>) {

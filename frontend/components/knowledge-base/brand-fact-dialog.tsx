@@ -15,7 +15,6 @@ import { Stack } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
 import { TOPIC_LABELS } from '@/lib/visibility/accuracy';
 
@@ -95,12 +94,7 @@ export function BrandFactDialog({
         </>
       }
     >
-      {mutation.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(mutation.error, { action: 'save the fact' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={mutation.error} act={'save the fact'} />
       <Stack gap="workspace">
         <Field label="Topic">
           {(props) => (

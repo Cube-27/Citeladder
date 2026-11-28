@@ -14,7 +14,6 @@ import { Plus, X } from '@/lib/icons';
 import { projectMutations } from '@/lib/api/projects';
 import { brandDiscoveryQueries } from '@/lib/api/brand-discoveries';
 import type { Project } from '@citeladder/contracts';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
 
 import { MentionRuleFields, mentionRuleDraft, type MentionRuleDraft } from './mention-rule-fields';
@@ -151,12 +150,7 @@ export function ProjectEditPanel({
         </>
       }
     >
-      {save.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(save.error, { action: 'save the project' })}
-        />
-      ) : null}
+      <Notice kind="mutation" error={save.error} act={'save the project'} />
 
       <Stack gap="workspace">
         <Field

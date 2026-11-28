@@ -6,7 +6,6 @@ import { Absence } from '@/components/ui/absence';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Textarea } from '@/components/ui/textarea';
 import { agentMutations, agentQueries } from '@/lib/api/agent';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -93,7 +92,8 @@ export function AgentInstructionsCard({
       {saveError ? (
         <Notice
           kind="mutation"
-          notice={mutationNoticeForError(saveError, { action: 'save the instructions' })}
+          error={saveError}
+          act={'save the instructions'}
           onRetry={instructions.retry}
         />
       ) : null}

@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/menu';
 import { robotsChoiceNote } from '@/components/site-health/robots-choice';
 import { ChevronDown } from '@/lib/icons';
-import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import { Notice } from '@/components/ui/notice';
@@ -150,7 +149,8 @@ export function useCrawlSchedule(
     notice: mutation.isError ? (
       <Notice
         kind="mutation"
-        notice={mutationNoticeForError(mutation.error, { action: 'save the crawl schedule' })}
+        error={mutation.error}
+        act={'save the crawl schedule'}
         onRetry={retry}
       />
     ) : null,
