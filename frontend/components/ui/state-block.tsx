@@ -161,7 +161,11 @@ function FramedState({
 }: Exclude<StateBlockProps, InlineEmpty> & Readonly<{ onPage: boolean }>) {
   const offers =
     onPage && (props.kind === 'empty' || props.kind === 'not_measured') && !!props.action;
-  usePageOffer(offers);
+  const register = usePageEmptyOfferRegister();
+  useLayoutEffect(() => {
+    if (!offers) return;
+    return register?.();
+  }, [offers, register]);
   const framed = framedKind(props);
   return (
     <div
@@ -172,14 +176,6 @@ function FramedState({
       <BlockBody {...props} offers={offers} />
     </div>
   );
-}
-
-function usePageOffer(offers: boolean) {
-  const register = usePageEmptyOfferRegister();
-  useLayoutEffect(() => {
-    if (!offers) return;
-    return register?.();
-  }, [offers, register]);
 }
 
 function OfferedAction({ action, offers }: Readonly<{ action: ReactNode; offers: boolean }>) {
@@ -256,7 +252,8 @@ function BlockBody({
           icon={CircleDashed}
           heading="No measurements yet"
           description={props.description}
-          action={props.action ? <OfferedAction action={props.action} offers={offers} /> : null}
+          action={props.action}
+          offers={offers}
           headingLevel={props.headingLevel ?? containerLevel}
         />
       );
@@ -266,7 +263,8 @@ function BlockBody({
           icon={props.icon}
           heading={props.heading}
           description={props.description}
-          action={props.action ? <OfferedAction action={props.action} offers={offers} /> : null}
+          action={props.action}
+          offers={offers}
           actionNote={props.actionNote}
           headingLevel={props.headingLevel ?? containerLevel}
         />
@@ -285,6 +283,7 @@ function EmptyBody({
   heading,
   description,
   action,
+  offers = false,
   actionNote,
   headingLevel,
 }: Readonly<{
@@ -292,6 +291,7 @@ function EmptyBody({
   heading: string;
   description?: ReactNode;
   action?: ReactNode;
+  offers?: boolean;
   actionNote?: ActionNote;
   headingLevel: HeadingLevel;
 }>) {
@@ -309,7 +309,7 @@ function EmptyBody({
       ) : null}
       {action ? (
         <div className="mt-[var(--state-action-gap,var(--spacing-loose))] flex flex-wrap items-center justify-center gap-2">
-          {action}
+          <OfferedAction action={action} offers={offers} />
         </div>
       ) : null}
       {actionNote ? (

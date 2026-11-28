@@ -29,11 +29,7 @@ export function MastheadPrimary({ children }: Readonly<{ children: ReactNode }>)
   const slot = useContext(MastheadPrimarySlot);
   const demoted = useContext(PageEmptyOffer)?.shown ?? false;
   if (slot === undefined) return children;
-  const control = (
-    <span className="contents">
-      <ButtonEmphasis value={demoted ? 'demote' : null}>{children}</ButtonEmphasis>
-    </span>
-  );
+  const control = <ButtonEmphasis value={demoted ? 'demote' : null}>{children}</ButtonEmphasis>;
   return slot ? createPortal(control, slot) : null;
 }
 
