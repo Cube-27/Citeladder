@@ -136,7 +136,7 @@ export function SettingsScreen() {
           section: 'reading',
         }}
       >
-        <TabPanel value="account" forceMount className="data-[state=inactive]:hidden">
+        <TabPanel value="account" forceMount>
           <SectionStack>
             <SettingsGroup title="Profile">
               <SettingRows>
@@ -150,14 +150,14 @@ export function SettingsScreen() {
           </SectionStack>
         </TabPanel>
 
-        <TabPanel value="workspace" forceMount className="data-[state=inactive]:hidden">
+        <TabPanel value="workspace" forceMount>
           <SectionStack>
             <WorkspacePanel />
             <ProjectDeletionControls />
           </SectionStack>
         </TabPanel>
 
-        <TabPanel value="providers" forceMount className="data-[state=inactive]:hidden">
+        <TabPanel value="providers" forceMount>
           <ProviderSettings />
         </TabPanel>
 
