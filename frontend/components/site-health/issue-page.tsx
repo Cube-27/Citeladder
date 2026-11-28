@@ -28,7 +28,6 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { Pager } from '@/components/ui/pager';
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
 import { cursorControls, pageRange, type useCursorTable } from '@/lib/table/use-cursor-table';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/typography';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import type {
@@ -297,7 +296,9 @@ function OccurrenceList({
       />
     );
   if (query.isPending || !detail) {
-    return <Skeleton variant="list" rows={3} label="Loading affected pages" />;
+    return (
+      <StateBlock kind="loading" label="Loading affected pages" shape={{ kind: 'list', rows: 3 }} />
+    );
   }
   if (detail.occurrences.length === 0)
     return <StateBlock kind="empty" inline message="No affected URLs found." />;

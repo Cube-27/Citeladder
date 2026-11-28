@@ -5,7 +5,6 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
-import { Skeleton } from '@/components/ui/skeleton';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
@@ -51,7 +50,7 @@ function SectionBody({
   empty: string;
   children: ReactNode | null;
 }>) {
-  if (loading) return <Skeleton variant="list" />;
+  if (loading) return <StateBlock kind="loading" shape={{ kind: 'list' }} />;
   if (children) return <>{children}</>;
   return <StateBlock kind="empty" inline message={empty} />;
 }

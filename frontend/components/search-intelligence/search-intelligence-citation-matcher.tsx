@@ -7,7 +7,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Inline } from '@/components/ui/layout';
 import { SectionBleed } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/typography';
 import { useToast } from '@/components/ui/toast';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
@@ -81,7 +80,7 @@ export function SearchIntelligenceCitationMatcher({
         title="Visibility audits could not be loaded"
       />
     );
-  if (audits.isPending) return <Skeleton variant="list" />;
+  if (audits.isPending) return <StateBlock kind="loading" shape={{ kind: 'list' }} />;
   const answered = audits.data.items.filter((audit) => audit.completed_count > 0);
   if (!answered.length)
     return (
