@@ -1,4 +1,5 @@
 import {
+  Children,
   createContext,
   useContext,
   useId,
@@ -54,7 +55,7 @@ export function SectionHeader({
       </header>
     );
   }
-  const heading = children ? (
+  const heading = Children.toArray(children).length ? (
     <div data-section-heading="" className="grid max-w-full min-w-0 shrink-0 grid-cols-1 gap-1">
       {children}
     </div>
