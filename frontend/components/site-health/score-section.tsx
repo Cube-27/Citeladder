@@ -1,7 +1,7 @@
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { checksRunLabel } from '@/lib/site-health/status';
 import { AuditScores } from './overview-metrics';
-import { scoreUnavailableState } from './url-score-summary';
+import { scoreUnavailableState } from './score-unavailable-state';
 
 export function ScoreSection({
   crawl,

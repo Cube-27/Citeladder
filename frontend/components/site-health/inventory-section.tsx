@@ -10,7 +10,7 @@ import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
-import { pageKindFilter } from '@/components/site-health/page-kind-select';
+import { pageKindFilter } from '@/components/site-health/page-kind-filter';
 import {
   PAGES_FILTER_URL_KEYS,
   pagesFilterParams,

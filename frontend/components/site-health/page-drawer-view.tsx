@@ -6,7 +6,7 @@ import { PageChecks } from '@/components/site-health/page-checks';
 import { PageIssues } from '@/components/site-health/page-issues';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { PageLink } from '@/components/site-health/page-link';
-import { scoreUnavailableState } from '@/components/site-health/url-score-summary';
+import { scoreUnavailableState } from '@/components/site-health/score-unavailable-state';
 import { Absence, printed } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';

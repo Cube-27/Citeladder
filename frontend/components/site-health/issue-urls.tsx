@@ -4,7 +4,7 @@ import type { PageSummary } from '@citeladder/contracts';
 
 import { IssuePagesExport } from '@/components/site-health/issues-export';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
-import { pageKindFilter } from '@/components/site-health/page-kind-select';
+import { pageKindFilter } from '@/components/site-health/page-kind-filter';
 import { SubmittedSearch } from '@/components/site-health/submitted-search';
 import { Absence, printed } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
