@@ -9,7 +9,7 @@ import { Section, SectionBleed, SectionHeader, SectionTitle } from '@/components
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow, TableRowHeader } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
-import { MetaFooter } from '@/components/ui/workspace';
+import { MetaFooter } from '@/components/ui/meta-footer';
 import type { SearchSurfaceEvidence, SurfaceEntity } from '@citeladder/contracts';
 import { Check, Link2, Minus, Users } from '@/lib/icons';
 import { pluralCount } from '@/lib/format';

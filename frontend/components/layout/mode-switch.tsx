@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 
-import { SidebarModeSegment, SidebarModeTrack, SidebarRowTooltip } from '@/components/ui/sidebar';
+import { SidebarModeSegment, SidebarModeTrack } from '@/components/ui/sidebar';
+import { SidebarRowTooltip } from '@/components/ui/sidebar-tooltip';
 import { ICONS, PanelsTopLeft, type IconGlyph } from '@/lib/icons';
 import { MODE_HOMES, navigationMode, type NavigationMode } from '@/lib/navigation/app-routes';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';

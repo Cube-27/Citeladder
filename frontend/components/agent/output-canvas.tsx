@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Textarea } from '@/components/ui/textarea';
 import { HoverActions } from '@/components/ui/actions';
-import { JumpList } from '@/components/ui/workspace';
+import { JumpList } from '@/components/ui/tree-branch';
 import { Pencil, Sparkles, X } from '@/lib/icons';
 import { scrollBehavior } from '@/lib/accessibility/use-reduced-motion';
 import { agentWriteFailure } from '@/lib/agent/errors';

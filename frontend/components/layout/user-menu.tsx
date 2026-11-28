@@ -2,7 +2,8 @@ import { useMutation } from '@tanstack/react-query';
 import { Link, useLocation } from 'react-router-dom';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
-import { SidebarIdentButton, SidebarTextTooltip } from '@/components/ui/sidebar';
+import { SidebarIdentButton } from '@/components/ui/sidebar';
+import { SidebarTextTooltip } from '@/components/ui/sidebar-tooltip';
 import {
   Menu,
   MenuContent,

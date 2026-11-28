@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import { Check, type IconGlyph } from '@/lib/icons';
 import { LazyIsland } from '@/components/ui/lazy-island';
 import { Menu, MenuContent, MenuLabel, MenuLinkItem, MenuTrigger } from '@/components/ui/menu';
-import { SidebarRailFace, SidebarRowTooltip } from '@/components/ui/sidebar';
+import { SidebarRailFace } from '@/components/ui/sidebar';
+import { SidebarRowTooltip } from '@/components/ui/sidebar-tooltip';
 
 import type { NavItem } from './nav-items';
 import { Icon } from '@/components/ui/icon';
