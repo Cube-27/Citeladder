@@ -1,6 +1,11 @@
 import { DetailsFacts, type DetailFact } from '@/components/ui/reading-page';
-import { Impact, scopeLabel, sourceLabel } from '@/components/agent/actions-rows';
-import { StateDot, type StateDotTone } from '@/components/ui/state-dot';
+import {
+  ACTION_STATUS_TONE,
+  Impact,
+  scopeLabel,
+  sourceLabel,
+} from '@/components/agent/actions-rows';
+import { StateDot } from '@/components/ui/state-dot';
 import { Tag } from '@/components/ui/tag';
 import {
   ACTION_GOAL_LABEL,
@@ -8,17 +13,10 @@ import {
   ACTION_MEASUREMENT_LABEL,
   ACTION_STATUS_LABEL,
 } from '@/lib/agent/vocabulary';
-import type { ActionDetail, ActionStatus } from '@/lib/api/actions';
+import type { ActionDetail } from '@/lib/api/actions';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { UrlText } from '@/components/ui/table';
 import { formatDisplayDate } from '@/lib/format';
-
-const TONE: Record<ActionStatus, StateDotTone> = {
-  open: 'open',
-  in_progress: 'active',
-  done: 'done',
-  dismissed: 'declined',
-};
 
 function StatusValue({
   action,
@@ -29,7 +27,7 @@ function StatusValue({
     action.declaration.checks.length > 0;
   return (
     <>
-      <StateDot tone={TONE[action.status]} />
+      <StateDot tone={ACTION_STATUS_TONE[action.status]} />
       {ACTION_STATUS_LABEL[action.status]}
       {action.status === 'done' && action.measurement && checked ? (
         <Tag>{ACTION_MEASUREMENT_LABEL[action.measurement]}</Tag>

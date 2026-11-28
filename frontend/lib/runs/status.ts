@@ -123,12 +123,15 @@ const RUN_SCOPES: Record<Audit['audit_scope'], string> = {
   probe: 'Market',
 };
 
+export function runKind(audit: Pick<Audit, 'audit_scope' | 'parent_audit_id'>): string {
+  const scope = RUN_SCOPES[audit.audit_scope];
+  const noun = audit.audit_scope === 'probe' ? 'probe' : 'audit';
+  return audit.parent_audit_id ? `${scope} repair run` : `${scope} ${noun}`;
+}
+
 export function runTitle(
   audit: Pick<Audit, 'audit_scope' | 'parent_audit_id' | 'created_at'>,
   timeZone = 'UTC',
 ): string {
-  const scope = RUN_SCOPES[audit.audit_scope];
-  const noun = audit.audit_scope === 'probe' ? 'probe' : 'audit';
-  const kind = audit.parent_audit_id ? `${scope} repair run` : `${scope} ${noun}`;
-  return `${kind} · ${formatDisplayDate(audit.created_at, timeZone)}`;
+  return `${runKind(audit)} · ${formatDisplayDate(audit.created_at, timeZone)}`;
 }

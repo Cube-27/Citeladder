@@ -71,7 +71,7 @@ describe('Visibility by market', () => {
     render(
       <VisibilityByMarket
         query={loaded}
-        markets={[US, DE, FR]}
+        markets={{ kind: 'loaded', markets: [US, DE, FR] }}
         market={null}
         onSelectMarket={() => undefined}
       />,
@@ -93,7 +93,7 @@ describe('Visibility by market', () => {
     render(
       <VisibilityByMarket
         query={loaded}
-        markets={[US, DE, FR]}
+        markets={{ kind: 'loaded', markets: [US, DE, FR] }}
         market={null}
         onSelectMarket={onSelectMarket}
       />,
@@ -102,11 +102,41 @@ describe('Visibility by market', () => {
     expect(onSelectMarket).toHaveBeenCalledWith(FR.id);
   });
 
+  it('holds its place with a loading table while the project markets are still loading', async () => {
+    const { container } = render(
+      <VisibilityByMarket
+        query={loaded}
+        markets={{ kind: 'pending' }}
+        market={null}
+        onSelectMarket={() => undefined}
+      />,
+    );
+    expect(await screen.findByRole('heading', { name: 'By market' })).toBeInTheDocument();
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.queryByText('United States · English')).not.toBeInTheDocument();
+  });
+
+  it('says the market list failed to load instead of hiding the table', async () => {
+    render(
+      <VisibilityByMarket
+        query={loaded}
+        markets={{
+          kind: 'failed',
+          read: { error: new Error('offline'), refetch: () => undefined, isFetching: false },
+        }}
+        market={null}
+        onSelectMarket={() => undefined}
+      />,
+    );
+    expect(await screen.findByText("Couldn't load the markets")).toBeVisible();
+    expect(screen.queryByText('United States · English')).not.toBeInTheDocument();
+  });
+
   it('stays out of the way for a project with only its default market', () => {
     const { container } = render(
       <VisibilityByMarket
         query={loaded}
-        markets={[US]}
+        markets={{ kind: 'loaded', markets: [US] }}
         market={null}
         onSelectMarket={() => undefined}
       />,

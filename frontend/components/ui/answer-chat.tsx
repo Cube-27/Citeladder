@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { CHIP_FACE } from '@/components/ui/link-look';
+import { TitleCount } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 
 import { ArrowUpRight } from '@/lib/icons';
@@ -149,7 +150,7 @@ export function RailSection({
     <section className="border-rule flex min-w-0 flex-col gap-3 border-t pt-4 first:border-t-0 first:pt-0">
       <h3 className="font-emphasis">
         {title}
-        {count ? <span className="text-ink-2 tabular-nums"> ({count})</span> : null}
+        <TitleCount count={count || undefined} />
       </h3>
       {children}
     </section>

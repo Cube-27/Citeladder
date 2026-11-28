@@ -27,7 +27,7 @@ import {
   ChartTable,
   ChartTipSheet,
 } from '@/components/ui/chart-frame';
-import type { SeriesTone } from '@/components/ui/step-chart-parts';
+import type { SeriesTone } from '@/components/ui/series-palette';
 import {
   breakConnectors,
   isolatedPoints,
@@ -37,12 +37,16 @@ import {
   type TrendScale,
 } from '@/components/ui/trend-geometry';
 import { LineEndLabels } from '@/components/ui/trend-line-labels';
-import { shownWith } from '@/components/ui/series-data';
+import {
+  shownWith,
+  type TrendEvent,
+  type TrendPoint,
+  type TrendSeries,
+} from '@/components/ui/series-data';
 import { formattedText } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-export type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/step-chart';
-import type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/step-chart';
+export type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/series-data';
 
 type Line = { name: string; values: readonly (number | null)[]; tone: ChartTone };
 

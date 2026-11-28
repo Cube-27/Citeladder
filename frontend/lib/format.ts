@@ -154,20 +154,6 @@ export function formatDisplayDate(timestamp: string, timeZone: string): string {
   }
 }
 
-export function formatDisplayTime(timestamp: string, timeZone: string): string {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  try {
-    return dateFormat('time', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone,
-    }).format(date);
-  } catch {
-    return timeZone === 'UTC' ? timestamp : formatDisplayTime(timestamp, 'UTC');
-  }
-}
-
 export function formatDisplayShortDate(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;

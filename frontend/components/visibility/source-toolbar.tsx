@@ -2,6 +2,7 @@ import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
 import { ExportAction } from '@/components/ui/export-action';
 import { downloadCsv } from '@/lib/csv/download';
+import { todayIso } from '@/lib/iso-day';
 import { standingLabel } from '@citeladder/contracts/page-labels';
 import { typeLabel, type SourceItem } from '@/lib/visibility/sources';
 
@@ -44,7 +45,7 @@ export function sourceTableToolbar({
   domain: string | null;
 }>): TableToolbarProps {
   const onExport = () => {
-    const stamp = new Date().toISOString().slice(0, 10);
+    const stamp = todayIso();
     const scope = domain ? `${domain}-` : '';
     if (dimension === 'url') {
       downloadCsv(

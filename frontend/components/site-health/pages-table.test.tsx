@@ -117,7 +117,7 @@ describe('PagesTable', () => {
     const row = screen.getByText('Homepage').closest('tr');
     expect(row).not.toBeNull();
     expect(within(row!).getByRole('cell', { name: 'Excluded' })).toBeInTheDocument();
-    expect(within(row!).getByRole('cell', { name: '46' })).toBeInTheDocument();
+    expect(within(row!).getByRole('cell', { name: '46 Not every check ran' })).toBeInTheDocument();
     expect(within(row!).queryByText('Limited evidence')).not.toBeInTheDocument();
     expect(within(row!).queryByText(/confidence/i)).not.toBeInTheDocument();
   });

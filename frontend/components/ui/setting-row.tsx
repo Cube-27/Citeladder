@@ -2,7 +2,13 @@ import { useId, type ComponentProps, type HTMLAttributes, type ReactNode } from 
 
 import { IconButton } from '@/components/ui/button';
 import { FieldFoot, type ControlProps } from '@/components/ui/field';
-import { Section, SectionBleed, SectionDescription, SectionHeader } from '@/components/ui/section';
+import {
+  Section,
+  SectionBleed,
+  SectionDescription,
+  SectionHeader,
+  TitleCount,
+} from '@/components/ui/section';
 
 import { Check, Pencil, Trash2, X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -11,6 +17,7 @@ import './setting-row.css';
 
 export function SettingsGroup({
   title,
+  count,
   status,
   description,
   action,
@@ -19,6 +26,7 @@ export function SettingsGroup({
   children,
 }: Readonly<{
   title: ReactNode;
+  count?: number;
   status?: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
@@ -35,7 +43,10 @@ export function SettingsGroup({
             id={titleId}
             className="text-label text-ink flex min-w-0 items-center gap-2 break-words"
           >
-            {title}
+            <span>
+              {title}
+              <TitleCount count={count} />
+            </span>
           </h2>
           {status}
         </div>

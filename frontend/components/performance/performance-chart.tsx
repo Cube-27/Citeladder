@@ -7,7 +7,8 @@ import { AXIS_PROPS, ChartText, LINE_CURSOR, LineTooltipCard } from '@/component
 import { METRIC_COLOR } from '@/components/ui/metric-tiles';
 import { SeriesTable, shownWith, type TrendPoint } from '@/components/ui/series-data';
 import { StateBlock } from '@/components/ui/state-block';
-import { formatWindowDate, pluralCount } from '@/lib/format';
+import { formatShortDate, formatWindowDate, pluralCount } from '@/lib/format';
+import { formatWeekdayDate } from '@/lib/iso-day';
 import {
   formatAxisTick,
   formatMetric,
@@ -50,15 +51,10 @@ function chartPoints(series: ChartSeries): TrendPoint[] {
     const day = date ? formatWindowDate(date) : `Day ${index + 1}`;
     return {
       label: peer ? `${day} · vs ${formatWindowDate(peer)}` : day,
-      axisLabel: date ? numericDate(date) : `Day ${index + 1}`,
+      axisLabel: date ? formatShortDate(date) : `Day ${index + 1}`,
       value: series.selected[index]?.value ?? null,
     };
   });
-}
-
-function numericDate(date: string): string {
-  const [year, month, day] = date.split('-');
-  return `${Number(month)}/${Number(day)}/${year?.slice(2)}`;
 }
 
 function tableLabel(series: ChartSeries): string {
@@ -87,12 +83,7 @@ function edgeAnchor(value: number, ticks: readonly number[]): 'start' | 'middle'
 
 function tooltipDate(date: string | null | undefined, index: number): string {
   if (!date) return `Day ${index + 1}`;
-  return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
+  return formatWeekdayDate({ isoDay: date, weekday: 'long' });
 }
 
 export function PerformanceChart({ series }: Readonly<{ series: readonly ChartSeries[] }>) {

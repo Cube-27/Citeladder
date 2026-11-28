@@ -72,6 +72,7 @@ export function BrandFactsPanel({
   return (
     <SettingsGroup
       title="Brand facts"
+      count={facts.length}
       action={
         mayEdit ? (
           <Button onClick={() => setEditing({ kind: 'add' })}>

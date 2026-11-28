@@ -75,7 +75,7 @@ export function InsightsScreen() {
           </SelectionGate>
           <VisibilityByMarket
             query={queries.marketRowsQuery}
-            markets={queries.markets}
+            markets={queries.marketsState}
             market={filters.market}
             onSelectMarket={filters.setMarket}
           />

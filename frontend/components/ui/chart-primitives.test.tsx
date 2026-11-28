@@ -6,7 +6,7 @@ import { appStylesheet } from '@/test/app-stylesheet';
 import { seriesColor } from './chart-tooltip';
 import { PartDonut } from './part-donut';
 import { Sparkline } from './sparkline';
-import { type SERIES_STROKE, SeriesTonesContext, seriesTones } from './step-chart-parts';
+import { type SERIES_STROKE, SeriesTonesContext, seriesTones } from './series-palette';
 
 describe('seriesColor', () => {
   it('names a variable the app stylesheet emits for every tone, so a script-drawn series has a colour', () => {

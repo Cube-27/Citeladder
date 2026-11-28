@@ -19,7 +19,6 @@ import { Tag } from '@/components/ui/tag';
 import { Select } from '@/components/ui/select';
 import { SectionBleed } from '@/components/ui/section';
 import { SettingsGroup } from '@/components/ui/setting-row';
-import { Text } from '@/components/ui/typography';
 import type { BusinessMap } from '@citeladder/contracts';
 import { Check, X } from '@/lib/icons';
 import { formatCount, pluralCount } from '@/lib/format';
@@ -186,14 +185,7 @@ export function OfferingsGrid({
     setOfferings(next);
   };
   return (
-    <SettingsGroup
-      title="Offerings"
-      status={
-        <Text variant="caption" numeric>
-          {formatCount(draft.offerings.length)}
-        </Text>
-      }
-    >
+    <SettingsGroup title="Offerings" count={draft.offerings.length}>
       <SectionBleed>
         <MapGridHead lead="Offering" heads={DIMENSIONS.map((dimension) => dimension.label)} />
         {draft.maps.length ? (

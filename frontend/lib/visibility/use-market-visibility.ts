@@ -4,7 +4,7 @@ import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import type { VisibilityCohortParam } from '@/lib/api/visibility';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import type { ActiveProjectScope } from '@/lib/project/active-project-scope';
-import { useProjectMarkets } from '@/lib/project/use-project-markets';
+import { useProjectMarketsState } from '@/lib/project/use-project-markets';
 
 export function useMarketVisibility(
   requestScope: Pick<ActiveProjectScope, 'workspaceId' | 'projectId'>,
@@ -12,11 +12,12 @@ export function useMarketVisibility(
   onInsights: boolean,
 ) {
   const { workspaceId, projectId } = requestScope;
-  const markets = useProjectMarkets(projectId, workspaceId);
+  const marketsState = useProjectMarketsState(projectId, workspaceId);
+  const markets = marketsState.kind === 'loaded' ? marketsState.markets : [];
   const marketRowsQuery = useQuery({
     ...visibilityQueries.markets(requestScope, params),
     enabled: onInsights && markets.length > 1,
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
   });
-  return { markets, marketRowsQuery };
+  return { markets, marketsState, marketRowsQuery };
 }

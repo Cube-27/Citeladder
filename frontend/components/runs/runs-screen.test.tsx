@@ -1,5 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vite-plus/test';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vite-plus/test';
 
 import { http, HttpResponse } from 'msw';
 import userEvent from '@testing-library/user-event';
@@ -12,7 +12,16 @@ import { makePrompt, makeSet, makeSetList } from '@/test/fixtures/prompts';
 import { renderWithProviders } from '@/test/render';
 import type { Audit, AuditStatus } from '@citeladder/contracts';
 
+import { DISPLAY_TIME_ZONE_COOKIE } from '@/lib/display-timezone';
 import { RunsScreen } from './runs-screen';
+
+beforeEach(() => {
+  document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=UTC; Path=/`;
+});
+
+afterEach(() => {
+  document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=; Path=/; Max-Age=0`;
+});
 
 const project = makeProject();
 
@@ -75,8 +84,10 @@ it('opens on the status a deep link names and asks the server for that status', 
   renderRuns();
 
   const table = within(await screen.findByRole('table', { name: 'All runs' }));
-  expect(table.getByRole('link', { name: 'Brand audit · Jul 30, 2026' })).toBeVisible();
-  expect(table.queryByRole('link', { name: 'Brand audit · Aug 1, 2026' })).not.toBeInTheDocument();
+  expect(table.getByRole('link', { name: 'Brand audit · Jul 30, 2026, 12:00 AM' })).toBeVisible();
+  expect(
+    table.queryByRole('link', { name: 'Brand audit · Aug 1, 2026, 12:00 AM' }),
+  ).not.toBeInTheDocument();
   expect(screen.getByRole('tab', { name: /Failed/ })).toHaveAttribute('aria-selected', 'true');
   expect(asked.at(-1)?.getAll('status')).toEqual(['failed', 'cancelled']);
 });
@@ -117,13 +128,17 @@ it('shows no rows from the previous status tab while the new one loads', async (
   );
   vi.spyOn(runsApi, 'listSchedules').mockResolvedValue([]);
   renderRuns();
-  expect(await screen.findByRole('link', { name: 'Brand audit · Aug 4, 2026' })).toBeVisible();
+  expect(
+    await screen.findByRole('link', { name: 'Brand audit · Aug 4, 2026, 12:00 AM' }),
+  ).toBeVisible();
 
   await user.click(screen.getByRole('tab', { name: /Failed/ }));
-  expect(screen.queryByRole('link', { name: 'Brand audit · Aug 4, 2026' })).toBeNull();
+  expect(screen.queryByRole('link', { name: 'Brand audit · Aug 4, 2026, 12:00 AM' })).toBeNull();
   release();
-  expect(await screen.findByRole('link', { name: 'Brand audit · Aug 1, 2026' })).toBeVisible();
-  expect(screen.queryByRole('link', { name: 'Brand audit · Aug 4, 2026' })).toBeNull();
+  expect(
+    await screen.findByRole('link', { name: 'Brand audit · Aug 1, 2026, 12:00 AM' }),
+  ).toBeVisible();
+  expect(screen.queryByRole('link', { name: 'Brand audit · Aug 4, 2026, 12:00 AM' })).toBeNull();
 });
 
 it('counts every run under exactly one status tab', async () => {

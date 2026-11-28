@@ -18,7 +18,7 @@ import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
 import { PerceptionState } from '@/components/visibility/visibility-perception';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { availabilityLabel, formatDisplayDate } from '@/lib/format';
+import { availabilityLabel, formatDisplayDate, formatDisplayShortDate } from '@/lib/format';
 import { BRAND_PROMPTS_HREF } from '@/lib/prompts/routes';
 import {
   coverageExtras,
@@ -154,7 +154,10 @@ function SentimentTrend({ trend }: Readonly<{ trend: PerceptionResponse['trend']
         label="Net sentiment over time"
         name="Net sentiment"
         empty="Too few classified mentions to score"
-        data={sentimentTrend(trend, (iso) => formatDisplayDate(iso, timeZone))}
+        data={sentimentTrend(trend, (iso) => ({
+          label: formatDisplayDate(iso, timeZone),
+          axisLabel: formatDisplayShortDate(iso, timeZone),
+        }))}
         yMin={-100}
         yMax={100}
         yFormat={(value) => formatNet(value) ?? ''}

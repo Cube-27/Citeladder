@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import type { EventKind } from '@/components/ui/step-chart-parts';
+import type { EventKind } from '@/components/ui/series-palette';
 import { ChartTable } from '@/components/ui/chart-frame';
 
 import { Value } from '@/components/ui/value';

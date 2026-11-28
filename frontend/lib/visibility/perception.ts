@@ -248,11 +248,11 @@ export function filterDrivers<T extends Readonly<{ domain: string }>>(
 
 export function sentimentTrend(
   trend: PerceptionResponse['trend'],
-  formatDate: (iso: string) => string,
+  formatDate: (iso: string) => Readonly<{ label: string; axisLabel?: string }>,
   minimum = PERCEPTION_MIN_CLASSIFIED,
 ) {
   return trend.map((point, index) => ({
-    label: formatDate(point.completed_at),
+    ...formatDate(point.completed_at),
     value: meetsMinimum(point.score.classified, minimum) ? point.score.net_sentiment : null,
     timestamp: Date.parse(point.completed_at),
     breakBefore: index > 0 && !point.comparable,

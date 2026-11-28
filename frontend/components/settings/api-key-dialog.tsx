@@ -4,12 +4,11 @@ import { useState } from 'react';
 import {
   DEFAULT_EXPIRY,
   EXPIRY_PRESET_DAYS,
-  addDays,
   dayInZone,
-  presetLabelDate,
   resolveExpiry,
   type ExpiryChoice,
 } from '@/components/settings/api-key-expiry';
+import { addIsoDays, formatWeekdayDate } from '@/lib/iso-day';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -47,7 +46,7 @@ function expiryOptions(today: string) {
         <>
           {days === 1 ? '1 day' : `${days} days`}{' '}
           <Text variant="body" tone="ink-2">
-            ({presetLabelDate(addDays(today, days), today)})
+            ({formatWeekdayDate({ isoDay: addIsoDays(today, days), weekday: 'short', today })})
           </Text>
         </>
       ),

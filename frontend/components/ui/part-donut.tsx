@@ -9,7 +9,7 @@ import {
   SeriesTonesContext,
   seriesTone,
   type SeriesTone,
-} from '@/components/ui/step-chart-parts';
+} from '@/components/ui/series-palette';
 
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';

@@ -4,7 +4,8 @@ const PAD_RIGHT = 24;
 const PAD_TOP = 12;
 const PAD_BOTTOM = 32;
 
-export const onGrid = (value: number) => Math.round(value / 4) * 4;
+const onGrid = (value: number) => Math.round(value / 4) * 4;
+export const LABEL_CHAR_WIDTH = 7.4;
 const LABEL_SPACING = 64;
 const X_INSET = 32;
 
@@ -79,7 +80,7 @@ export function trendScale({
   maxTicks?: number;
 }>): TrendScale {
   const { ticks, bottom, top } = domainOf(lines, yMin, yMax, tickCount, maxTicks);
-  const padLeft = onGrid(tickWidth(ticks) * 7.4 + 14);
+  const padLeft = onGrid(tickWidth(ticks) * LABEL_CHAR_WIDTH + 14);
   const plotWidth = Math.max(1, width - padLeft - padRight);
   const plotHeight = Math.max(1, height - PAD_TOP - PAD_BOTTOM);
   const fractions = timeFractions(timestamps) ?? evenFractions(timestamps.length);

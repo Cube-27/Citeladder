@@ -1,6 +1,5 @@
-import { z } from 'zod';
-
 import { endOfDayInZone } from '@/lib/display-timezone';
+import { addIsoDays, isIsoDay } from '@/lib/iso-day';
 
 export const EXPIRY_PRESET_DAYS = [1, 7, 30, 90] as const;
 
@@ -22,22 +21,6 @@ export function dayInZone(instant: Date, timeZone: string): string {
   }).format(instant);
 }
 
-export function addDays(isoDay: string, days: number): string {
-  const date = new Date(`${isoDay}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-export function presetLabelDate(isoDay: string, today: string): string {
-  return new Date(`${isoDay}T00:00:00Z`).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    ...(isoDay.slice(0, 4) === today.slice(0, 4) ? {} : { year: 'numeric' }),
-    timeZone: 'UTC',
-  });
-}
-
 export function resolveExpiry({
   choice,
   customDay,
@@ -48,15 +31,14 @@ export function resolveExpiry({
     case 'never':
       return { kind: 'never' };
     case 'custom':
-      if (!z.iso.date().safeParse(customDay).success)
-        return { kind: 'invalid', message: 'Enter a date as YYYY-MM-DD.' };
+      if (!isIsoDay(customDay)) return { kind: 'invalid', message: 'Enter a date as YYYY-MM-DD.' };
       if (customDay < today) return { kind: 'invalid', message: 'Choose today or a later date.' };
       return { kind: 'at', expiresAt: endOfDayInZone(customDay, timeZone) };
     case '1':
     case '7':
     case '30':
     case '90':
-      return { kind: 'at', expiresAt: endOfDayInZone(addDays(today, Number(choice)), timeZone) };
+      return { kind: 'at', expiresAt: endOfDayInZone(addIsoDays(today, Number(choice)), timeZone) };
     default: {
       const unreachable: never = choice;
       return unreachable;

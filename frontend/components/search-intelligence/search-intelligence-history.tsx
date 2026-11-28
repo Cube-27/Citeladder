@@ -10,6 +10,7 @@ import {
   type SearchIntelligenceDataset,
 } from '@/lib/api/search-intelligence';
 import { formatCount, formatMonth, formatWindowDate } from '@/lib/format';
+import { isIsoDay } from '@/lib/iso-day';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -60,7 +61,7 @@ function historyObservations(rows: HistoryRows): HistoryRow[] {
       new: numeric(row.auxiliary.new_backlinks),
       lost: numeric(row.auxiliary.lost_backlinks),
     }))
-    .filter(({ date }) => validHistoryDate(date))
+    .filter(({ date }) => isIsoDay(date))
     .sort((left, right) => left.date.localeCompare(right.date));
 }
 
@@ -133,12 +134,6 @@ function compactCount(value: number): string {
 
 function numeric(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
-function validHistoryDate(date: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
-  const parsed = new Date(`${date}T00:00:00Z`);
-  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
 }
 
 function fillMonths(

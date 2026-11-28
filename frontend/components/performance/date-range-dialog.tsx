@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { X } from '@/lib/icons';
 import { formatWindowDate } from '@/lib/format';
+import { isIsoDay } from '@/lib/iso-day';
 import { Dialog } from '@/components/ui/dialog';
 import { DateField } from '@/components/ui/date-field';
 import { Field } from '@/components/ui/field';
@@ -17,25 +18,12 @@ import {
 } from '@/lib/performance/performance';
 import { Text } from '@/components/ui/typography';
 
-function isoDay(value: string): boolean {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return false;
-  const [, year, month, day] = match;
-  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12));
-  return (
-    !Number.isNaN(date.getTime()) &&
-    date.getUTCFullYear() === Number(year) &&
-    date.getUTCMonth() === Number(month) - 1 &&
-    date.getUTCDate() === Number(day)
-  );
-}
-
 function isUsableWindow(
   from: string,
   to: string,
   coverage: { earliest: string | null; latest: string | null },
 ): boolean {
-  if (!isoDay(from) || !isoDay(to) || to < from) return false;
+  if (!isIsoDay(from) || !isIsoDay(to) || to < from) return false;
   if (coverage.earliest && from < coverage.earliest) return false;
   if (coverage.latest && to > coverage.latest) return false;
   return true;
