@@ -3,16 +3,42 @@ import { useQuery } from '@tanstack/react-query';
 import type { NewChatInput } from '@/components/agent/use-chat-turns';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
-import { Text } from '@/components/ui/typography';
-import { Sparkles } from '@/lib/icons';
+import { Columns } from '@/components/ui/layout';
+import { Eye, FileText, Sparkles, TrendingUp, type IconGlyph } from '@/lib/icons';
 import { actionsQueries } from '@/lib/api/actions';
 import { AGENT_BRIEFING_ACTIONS } from '@/lib/config/agent';
 
 const BRIEFING_REQUEST =
   'What should I work on this week? Brief me on the highest-value work, why each item matters with its evidence, and the first step for each.';
 
-export function BriefingCard({
+const QUICK_STARTS: readonly Readonly<{
+  workflowId: string;
+  label: string;
+  icon: IconGlyph;
+  message: string;
+}>[] = [
+  {
+    workflowId: 'visibility_diagnosis',
+    label: 'AI visibility',
+    icon: Eye,
+    message: 'Why do AI answers miss us? Diagnose where we are absent and what to fix first.',
+  },
+  {
+    workflowId: 'page_edits',
+    label: 'Search traffic',
+    icon: TrendingUp,
+    message:
+      'Find the page with the most search traffic to gain and draft the edits that would win it.',
+  },
+  {
+    workflowId: 'article',
+    label: 'Write an article',
+    icon: FileText,
+    message: 'Find the article or guide most worth writing next and draft it.',
+  },
+];
+
+export function QuickStarts({
   workspaceId,
   projectId,
   onStart,
@@ -27,24 +53,12 @@ export function BriefingCard({
 }>) {
   const actions = useQuery(actionsQueries.list({ workspaceId, projectId }));
   const top = actions.data?.items.slice(0, AGENT_BRIEFING_ACTIONS) ?? [];
-  const actionLabel = top.length === 1 ? 'Action' : 'Actions';
-  const basis = top.length > 0 ? `Reads your top ${top.length} open ${actionLabel}.` : null;
+  const locked = disabled || pending;
   return (
-    <Stack as="section" aria-labelledby="agent-briefing">
-      <Stack gap="tight">
-        <Text as="h2" variant="label" id="agent-briefing">
-          What should I work on?
-        </Text>
-        {basis ? (
-          <Text as="p" variant="body" tone="ink-2">
-            {basis}
-          </Text>
-        ) : null}
-      </Stack>
+    <Columns as="nav" aria-label="Quick starts" template="quarters">
       <Button
         variant="secondary"
-        box="start"
-        disabled={disabled || pending || actions.isPending}
+        disabled={locked || actions.isPending}
         onClick={() =>
           onStart({
             message: BRIEFING_REQUEST,
@@ -57,6 +71,24 @@ export function BriefingCard({
         <Icon icon={Sparkles} />
         Brief me
       </Button>
-    </Stack>
+      {QUICK_STARTS.map((start) => (
+        <Button
+          key={start.workflowId}
+          variant="secondary"
+          disabled={locked}
+          onClick={() =>
+            onStart({
+              message: start.message,
+              skillId: undefined,
+              workflowId: start.workflowId,
+              context: {},
+            })
+          }
+        >
+          <Icon icon={start.icon} />
+          {start.label}
+        </Button>
+      ))}
+    </Columns>
   );
 }

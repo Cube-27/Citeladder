@@ -175,7 +175,7 @@ measures `metric-ink` only on the impressions fill.
 
 ## Type
 
-Sans (Google Sans) for words and numbers alike, numbers in its tabular
+Sans (Inter) for words and numbers alike, numbers in its tabular
 figures (dates, counts, prices, URLs too); the website sets its metric figures
 in mono. Mono (Geist Mono) only for literal
 code: API keys, code blocks, raw IDs and keyboard hints. Weights 400 and 500 only; the app's dark asks for every weight 50 lighter

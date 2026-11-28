@@ -15,14 +15,14 @@
       }
     },
     "sans": {
-      "family": "Google Sans",
-      "file": "GoogleSans-Variable.woff2",
+      "family": "Inter",
+      "file": "InterVariable.woff2",
       "preload": ["app", "public", "docs"],
-      "weights": "400 600",
+      "weights": "300 600",
       "fallback": {
-        "sizeAdjust": "98.27%",
-        "ascentOverride": "98.3%",
-        "descentOverride": "29.1%",
+        "sizeAdjust": "105.18%",
+        "ascentOverride": "92.1%",
+        "descentOverride": "22.93%",
         "lineGapOverride": "0%"
       }
     },

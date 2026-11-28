@@ -677,14 +677,14 @@ describe('NewChatScreen', () => {
 
     await screen.findByDisplayValue('Work on Pricing page.');
     expect(screen.getByText('Action: Create a new page: Pricing page')).toBeVisible();
-    expect(screen.queryByRole('region', { name: 'What should I work on?' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Quick starts' })).toBeNull();
     expect(screen.queryByText('Type / to pick a skill or @ to mention an Action.')).toBeNull();
 
     await user.click(
       screen.getByRole('button', { name: 'Remove Action: Create a new page: Pricing page' }),
     );
     expect(screen.getByLabelText('Message the agent')).toHaveValue('Work on Pricing page.');
-    expect(await screen.findByRole('region', { name: 'What should I work on?' })).toBeVisible();
+    expect(await screen.findByRole('navigation', { name: 'Quick starts' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
@@ -768,11 +768,11 @@ describe('NewChatScreen', () => {
     const user = userEvent.setup();
     renderNewChat('');
 
-    const briefing = await screen.findByRole('region', { name: 'What should I work on?' });
-    expect(await within(briefing).findByText(/top 2 open Actions/)).toBeVisible();
+    const starts = within(await screen.findByRole('navigation', { name: 'Quick starts' }));
+    await waitFor(() => expect(starts.getByRole('button', { name: 'Brief me' })).toBeEnabled());
     await user.click(screen.getByRole('button', { name: 'Model: Haiku 5.5' }));
     await user.click(await screen.findByRole('menuitemradio', { name: 'Opus 5.5' }));
-    await user.click(within(briefing).getByRole('button', { name: 'Brief me' }));
+    await user.click(starts.getByRole('button', { name: 'Brief me' }));
 
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
     expect(bodies).toEqual([
@@ -782,5 +782,14 @@ describe('NewChatScreen', () => {
         model: 'claude-opus-5-5',
       }),
     ]);
+  });
+
+  it('starts a quick start chat at once with its workflow', async () => {
+    const bodies = captureChats();
+    renderNewChat('');
+    const starts = within(await screen.findByRole('navigation', { name: 'Quick starts' }));
+    await userEvent.setup().click(starts.getByRole('button', { name: 'AI visibility' }));
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([expect.objectContaining({ workflow_id: 'visibility_diagnosis' })]);
   });
 });

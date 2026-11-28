@@ -173,7 +173,11 @@ export function ComposerFrame({
 }
 
 export function AgentThread({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="max-w-chat gap-card mx-auto flex w-full min-w-0 flex-col">{children}</div>;
+  return (
+    <div data-agent-thread="" className="max-w-chat gap-card mx-auto flex w-full min-w-0 flex-col">
+      {children}
+    </div>
+  );
 }
 
 export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: ReactNode }>) {

@@ -343,10 +343,11 @@ how to add or change an entry.
 [Design](design.md) holds the values; these are the rules behind them.
 
 - **AR-1 Look:** HeroUI's tokens, surfaces and controls (light neutrals, dark per AR-33, shadows,
-  control sizes, focus), keeping CiteLadder's corner radii; Google Sans as the
-  sans face and an inset content panel (2026-11-26). The HeroUI move changes
+  control sizes, focus), keeping CiteLadder's corner radii; Inter as the
+  sans face (2026-11-28, replacing Google Sans) and an inset content panel (2026-11-26). The HeroUI move changes
   layout and styling only, never behaviour (2026-11-26). **AR-2 Text:** body
-  and labels 14px, captions 12px and the page header 48px (2026-11-22); phone
+  and labels 14px, captions 12px and the page header 48px (2026-11-22); the
+  Agent chat's conversation is the one exception at 15px (2026-11-28); phone
   fields stay 14px, accepting the iOS focus zoom (2026-11-27).
 - **AR-3 Metrics** sit in one strip with hairline dividers, never cards, with no
   meters, rings or bars in a cell. A strip is always one row, never wrapped into

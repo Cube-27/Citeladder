@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { AgentFailureNotice } from '@/components/agent/agent-failure-notice';
-import { BriefingCard } from '@/components/agent/briefing-card';
+import { QuickStarts } from '@/components/agent/quick-starts';
 import { Composer } from '@/components/agent/composer';
 import { useSkillChoice } from '@/components/agent/skill-picker';
 import { useModelPicker } from '@/components/agent/model-picker';
@@ -122,6 +122,15 @@ function NewChat({
           />
         ) : null}
         <Stack gap="tight">
+          {actionId ? null : (
+            <QuickStarts
+              workspaceId={workspaceId}
+              projectId={projectId}
+              onStart={(input) => create.start({ ...input, choice: model.request })}
+              pending={pending}
+              disabled={!access.canSend}
+            />
+          )}
           <Composer
             id="new-chat-message"
             layout="opening"
@@ -141,20 +150,11 @@ function NewChat({
             onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
           />
           {actionId ? null : (
-            <Text as="p" variant="caption">
+            <Text as="p" variant="caption" align="center">
               Type / to pick a skill or @ to mention an Action.
             </Text>
           )}
         </Stack>
-        {actionId ? null : (
-          <BriefingCard
-            workspaceId={workspaceId}
-            projectId={projectId}
-            onStart={(input) => create.start({ ...input, choice: model.request })}
-            pending={pending}
-            disabled={!access.canSend}
-          />
-        )}
       </ThreadOpening>
     </ThreadPage>
   );
