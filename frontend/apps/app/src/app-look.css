@@ -277,9 +277,9 @@
   border-top-width: 0;
 }
 
-@media (max-resolution: 1.99dppx) {
+@media (min-resolution: 2dppx) {
   :root:not([data-public-surface]) {
-    --rule-width: 1px;
+    --rule-width: 0.5px;
   }
 }
 
@@ -390,8 +390,4 @@
 :root:not([data-public-surface]) [data-panel='card'] > header:first-child > #insights-headline {
   font-size: calc(var(--type-base) + 2 * var(--type-step));
   line-height: calc(var(--type-base) + 5.5 * var(--type-step));
-}
-
-:root:not([data-public-surface]) [data-sidebar-scroll] {
-  mask-image: none;
 }

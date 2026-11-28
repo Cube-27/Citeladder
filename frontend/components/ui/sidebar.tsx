@@ -6,7 +6,6 @@ import {
   type ComponentPropsWithoutRef,
   type ReactNode,
   type Ref,
-  type RefObject,
 } from 'react';
 
 import { Slot } from '@radix-ui/react-slot';
@@ -62,47 +61,14 @@ export function SidebarFrame({
   );
 }
 
-type ScrollEnds = Readonly<{ top: boolean; bottom: boolean }>;
-
-function useScrollEnds(ref: RefObject<HTMLElement | null>): ScrollEnds {
-  const [ends, setEnds] = useState<ScrollEnds>({ top: false, bottom: false });
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    const update = () => {
-      const hidden = node.scrollHeight - node.clientHeight;
-      const top = hidden > 1 && node.scrollTop > 1;
-      const bottom = hidden > 1 && node.scrollTop < hidden - 1;
-      setEnds((current) =>
-        current.top === top && current.bottom === bottom ? current : { top, bottom },
-      );
-    };
-    update();
-    node.addEventListener('scroll', update, { passive: true });
-    const observer = new ResizeObserver(update);
-    observer.observe(node);
-    const content = node.firstElementChild;
-    if (content) {
-      observer.observe(content);
-      for (const group of content.children) observer.observe(group);
-    }
-    void document.fonts?.ready.then(update);
-    return () => {
-      node.removeEventListener('scroll', update);
-      observer.disconnect();
-    };
-  }, [ref]);
-  return ends;
-}
-
-const LIST_FADE = 32;
+const REVEAL_INSET = 32;
 
 function revealCurrent(list: HTMLElement) {
   const current = list.querySelector<HTMLElement>('[aria-current="page"]');
   if (!current) return;
   const listBox = list.getBoundingClientRect();
   const rowBox = current.getBoundingClientRect();
-  const inset = Math.max(0, Math.min(LIST_FADE, (listBox.height - rowBox.height) / 2));
+  const inset = Math.max(0, Math.min(REVEAL_INSET, (listBox.height - rowBox.height) / 2));
   const above = listBox.top + inset - rowBox.top;
   const below = rowBox.bottom - (listBox.bottom - inset);
   if (above > 0) list.scrollTop -= above;
@@ -115,7 +81,6 @@ export function SidebarScrollList({
   children,
 }: Readonly<{ label: string; revealKey: string; children: ReactNode }>) {
   const ref = useRef<HTMLDivElement>(null);
-  const ends = useScrollEnds(ref);
   useEffect(() => {
     const list = ref.current;
     if (!list) return;
@@ -132,8 +97,6 @@ export function SidebarScrollList({
     <div
       ref={ref}
       data-sidebar-scroll=""
-      data-fade-top={ends.top || undefined}
-      data-fade-bottom={ends.bottom || undefined}
       className="-mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-1"
     >
       <nav aria-label={label} className="flex flex-col gap-4">
