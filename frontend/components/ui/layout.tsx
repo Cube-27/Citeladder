@@ -156,8 +156,8 @@ export function Inline({
   box = 'auto',
   inline = false,
   nowrap = false,
-  stackBelow,
-  showFrom,
+  stackBelowDesktop = false,
+  desktopOnly = false,
   hideEmpty = false,
   children,
   ...props
@@ -171,8 +171,8 @@ export function Inline({
     box?: Box;
     inline?: boolean;
     nowrap?: boolean;
-    stackBelow?: 'desktop';
-    showFrom?: 'desktop';
+    stackBelowDesktop?: boolean;
+    desktopOnly?: boolean;
     hideEmpty?: boolean;
   }
 >) {
@@ -190,8 +190,8 @@ export function Inline({
         BOX[box],
         inline && 'inline-flex',
         nowrap && 'whitespace-nowrap',
-        stackBelow && 'desktop:flex-row desktop:items-center flex-col items-stretch',
-        showFrom && 'desktop:flex hidden',
+        stackBelowDesktop && 'desktop:flex-row desktop:items-center flex-col items-stretch',
+        desktopOnly && 'desktop:flex hidden',
         hideEmpty && 'empty:hidden',
       )}
     >

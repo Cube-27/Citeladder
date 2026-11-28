@@ -96,7 +96,7 @@ function RowFrame({
 }>) {
   return (
     <Stack as="li" gap="compact">
-      <Inline gap="compact" stackBelow="desktop">
+      <Inline gap="compact" stackBelowDesktop>
         <Inline gap="compact" align="start" box="fill">
           <Icon icon={glyph} tone="ink-2" />
           <div className="min-w-0">
