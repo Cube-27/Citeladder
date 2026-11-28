@@ -34,7 +34,7 @@ export function DataTableBody({
     return (
       <TableBody>
         <tr data-table-state="">
-          <TableCell colSpan={colSpan} className="align-top">
+          <TableCell colSpan={colSpan} alignTop>
             <InFrame>
               <StateBlock {...state} />
             </InFrame>

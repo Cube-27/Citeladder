@@ -16,7 +16,7 @@ const LAYOUT = [
   /^auto-(?:cols|rows)-\w+$/,
   /^order-[\w-]+$/,
   /^(?:pointer-events|select)-\w+$/,
-  /^(?:cursor|touch)-[\w-]+$/,
+  /^touch-[\w-]+$/,
   /^resize[\w-]*$/,
   /^(?:visible|invisible|collapse|backface-hidden)$/,
   /^aspect-(?:square|video|auto)$/,

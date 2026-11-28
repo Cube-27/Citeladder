@@ -12,12 +12,12 @@
 }
 :root:not([data-public-surface]) .table-frame thead th {
   height: var(--table-head-height);
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
-  font-weight: var(--text-label--font-weight);
-  letter-spacing: var(--text-label--letter-spacing);
+  font-size: var(--text-caption-strong);
+  line-height: var(--text-caption-strong--line-height);
+  font-weight: var(--text-caption-strong--font-weight);
+  letter-spacing: var(--text-caption-strong--letter-spacing);
   text-transform: none;
-  color: var(--text-color-ink-soft);
+  color: var(--text-color-ink-2);
   background: var(--color-table-head);
   box-shadow: inset 0 calc(-1 * var(--rule-width)) 0 var(--color-rule);
 }

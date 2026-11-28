@@ -5,14 +5,13 @@ import type { SiteScoreSummary } from '@citeladder/contracts';
 import { ISSUE_COLUMNS, IssueRow } from '@/components/site-health/issue-rows';
 import { Button } from '@/components/ui/button';
 import { ClampText } from '@/components/ui/clamp-text';
-import { DataTable, type DataTableState } from '@/components/ui/data-table';
+import { DataTable } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
-import { readErrorProps } from '@/components/ui/notice';
 import { PartDonut } from '@/components/ui/part-donut';
 import { ProjectLink } from '@/components/ui/project-link';
 import { BarRows } from '@/components/ui/score-gauge';
 import { TitledSection } from '@/components/ui/section';
-import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
+import { queryTableState, StateBlock } from '@/components/ui/state-block';
 import { TextLink } from '@/components/ui/text-link';
 import { Text } from '@/components/ui/typography';
 import type { IssuesParams } from '@/lib/api/site-health';
@@ -31,17 +30,13 @@ export function IssueTable({
 }: Readonly<{ title: string; workspaceId: string; crawlId: string; params: IssuesParams }>) {
   const issues = useQuery(siteHealthQueries.issues(workspaceId, crawlId, params));
   const rows = issues.data?.items ?? [];
-  let state: DataTableState | undefined;
-  if (issues.isError && !issues.data)
-    state = {
-      kind: 'error',
-      ...readErrorProps(issues),
-      fallback: READ_FAILED,
-      title: "Couldn't load issues for this crawl",
-    };
-  else if (!issues.data) state = { kind: 'loading', label: 'Loading issues…' };
-  else if (rows.length === 0)
-    state = { kind: 'empty', icon: ICONS.issues, headingLevel: 3, heading: 'No issues found' };
+  const table = queryTableState(issues, {
+    subject: 'issues for this crawl',
+    empty: (data) =>
+      data.items.length === 0
+        ? { kind: 'empty', icon: ICONS.issues, headingLevel: 3, heading: 'No issues found' }
+        : undefined,
+  });
   return (
     <DataTable
       title={title}
@@ -53,7 +48,7 @@ export function IssueTable({
         ),
       }}
       columns={ISSUE_COLUMNS}
-      state={state}
+      {...table}
     >
       {rows.map((issue) => (
         <IssueRow

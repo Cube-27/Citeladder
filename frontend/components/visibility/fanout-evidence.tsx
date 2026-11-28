@@ -5,7 +5,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
-import { pageNumberControls, useTablePage } from '@/components/ui/pager';
+import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager';
 import { SearchField } from '@/components/ui/search-field';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -49,8 +49,6 @@ import {
 import { SegmentedControl } from '@/components/ui/tabs';
 
 const TITLE = 'Query fan-outs';
-
-const PAGE_SIZE = 10;
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'search', label: 'Search' },
@@ -154,6 +152,7 @@ export function FanoutEvidence({
     page,
     setPage,
     pageCount,
+    pageSizeControl,
     from,
     to,
   } = useSearchTable(query, runId);
@@ -208,8 +207,18 @@ export function FanoutEvidence({
         status: <SearchScopeNote search={needle} matched={matched} />,
       }}
       columns={COLUMNS}
-      state={tableState({ view, rows: visible.length, needle, matched, queries })}
-      pager={tablePager({ view, unit, from, to, grouping, page, pageCount, setPage })}
+      {...tableState({ view, rows: visible.length, needle, matched, queries })}
+      pager={tablePager({
+        view,
+        unit,
+        from,
+        to,
+        grouping,
+        page,
+        pageCount,
+        setPage,
+        pageSizeControl,
+      })}
       footer={query.data?.truncated ? `Newest ${limit} shown` : null}
     >
       <FanoutRows view={view} groups={paged} queries={queries} />
@@ -251,12 +260,13 @@ function FanoutRows({
 function tablePager(
   input: Pick<
     ReturnType<typeof useSearchTable>,
-    'unit' | 'from' | 'to' | 'grouping' | 'page' | 'pageCount' | 'setPage'
+    'unit' | 'from' | 'to' | 'grouping' | 'page' | 'pageCount' | 'setPage' | 'pageSizeControl'
   > & { view: FanoutView },
 ) {
-  if (input.view !== 'top' || input.unit <= PAGE_SIZE) return undefined;
+  if (input.view !== 'top') return undefined;
   return {
     range: { from: input.from, to: input.to, total: input.unit, noun: GROUP_NOUNS[input.grouping] },
+    pageSize: input.pageSizeControl,
     ...pageNumberControls(input.page, input.pageCount, input.setPage),
   };
 }
@@ -269,7 +279,7 @@ function tableState(input: {
   queries: ReturnType<typeof useFanoutQueries>;
 }) {
   if (input.view !== 'top') return movedState(input.view, input.queries);
-  return input.rows === 0 ? noSearchMatchState(input.needle, input.matched) : undefined;
+  return { state: input.rows === 0 ? noSearchMatchState(input.needle, input.matched) : undefined };
 }
 
 function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) {
@@ -295,8 +305,7 @@ function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) 
   }, [groups, needle]);
   const grouped = grouping !== 'none';
   const unit = grouped ? visible.length : (visible[0]?.rows.length ?? 0);
-  const { page, setPage, pageCount, from, to } = useTablePage(unit, {
-    pageSize: PAGE_SIZE,
+  const { page, setPage, pageCount, pageSizeControl, from, to } = useResizableTablePage(unit, {
     resetKey: `${grouping}\u0000${needle}`,
     urlKey: 'fanout_page',
   });
@@ -318,6 +327,7 @@ function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) 
     page,
     setPage,
     pageCount,
+    pageSizeControl,
     from,
     to,
   };

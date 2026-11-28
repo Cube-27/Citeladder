@@ -5,14 +5,15 @@ import { formatMoney } from '@/lib/billing/catalog';
 import { DisplayTime } from '@/components/ui/display-time';
 
 import { IconButton } from '@/components/ui/button';
-import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { queryTableState, type TableRead } from '@/components/ui/state-block';
 import { SettingsGroup } from '@/components/ui/setting-row';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { Download, ICONS } from '@/lib/icons';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { saveBlob } from '@/lib/download';
-import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
+import { Notice } from '@/components/ui/notice';
 import { Value } from '@/components/ui/value';
 
 const COLUMNS: readonly DataTableColumn[] = [
@@ -42,25 +43,14 @@ function taxBreakdown(invoice: BillingInvoice): string {
   return parts.length > 0 ? parts.join(' · ') : TREATMENT_LABEL[invoice.tax_treatment];
 }
 
-type InvoicesRead = RetryableRead & Readonly<{ isError: boolean; isLoading: boolean }>;
-
-function invoicesState(read: InvoicesRead, count: number): DataTableState | undefined {
-  if (read.isError) {
-    return {
-      kind: 'error',
-      title: "Couldn't load invoices",
-      ...readErrorProps(read),
-      fallback: 'Receipts could not be loaded.',
-    };
-  }
-  if (read.isLoading) return { kind: 'loading', label: 'Loading invoices…' };
-  if (count > 0) return undefined;
-  return {
-    kind: 'empty',
-    icon: ICONS.billing,
-    headingLevel: 3,
-    heading: 'No invoices yet',
-  };
+function invoicesState(read: TableRead<unknown>, count: number) {
+  return queryTableState(read, {
+    subject: 'invoices',
+    empty: () =>
+      count > 0
+        ? undefined
+        : { kind: 'empty', icon: ICONS.billing, headingLevel: 3, heading: 'No invoices yet' },
+  });
 }
 
 function downloadLabel(invoice: BillingInvoice, downloading: string | null): string {
@@ -73,7 +63,7 @@ export function InvoiceHistory({
   read,
 }: Readonly<{
   invoices: BillingInvoice[];
-  read: InvoicesRead;
+  read: TableRead<unknown>;
 }>) {
   const workspaceId = useActiveWorkspaceId();
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -96,15 +86,13 @@ export function InvoiceHistory({
       {downloadError ? (
         <Notice tone="negative">Receipt download failed. Please retry.</Notice>
       ) : null}
-      <DataTable label="Invoices" columns={COLUMNS} state={invoicesState(read, invoices.length)}>
+      <DataTable label="Invoices" columns={COLUMNS} {...invoicesState(read, invoices.length)}>
         {invoices.map((invoice) => (
           <TableRow key={invoice.invoice_id}>
-            <TableCell>
-              <ClampText lines={1}>
-                {invoice.status === 'credited'
-                  ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
-                  : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
-              </ClampText>
+            <TableCell wrap="normal">
+              {invoice.status === 'credited'
+                ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
+                : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
             </TableCell>
             <TableCell>
               <DisplayTime value={invoice.paid_at} dateOnly />

@@ -17,8 +17,7 @@ import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { changeFieldLabel } from '@/lib/site-health/change-fields';
 import { ChangeEvidenceDrawer } from './changes-panel-evidence';
 import { CrawlHistory } from './crawl-history';
-import { readErrorProps } from '@/components/ui/notice';
-import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
+import { queryTableState, StateBlock } from '@/components/ui/state-block';
 import { FigureStrip } from '@/components/ui/figure-strip';
 import { Text } from '@/components/ui/typography';
 
@@ -76,7 +75,8 @@ export function ChangesPanel({
     summary.data?.state === 'available'
       ? classCountsSchema.safeParse(summary.data.summary.counts_by_class).data
       : undefined;
-  const summaryState = comparisonState(summary, pairAvailable);
+  const summaryTable = comparisonState(summary, pairAvailable);
+  const summaryState = summaryTable.state;
   const origin = sharedOrigin(page?.items.map((row) => row.normalized_url) ?? []);
   return (
     <SectionStack data-testid="website-changes">
@@ -103,6 +103,7 @@ export function ChangesPanel({
         columns={CHANGE_COLUMNS}
         {...table}
         state={summaryState ?? table.state}
+        refreshError={summaryTable.refreshError ?? table.refreshError}
         pager={summaryState ? undefined : table.pager}
       >
         {page?.items.map((row) => (
@@ -172,32 +173,29 @@ function ChangeRow({
   );
 }
 
-function comparisonState(
-  summary: UseQueryResult<ChangeSummary>,
-  pairAvailable: boolean,
-): DataTableState | undefined {
-  if (summary.isPending) return { kind: 'loading', label: 'Loading persisted website changes…' };
-  if (summary.isError)
-    return {
-      kind: 'error',
-      ...readErrorProps(summary),
-      fallback: READ_FAILED,
-      title: "Couldn't load the website changes",
-    };
-  if (summary.data.state === 'unavailable')
+function comparisonState(summary: UseQueryResult<ChangeSummary>, pairAvailable: boolean) {
+  return queryTableState(summary, {
+    subject: 'the website changes',
+    loading: 'Loading persisted website changes…',
+    empty: (data) => comparisonEmpty(data, pairAvailable),
+  });
+}
+
+function comparisonEmpty(data: ChangeSummary, pairAvailable: boolean): DataTableState | undefined {
+  if (data.state === 'unavailable')
     return {
       kind: 'empty',
       icon: GitCompare,
       headingLevel: 3,
       heading: 'Changes need two completed crawls',
     };
-  if (summary.data.state === 'non_comparable')
+  if (data.state === 'non_comparable')
     return {
       kind: 'empty',
       icon: GitCompare,
       headingLevel: 3,
       heading: 'These crawls are not comparable',
-      description: `Reason: ${summary.data.reason_code?.replaceAll('_', ' ') ?? 'unknown'}.`,
+      description: `Reason: ${data.reason_code?.replaceAll('_', ' ') ?? 'unknown'}.`,
     };
   if (!pairAvailable)
     return {

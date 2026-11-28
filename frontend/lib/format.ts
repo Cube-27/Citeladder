@@ -287,11 +287,19 @@ export function urlCellText(value: string, origin: string | null): string {
 
 const URL_SEGMENT_KEPT = 32;
 const URL_TAIL_KEPT = 28;
+const URL_TAIL_MIN = 12;
+
+function wordStart(text: string, start: number): number {
+  if (start === 0 || /[-_./]/u.test(text.charAt(start - 1))) return start;
+  const next = text.slice(start).search(/[-_.]/u);
+  const moved = start + next + 1;
+  return next < 0 || text.length - moved < URL_TAIL_MIN ? start : moved;
+}
 
 export function urlCut(text: string): { head: string; tail: string } {
   if (/\s/u.test(text) && !text.includes('/')) return { head: '', tail: text };
   const slash = text.replace(/\/$/u, '').lastIndexOf('/');
   const keepSegment = slash > 0 && text.length - slash <= URL_SEGMENT_KEPT;
-  const start = keepSegment ? slash : Math.max(0, text.length - URL_TAIL_KEPT);
+  const start = keepSegment ? slash : wordStart(text, Math.max(0, text.length - URL_TAIL_KEPT));
   return { head: text.slice(0, start), tail: text.slice(start) };
 }

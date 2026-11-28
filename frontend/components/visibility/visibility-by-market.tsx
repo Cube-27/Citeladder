@@ -4,14 +4,14 @@ import type { VisibilityMarkets } from '@citeladder/contracts/visibility';
 
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
-import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import { formatRate } from '@/lib/visibility/dashboard';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
-import { readErrorProps } from '@/components/ui/notice';
+import { queryTableState } from '@/components/ui/state-block';
 import type { ProjectMarkets } from '@/lib/project/use-project-markets';
 
 const COLUMNS: readonly DataTableColumn[] = [
@@ -29,21 +29,13 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'net', label: 'Net sentiment', width: 'figure', kind: 'number' },
 ];
 
-function marketsState(
-  query: UseQueryResult<VisibilityMarkets>,
-  markets: ProjectMarkets,
-): DataTableState | undefined {
-  const failed = markets.kind === 'failed' ? markets.read : query;
-  if (markets.kind === 'failed' || query.isError)
-    return {
-      kind: 'error',
-      ...readErrorProps(failed),
-      title: "Couldn't load the markets",
-      fallback: 'The request failed or timed out.',
-    };
-  if (markets.kind === 'pending' || query.isPending)
-    return { kind: 'loading', label: 'Loading markets…' };
-  return undefined;
+function marketsState(query: UseQueryResult<VisibilityMarkets>, markets: ProjectMarkets) {
+  const subject = { subject: 'the markets' };
+  if (markets.kind === 'failed')
+    return queryTableState({ ...markets.read, isError: true, data: undefined }, subject);
+  if (markets.kind === 'pending')
+    return queryTableState({ ...query, isError: false, data: undefined }, subject);
+  return queryTableState(query, subject);
 }
 
 export function VisibilityByMarket({
@@ -59,7 +51,7 @@ export function VisibilityByMarket({
 }>) {
   if (markets.kind === 'loaded' && markets.markets.length < 2) return null;
   return (
-    <DataTable title="By market" columns={COLUMNS} state={marketsState(query, markets)}>
+    <DataTable title="By market" columns={COLUMNS} {...marketsState(query, markets)}>
       {(query.data?.markets ?? []).map((row) => (
         <TableRow key={row.market.id ?? 'default'}>
           <TableCell>

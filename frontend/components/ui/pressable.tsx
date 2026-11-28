@@ -54,9 +54,9 @@ const LOOK = {
   jump: 'underline decoration-1 underline-offset-3 decoration-control-line hover:decoration-current',
   square: cn(SQUARE, SQUARE_FILL),
   chip: 'hover:text-ink rounded-mark inline-flex w-auto min-w-0 items-center gap-1',
-  more: 'border-rule hover:overlay-hover hover:text-ink flex h-10 items-center justify-center border-t',
-  'tree-row': 'hover:overlay-hover flex h-10 items-center gap-2 px-2',
-  disclosure: cn(ROW_FACE.base, ROW_FACE.rest, pressableRowClasses, 'min-h-10'),
+  more: 'border-rule hover:overlay-hover hover:text-ink flex min-h-row items-center justify-center border-t',
+  'tree-row': 'hover:overlay-hover flex min-h-row items-center gap-2 px-2',
+  disclosure: cn(ROW_FACE.base, ROW_FACE.rest, pressableRowClasses, 'min-h-row'),
 } as const;
 
 const DAY = cn(SQUARE, 'transition-colors');

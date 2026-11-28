@@ -2,8 +2,8 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import type { VisibilityTopics } from '@citeladder/contracts/visibility-topics';
 import { Absence } from '@/components/ui/absence';
-import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { readErrorProps } from '@/components/ui/notice';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { queryTableState } from '@/components/ui/state-block';
 import { Pressable } from '@/components/ui/pressable';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
@@ -30,18 +30,14 @@ const COLUMNS: readonly DataTableColumn[] = [
 ];
 const VALUE_KEYS = COLUMNS.slice(1).map((column) => column.key);
 
-function topicsState(query: UseQueryResult<VisibilityTopics>): DataTableState | undefined {
-  if (query.isError)
-    return {
-      kind: 'error',
-      ...readErrorProps(query),
-      title: "Couldn't load the topics",
-      fallback: 'The request failed or timed out.',
-    };
-  if (query.isPending) return { kind: 'loading', label: 'Loading topics…' };
-  if (query.data.items.length === 0)
-    return { kind: 'empty', headingLevel: 3, icon: Tags, heading: 'No topics yet' };
-  return undefined;
+function topicsState(query: UseQueryResult<VisibilityTopics>) {
+  return queryTableState(query, {
+    subject: 'the topics',
+    empty: (data) =>
+      data.items.length === 0
+        ? { kind: 'empty', headingLevel: 3, icon: Tags, heading: 'No topics yet' }
+        : undefined,
+  });
 }
 
 export function VisibilityByTopic({
@@ -54,7 +50,7 @@ export function VisibilityByTopic({
   onSelectTopic: (topic: string) => void;
 }>) {
   return (
-    <DataTable title="By topic" columns={COLUMNS} state={topicsState(query)}>
+    <DataTable title="By topic" columns={COLUMNS} {...topicsState(query)}>
       {(query.data?.items ?? []).map((row) => (
         <TableRow key={row.topic_id}>
           <TableCell>

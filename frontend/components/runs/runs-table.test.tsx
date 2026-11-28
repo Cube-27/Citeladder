@@ -21,7 +21,11 @@ const TABLE: RunsTablePage = {
   sort: { key: 'created', descending: true },
   onSort: () => undefined,
   pageSize: 10,
-  pager: pageNumberControls(1, 1, () => undefined),
+  pager: {
+    ...pageNumberControls(1, 1, () => undefined),
+    range: { from: 1, to: 1, total: 1, noun: 'runs' },
+    pageSize: { value: 10, onChange: () => undefined },
+  },
 };
 
 function renderTable(audits: Audit[]) {
@@ -38,18 +42,18 @@ describe('RunsTable', () => {
     renderTable(rows);
 
     const links = runLinks();
-    expect(links[0]).toHaveAccessibleName('Brand audit · Aug 1, 2026, 12:00 AM');
+    expect(links[0]).toHaveAccessibleName('Aug 1, 2026, 12:00 AM · Brand audit');
     expect(links[0]).toHaveAttribute('href', `/runs/${rows[0]!.id}`);
-    expect(links[1]).toHaveAccessibleName('Brand audit · Jul 30, 2026, 12:00 AM');
+    expect(links[1]).toHaveAccessibleName('Jul 30, 2026, 12:00 AM · Brand audit');
     expect(links[1]).toHaveAttribute('href', `/runs/${rows[1]!.id}`);
   });
 
   it.each([
-    [{ audit_scope: 'brand' }, 'Brand audit · Aug 1, 2026, 12:00 AM'],
-    [{ audit_scope: 'commerce' }, 'Commerce audit · Aug 1, 2026, 12:00 AM'],
+    [{ audit_scope: 'brand' }, 'Aug 1, 2026, 12:00 AM · Brand audit'],
+    [{ audit_scope: 'commerce' }, 'Aug 1, 2026, 12:00 AM · Commerce audit'],
     [
       { audit_scope: 'brand', parent_audit_id: '99999999-1111-4111-8111-111111111111' },
-      'Brand repair run · Aug 1, 2026, 12:00 AM',
+      'Aug 1, 2026, 12:00 AM · Brand repair run',
     ],
   ] as const)('distinguishes a run by what it measured (%o)', (overrides, name) => {
     renderTable([audit(1, overrides)]);

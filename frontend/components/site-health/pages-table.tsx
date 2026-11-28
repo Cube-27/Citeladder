@@ -8,6 +8,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { mutedWhenMissing, TableCell, TableRow, TableTime, UrlText } from '@/components/ui/table';
 import { sharedOrigin } from '@/lib/format';
 import { Absence } from '@/components/ui/absence';
+import type { RefreshError } from '@/components/ui/state-block';
 import { PageLink } from '@/components/site-health/page-link';
 import { PageOpenContext } from '@/components/site-health/page-open-context';
 import type { PagesSort } from '@/lib/api/site-health';
@@ -74,6 +75,7 @@ export function PagesTable({
   sort = DEFAULT_PAGES_SORT,
   onSortChange,
   state,
+  refreshError,
   toolbar,
   pager,
   pageSize,
@@ -84,6 +86,7 @@ export function PagesTable({
   sort?: PagesSort;
   onSortChange?: (sort: PagesSort) => void;
   state?: DataTableState;
+  refreshError?: RefreshError;
   toolbar?: TableToolbarProps;
   pager?: ComponentProps<typeof DataTable>['pager'];
   pageSize?: number;
@@ -100,6 +103,7 @@ export function PagesTable({
       columns={pagesColumns(sort, onSortChange)}
       toolbar={toolbar}
       state={state}
+      refreshError={refreshError}
       pager={pager}
       pageSize={pageSize}
       busy={busy}
@@ -107,19 +111,7 @@ export function PagesTable({
       {pages.map((page) => {
         const title = pageDisplayTitle(page.title, page.display_url);
         return (
-          <TableRow
-            key={page.site_url_id}
-            tabIndex={0}
-            onClick={() => openPage(page)}
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter' && event.key !== ' ') return;
-              if (event.target !== event.currentTarget) return;
-              event.preventDefault();
-              openPage(page);
-            }}
-            focusable
-            className="cursor-pointer"
-          >
+          <TableRow key={page.site_url_id} onOpen={() => openPage(page)}>
             <TableCell>
               <Stack as="span" gap="tight" box="shrink">
                 <Inline as="span" wrap="phone">
@@ -135,19 +127,19 @@ export function PagesTable({
                     </PageLink>
                   </ClampText>
                   {page.robots_excluded ? <RobotsExcludedBadge /> : null}
-                  <Text variant="body" tone="ink-2" box="clip">
-                    <UrlText url={page.display_url} origin={origin} />
-                  </Text>
                 </Inline>
+                <Text variant="body" tone="ink-2" box="clip">
+                  <UrlText url={page.display_url} origin={origin} />
+                </Text>
                 <LinkedFromLine page={page} />
               </Stack>
             </TableCell>
-            <TableCell className="whitespace-nowrap">
+            <TableCell wrap="nowrap">
               <StatusMark tone={pageStatusBadgeValue(page.analysis_status)}>
                 {statusLabel(page.analysis_status)}
               </StatusMark>
             </TableCell>
-            <TableCell className="whitespace-nowrap">
+            <TableCell wrap="nowrap">
               <PageKindBadge pageKind={page.page_kind} />
             </TableCell>
             <TableCell numeric tone={page.issue_count === 0 ? 'ink-2' : undefined}>

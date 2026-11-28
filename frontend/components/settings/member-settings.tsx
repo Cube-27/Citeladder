@@ -193,11 +193,8 @@ export function MemberSettings({ mayInvite }: Readonly<{ mayInvite: boolean }>) 
           noMatch={
             searchFindsNobody(needle, membersQuery.isSuccess, visibleMembers) ? search.trim() : null
           }
-          isLoading={membersQuery.isLoading}
-          isError={membersQuery.isError}
-          error={membersQuery.error}
+          read={{ ...membersQuery, refetch: refresh }}
           busy={busy}
-          onRetry={refresh}
           onChangeRole={(member, role) =>
             confirmThen(confirmations.role(member.email, role), () =>
               changeRole.mutateAsync({ memberId: member.id, role }),

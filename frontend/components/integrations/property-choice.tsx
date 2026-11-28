@@ -1,10 +1,10 @@
 import { useMutation } from '@tanstack/react-query';
+import { StateBlock } from '@/components/ui/state-block';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/typography';
 import { List, RefreshCw } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -173,7 +173,13 @@ function discoveryStatus({
   if (discovery.isPending)
     return {
       action: null,
-      body: <Skeleton variant="list" rows={2} label={`Loading your ${noun}s…`} />,
+      body: (
+        <StateBlock
+          kind="loading"
+          label={`Loading your ${noun}s…`}
+          shape={{ kind: 'list', rows: 2 }}
+        />
+      ),
     };
   return {
     action: null,

@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 
-import { Checkbox } from '@/components/ui/checkbox';
+import { ClampText } from '@/components/ui/clamp-text';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import type { ProgressValue } from '@/components/ui/status-mark';
 import { StatusMark } from '@/components/ui/status-mark';
-import { WorkRow, WorkRows, WorkRowsMore } from '@/components/ui/work-rows';
+import { TableCell, TableRow, TableSelectCell } from '@/components/ui/table';
+import { TextLink } from '@/components/ui/text-link';
+import { WorkRowsMore } from '@/components/ui/work-rows';
+import { useProjectHref } from '@/lib/navigation/project-destination';
 import { actionTarget } from '@/lib/agent/action-title';
 import { groupingParams, type GroupingRef, type TreeGrouping } from '@/lib/agent/action-tree';
 import { approachLabel, familyLabel, IMPACT_LABEL, targetKindLabel } from '@/lib/agent/vocabulary';
@@ -14,6 +19,14 @@ import { formatCount, pluralCount } from '@/lib/format';
 import { firstSentence } from '@/lib/site-health/issues';
 
 import { useActionsPageContext } from './actions-page-context';
+
+const ACTION_COLUMNS: readonly DataTableColumn[] = [
+  { key: 'select', label: 'Select', hideLabel: true, width: 'control' },
+  { key: 'action', label: 'Action', kind: 'identity' },
+  { key: 'scope', label: 'Scope', width: 'category', priority: 'low' },
+  { key: 'impact', label: 'Impact', width: 'status' },
+  { key: 'source', label: 'Source', width: 'name', priority: 'low' },
+];
 
 const SCOPE_BY_KIND: Readonly<Record<string, string>> = {
   prompt: '1 prompt',
@@ -82,10 +95,10 @@ export function GroupingRows({
     else void extra.fetchNextPage();
   };
   return (
-    <WorkRows
+    <DataTable
       label={pluralCount(grouping.count, 'action')}
-      heads={['Action', 'Scope', 'Impact', 'Source']}
-      more={
+      columns={ACTION_COLUMNS}
+      footer={
         rest > 0 && cursor !== null && !exhausted ? (
           <WorkRowsMore onClick={showMore} disabled={extra.isFetching}>
             {extra.isFetching
@@ -98,12 +111,15 @@ export function GroupingRows({
       {rows.map((action) => (
         <ActionRow key={action.id} action={action} refOf={refOf} />
       ))}
-    </WorkRows>
+    </DataTable>
   );
 }
 
 function ActionRow({ action, refOf }: Readonly<{ action: Action; refOf: GroupingRef }>) {
   const { selection } = useActionsPageContext();
+  const navigate = useNavigate();
+  const projectHref = useProjectHref();
+  const href = `/actions/${action.id}`;
   const title = actionTarget(action);
   const whole = selection.hasGrouping(refOf);
   const caption = [
@@ -115,21 +131,28 @@ function ActionRow({ action, refOf }: Readonly<{ action: Action; refOf: Grouping
     .filter(Boolean)
     .join(' · ');
   return (
-    <WorkRow
-      tick={
-        <Checkbox
-          aria-label={`Select ${title}`}
-          checked={whole || selection.hasRow(action.id)}
-          disabled={whole}
-          onCheckedChange={() => selection.toggleRow(action.id, refOf)}
-        />
-      }
-      href={`/actions/${action.id}`}
-      title={title}
-      caption={caption}
-      scope={scopeLabel(action)}
-      impact={<Impact band={action.priority_band} />}
-      source={sourceLabel(action)}
-    />
+    <TableRow onOpen={() => void navigate(projectHref(href))}>
+      <TableSelectCell
+        label={`Select ${title}`}
+        checked={whole || selection.hasRow(action.id)}
+        disabled={whole}
+        onCheckedChange={() => selection.toggleRow(action.id, refOf)}
+      />
+      <TableCell>
+        <ClampText box="cell-title">
+          <TextLink href={href} text="body" underline="hover" truncate box="fill-phone">
+            {title}
+          </TextLink>
+          <ClampText box="fill-desktop" tone="ink-2">
+            {caption}
+          </ClampText>
+        </ClampText>
+      </TableCell>
+      <TableCell>{scopeLabel(action)}</TableCell>
+      <TableCell>
+        <Impact band={action.priority_band} />
+      </TableCell>
+      <TableCell>{sourceLabel(action)}</TableCell>
+    </TableRow>
   );
 }

@@ -283,6 +283,7 @@ function ScoredInventoryState({
           sort={sort}
           onSortChange={setSort}
           state={table.state}
+          refreshError={table.refreshError}
           pageSize={table.pageSize}
           pager={table.pager}
           busy={table.busy}

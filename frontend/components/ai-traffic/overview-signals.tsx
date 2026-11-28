@@ -23,9 +23,10 @@ import { InfoHint } from '@/components/ui/info-hint';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
-import { pageNumberControls, useTablePage } from '@/components/ui/pager';
+import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager';
 import { Section } from '@/components/ui/section';
 import { TableCell, TableRow } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
 
 type Overview = z.infer<typeof aiTrafficOverviewSchema>;
 type CrawlSummary = z.infer<typeof crawlSummarySchema>;
@@ -35,8 +36,6 @@ const PURPOSE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'purpose', label: 'Purpose' },
   { key: 'requests', label: 'Requests', width: 'figure', kind: 'number' },
 ];
-
-const PURPOSE_PAGE_SIZE = 10;
 
 export function OverviewFigures({
   data,
@@ -292,26 +291,27 @@ function CrawlProcessed({
   if (!available || !crawl.last_processed_at) return null;
   return (
     <PageTabEnd fallback={null}>
-      <span className="min-w-0 truncate">
+      <ClampText>
         Processed <DisplayTime value={crawl.last_processed_at} />
-      </span>
+      </ClampText>
     </PageTabEnd>
   );
 }
 
 export function RequestsByPurpose({ series }: Readonly<{ series: CrawlSummary['series'] }>) {
   const rows = [...series].reverse();
-  const { page, setPage, pageCount, from, to } = useTablePage(rows.length, {
-    pageSize: PURPOSE_PAGE_SIZE,
-    urlKey: 'purpose_page',
-  });
+  const { page, setPage, pageCount, from, to, pageSize, pageSizeControl } = useResizableTablePage(
+    rows.length,
+    { urlKey: 'purpose_page' },
+  );
   return (
     <DataTable
       title="Recognized requests by purpose"
       columns={PURPOSE_COLUMNS}
-      pageSize={PURPOSE_PAGE_SIZE}
+      pageSize={pageSize}
       pager={{
         range: { from, to, total: rows.length, noun: 'rows' },
+        pageSize: pageSizeControl,
         ...pageNumberControls(page, pageCount, setPage),
       }}
     >

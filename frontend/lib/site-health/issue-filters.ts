@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import type { IssueSection, IssueSort } from '@citeladder/contracts';
 import type { IssuesParams } from '@/lib/api/site-health';
 import { ISSUE_PAGE_LIMIT } from '@/lib/config/site-health';
 import { isOneOf } from '@/lib/utils';
+import { useCursorTable } from '@/lib/table/use-cursor-table';
 import {
   optionalStringUrlCodec,
   setUrlParams,
@@ -97,8 +98,12 @@ export function toIssueParams(
   };
 }
 
-export function issueCatalogParams(filters: IssueFilters, cursor: string | null): IssuesParams {
-  return toIssueParams(filters, cursor, ISSUE_PAGE_LIMIT);
+export function issueCatalogParams(
+  filters: IssueFilters,
+  cursor: string | null,
+  limit: number = ISSUE_PAGE_LIMIT,
+): IssuesParams {
+  return toIssueParams(filters, cursor, limit);
 }
 
 const PRIORITY_ISSUE_COUNT = 3;
@@ -129,7 +134,6 @@ export function useIssueFilters() {
   const [pageKind] = useUrlState('page_kind', textCodec);
   const [cursor] = useUrlState('cursor', optionalStringUrlCodec);
   const [selectedGroupId] = useUrlState('issue', optionalStringUrlCodec);
-  const [occurrenceCursors, setOccurrenceCursors] = useState<string[]>([]);
 
   const filters = useMemo<IssueFilters>(
     () => ({
@@ -149,7 +153,6 @@ export function useIssueFilters() {
     (change: Partial<IssueFilters>) => {
       const next = { ...filters, rule_id: '', ...change };
       setUrlParams({ ...issueFilterParams(next), cursor: null, issue: null });
-      setOccurrenceCursors([]);
     },
     [filters],
   );
@@ -157,33 +160,21 @@ export function useIssueFilters() {
   const goToPage = useCallback(
     (next: string | null) => {
       setUrlParams({ ...issueFilterParams(filters), cursor: next, issue: null });
-      setOccurrenceCursors([]);
     },
     [filters],
   );
 
   const selectIssue = useCallback((groupId: string | null) => {
     setUrlParams({ issue: groupId });
-    setOccurrenceCursors([]);
   }, []);
 
-  const nextOccurrences = useCallback(
-    (next: string) => setOccurrenceCursors((values) => [...values, next]),
-    [],
-  );
-  const previousOccurrences = useCallback(
-    () => setOccurrenceCursors((values) => values.slice(0, -1)),
-    [],
-  );
+  const occurrences = useCursorTable(JSON.stringify([filters, cursor, selectedGroupId]));
 
   return {
     filters,
     cursor,
     selectedGroupId,
-    occurrenceCursor: occurrenceCursors.at(-1),
-    canPageOccurrencesBack: occurrenceCursors.length > 0,
-    nextOccurrences,
-    previousOccurrences,
+    occurrences,
     updateFilters,
     goToPage,
     selectIssue,

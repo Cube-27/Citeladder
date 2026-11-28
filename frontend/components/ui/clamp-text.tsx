@@ -138,7 +138,7 @@ export function UrlCutParts({ text }: Readonly<{ text: string }>) {
   const { head, tail } = urlCut(text);
   return (
     <>
-      {head ? <span className="min-w-0 truncate">{head}</span> : null}
+      {head ? <span className="min-w-4 truncate">{head}</span> : null}
       <span className={cn('max-w-full min-w-0 truncate', head && 'shrink-0')}>{tail}</span>
     </>
   );

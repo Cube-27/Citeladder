@@ -82,7 +82,6 @@ export function RunDetailScreen() {
         auditLoading={auditQuery.isLoading}
         auditRead={auditQuery}
         executions={executionsQuery.data}
-        executionsLoading={executionsQuery.isLoading}
         executionsRead={executionsQuery}
         cancelNotice={failureNotice(cancelMutation, 'cancel the run')}
         rerunNotice={failureNotice(rerunFailuresMutation, 'rerun failed executions')}

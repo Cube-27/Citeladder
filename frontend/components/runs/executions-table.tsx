@@ -7,6 +7,7 @@ import { Inline } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
+import type { RefreshError } from '@/components/ui/state-block';
 import { FileSearch, ICONS } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
 import { useEngineCatalog } from '@/lib/providers/engines';
@@ -24,10 +25,12 @@ const COLUMNS: readonly DataTableColumn[] = [
 export function ExecutionsTable({
   executions,
   state,
+  refreshError,
   onSelectEvidence,
 }: Readonly<{
   executions: readonly Execution[];
   state?: DataTableState;
+  refreshError?: RefreshError;
   onSelectEvidence: (execution: Execution) => void;
 }>) {
   const engines = useEngineCatalog();
@@ -52,6 +55,7 @@ export function ExecutionsTable({
       toolbar={!state || state.kind === 'loading' ? { filters: filters.definitions } : undefined}
       columns={COLUMNS}
       state={state ?? unmatched}
+      refreshError={refreshError}
       pageSize={pageCount > 1 ? pageSize : undefined}
       pager={{
         range: { from, to, total: filters.rows.length, noun: 'executions' },
@@ -108,7 +112,7 @@ function StatusBadge({ execution }: Readonly<{ execution: Execution }>) {
   const label = executionStatusLabel(execution.status, engines.label(execution.logical_engine));
   return (
     <StatusMark tone={EXECUTION_STATES[execution.status].badge} full title={label}>
-      <span className="min-w-0 truncate">{label}</span>
+      <ClampText>{label}</ClampText>
     </StatusMark>
   );
 }

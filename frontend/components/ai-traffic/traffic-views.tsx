@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type { z } from 'zod';
 import type {
   aiTrafficOverviewSchema,
-  crawlCatalogSchema,
   crawlCoverageResponseSchema,
 } from '@citeladder/contracts/ai-traffic';
 import {
@@ -30,7 +29,7 @@ import { CrawlerPages } from './crawler-pages';
 import { ClampText } from '@/components/ui/clamp-text';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { readErrorProps } from '@/components/ui/notice';
+import { queryTableState } from '@/components/ui/state-block';
 import { SectionStack } from '@/components/ui/section';
 
 const CRAWLER_COLUMNS: readonly DataTableColumn[] = [
@@ -193,22 +192,10 @@ export function TrafficCrawlers(scope: CrawlTableScope) {
     </TabPanel>
   );
 }
-function catalogState(
-  catalog: UseQueryResult<z.infer<typeof crawlCatalogSchema>>,
-): DataTableState | undefined {
-  if (catalog.isError && !catalog.data)
-    return {
-      kind: 'error',
-      ...readErrorProps(catalog),
-      title: "Couldn't load the crawler catalog",
-      fallback: 'Without it the bots in this table cannot be named.',
-    };
-  if (catalog.isPending) return { kind: 'loading', label: 'Loading the crawler catalog…' };
-  return undefined;
-}
 export function TrafficActivity(scope: CrawlTableScope) {
   const { workspaceId, projectId, filters } = scope;
   const catalog = useQuery(aiTrafficQueries.catalog({ workspaceId, projectId }));
+  const catalogTable = queryTableState(catalog, { subject: 'the crawler catalog' });
   const website = useProjectScope().project.website_url;
   const { page, table } = useCursorTableQuery({
     workspaceId,
@@ -228,7 +215,8 @@ export function TrafficActivity(scope: CrawlTableScope) {
           label="Retained automated request activity"
           columns={ACTIVITY_COLUMNS}
           {...table}
-          state={catalogState(catalog) ?? table.state}
+          state={catalogTable.state ?? table.state}
+          refreshError={catalogTable.refreshError ?? table.refreshError}
         >
           {page?.items.map((r) => (
             <TableRow key={r.id}>

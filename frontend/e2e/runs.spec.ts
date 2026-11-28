@@ -112,7 +112,10 @@ test('shell → open run → open execution evidence', async ({ page }) => {
   await page.goto(fixtureProjectPath('/runs'));
 
   await expect(page.getByRole('heading', { level: 1, name: 'Runs' })).toBeVisible();
-  await page.getByRole('table').getByRole('link', { name: 'Brand audit · Jan 1, 2026' }).click();
+  await page
+    .getByRole('table')
+    .getByRole('link', { name: /^Jan 1, 2026.* · Brand audit$/u })
+    .click();
 
   await expect(page).toHaveURL(fixtureProjectPath(`/runs/${AUDIT_ID}`));
   await expect(page.getByText('Executions')).toBeVisible();

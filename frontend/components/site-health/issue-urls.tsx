@@ -96,8 +96,7 @@ export function IssueUrlTable({
       {rows.map((row) => (
         <TableRow
           key={row.site_url_id}
-          onClick={() => openPage?.({ crawlId: row.crawl_id, siteUrlId: row.site_url_id })}
-          className="cursor-pointer"
+          onOpen={() => openPage?.({ crawlId: row.crawl_id, siteUrlId: row.site_url_id })}
         >
           <TableCell>
             <PageLink
@@ -110,7 +109,7 @@ export function IssueUrlTable({
               <UrlText url={row.display_url} origin={origin} />
             </PageLink>
           </TableCell>
-          <TableCell className="whitespace-nowrap">
+          <TableCell wrap="nowrap">
             <PageKindBadge pageKind={row.page_kind} />
           </TableCell>
           <TableCell>

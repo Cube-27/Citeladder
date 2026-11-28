@@ -16,6 +16,7 @@ import { formatCount, ownOrigin } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { UrlPanel, TrafficLeg, trafficLegExplanation } from './url-panel';
+import { ClampText } from '@/components/ui/clamp-text';
 
 type PageRow = z.infer<typeof aiTrafficPagesSchema>['items'][number];
 
@@ -252,9 +253,9 @@ function InventoryDate({
   if (!date) return null;
   return (
     <PageTabEnd fallback={null}>
-      <span className="min-w-0 truncate">
+      <ClampText>
         Inventory <DisplayTime value={date} dateOnly />
-      </span>
+      </ClampText>
     </PageTabEnd>
   );
 }

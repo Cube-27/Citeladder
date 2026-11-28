@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { z } from 'zod';
 
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { readErrorProps } from '@/components/ui/notice';
+import { queryTableState } from '@/components/ui/state-block';
 import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { NumericCell, SourceName } from '@/components/visibility/source-cells';
@@ -66,20 +66,17 @@ function nearMissColumns(
   ];
 }
 
-function nearMissState(
-  query: ReturnType<typeof useSourceNearMisses>,
+function nearMissState(query: ReturnType<typeof useSourceNearMisses>, engineLabel: EngineLabel) {
+  return queryTableState(query, {
+    subject: 'your pages read but not cited',
+    empty: (data) => nearMissEmpty(data, engineLabel),
+  });
+}
+
+function nearMissEmpty(
+  data: NonNullable<ReturnType<typeof useSourceNearMisses>['data']>,
   engineLabel: EngineLabel,
 ): DataTableState | undefined {
-  if (query.isError) {
-    return {
-      kind: 'error',
-      ...readErrorProps(query),
-      title: "Couldn't load your pages read but not cited",
-      fallback: 'The request failed or timed out.',
-    };
-  }
-  const data = query.data;
-  if (!data) return { kind: 'loading', label: 'Loading your pages read but not cited…' };
   if (data.items.length) return undefined;
   if (data.responses === 0)
     return {
@@ -121,14 +118,14 @@ export function NearMissTable({
       label="Your pages read but not cited"
       toolbar={toolbar}
       columns={nearMissColumns(query.data, engines.label)}
-      state={nearMissState(query, engines.label)}
+      {...nearMissState(query, engines.label)}
       pageSize={pageSize}
       busy={{ active: query.isFetching, label: 'Updating your pages read but not cited' }}
       pager={{
         range: {
           from: shown ? 1 : 0,
           to: shown,
-          total: query.data ? shown : undefined,
+          total: shown,
           noun: 'pages',
         },
         pageSize: { value: pageSize, onChange: onPageSizeChange },

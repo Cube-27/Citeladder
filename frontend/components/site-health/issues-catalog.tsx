@@ -8,15 +8,9 @@ import { IssuePage, PendingIssuePage, type IssueHead } from '@/components/site-h
 import { ISSUE_COLUMNS, IssueRow } from '@/components/site-health/issue-rows';
 import { pageKindFilter } from '@/components/site-health/page-kind-select';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
-import {
-  DataTable,
-  type DataTableColumn,
-  type DataTablePager,
-  type DataTableState,
-} from '@/components/ui/data-table';
+import { DataTable, type DataTableColumn, type DataTablePager } from '@/components/ui/data-table';
 import { InfoHint } from '@/components/ui/info-hint';
-import { readErrorProps } from '@/components/ui/notice';
-import { READ_FAILED } from '@/components/ui/state-block';
+import { queryTableState } from '@/components/ui/state-block';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { SubmittedSearch } from '@/components/site-health/submitted-search';
@@ -25,7 +19,8 @@ import { TableGroupRow } from '@/components/ui/table';
 import { statusLabel } from '@/lib/site-health/status';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { ICONS } from '@/lib/icons';
-import { ISSUE_OCCURRENCE_LIMIT, ISSUE_PAGE_LIMIT } from '@/lib/config/site-health';
+import { ISSUE_PAGE_LIMIT } from '@/lib/config/site-health';
+import { pageRange } from '@/lib/table/use-cursor-table';
 import type { IssueSort, SiteIssue } from '@citeladder/contracts';
 import {
   ISSUE_SEVERITY_CHOICES,
@@ -44,24 +39,26 @@ function useIssuesCatalogQueries({
   filters,
   cursor,
   selectedGroupId,
-  occurrenceCursor,
+  pageSize,
+  occurrences,
 }: Readonly<{
   workspaceId: string;
   crawlId: string;
   filters: IssueFilters;
   cursor: string | null;
   selectedGroupId: string | null;
-  occurrenceCursor: string | undefined;
+  pageSize: number;
+  occurrences: Readonly<{ cursor: string | undefined; pageSize: number }>;
 }>) {
   const params = useMemo(
-    () => ({ ...issueCatalogParams(filters, cursor), section: undefined }),
-    [filters, cursor],
+    () => ({ ...issueCatalogParams(filters, cursor, pageSize), section: undefined }),
+    [filters, cursor, pageSize],
   );
   const issuesQuery = useQuery(siteHealthQueries.issues(workspaceId, crawlId, params));
   const detailQuery = useQuery({
     ...siteHealthQueries.issue(workspaceId, crawlId, selectedGroupId ?? '', {
-      cursor: occurrenceCursor,
-      limit: ISSUE_OCCURRENCE_LIMIT,
+      cursor: occurrences.cursor,
+      limit: occurrences.pageSize,
       page_kind: filters.page_kind || undefined,
     }),
     enabled: selectedGroupId !== null,
@@ -86,15 +83,24 @@ export function IssuesCatalog({
 }>) {
   const catalog = useIssueFilters();
   const { filters, cursor, selectedGroupId, updateFilters } = catalog;
+  const [pageSize, setPageSize] = useState<number>(ISSUE_PAGE_LIMIT);
   const { issuesQuery, detailQuery, rows, open } = useIssuesCatalogQueries({
     workspaceId,
     crawlId,
     filters,
     cursor,
     selectedGroupId,
-    occurrenceCursor: catalog.occurrenceCursor,
+    pageSize,
+    occurrences: catalog.occurrences,
   });
-  const pager = useCatalogPager(cursor, issuesQuery.data?.next_cursor ?? null, catalog.goToPage);
+  const pager = useCatalogPager({
+    cursor,
+    nextCursor: issuesQuery.data?.next_cursor ?? null,
+    shown: rows.length,
+    pageSize,
+    onPageSize: setPageSize,
+    onGo: catalog.goToPage,
+  });
 
   if (selectedGroupId !== null) {
     const close = () => catalog.selectIssue(null);
@@ -105,12 +111,7 @@ export function IssuesCatalog({
         crawlId={crawlId}
         pageKind={filters.page_kind}
         detailQuery={detailQuery}
-        canPrevious={catalog.canPageOccurrencesBack}
-        onPrevious={catalog.previousOccurrences}
-        onNext={() => {
-          const next = detailQuery.data?.next_cursor;
-          if (next) catalog.nextOccurrences(next);
-        }}
+        occurrences={catalog.occurrences}
         onClose={close}
       />
     ) : (
@@ -144,8 +145,8 @@ export function IssuesCatalog({
           ),
           filters: catalogFilters(filters, rows, updateFilters),
         }}
-        state={tableState(issuesQuery)}
-        pageSize={ISSUE_PAGE_LIMIT}
+        {...tableState(issuesQuery)}
+        pageSize={pageSize}
         pager={pager}
         busy={{ active: issuesQuery.isFetching, label: 'Updating issues' }}
       >
@@ -163,21 +164,13 @@ export function IssuesCatalog({
 }
 
 function tableState(query: ReturnType<typeof useIssuesCatalogQueries>['issuesQuery']) {
-  if (query.isError && !query.data)
-    return {
-      kind: 'error',
-      ...readErrorProps(query),
-      fallback: READ_FAILED,
-      title: "Couldn't load issues for this crawl",
-    } satisfies DataTableState;
-  if (!query.data) return { kind: 'loading', label: 'Loading issues…' } satisfies DataTableState;
-  if (query.data.items.length === 0)
-    return {
-      kind: 'empty',
-      icon: ICONS.issues,
-      heading: 'No issue types match this view',
-    } satisfies DataTableState;
-  return undefined;
+  return queryTableState(query, {
+    subject: 'issues for this crawl',
+    empty: (data) =>
+      data.items.length === 0
+        ? { kind: 'empty', icon: ICONS.issues, heading: 'No issue types match this view' }
+        : undefined,
+  });
 }
 
 function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataTableColumn[] {
@@ -286,27 +279,48 @@ function ruleFilterTitle(rows: readonly SiteIssue[], ruleId: string): string {
   return row ? issueTitle(row) : 'one issue';
 }
 
-function useCatalogPager(
-  cursor: string | null,
-  nextCursor: string | null,
-  onGo: (cursor: string | null) => void,
-): DataTablePager {
-  const [trail, setTrail] = useState<(string | null)[]>([]);
-  const followed = cursor ? trail : [];
+function useCatalogPager({
+  cursor,
+  nextCursor,
+  shown,
+  pageSize,
+  onPageSize,
+  onGo,
+}: Readonly<{
+  cursor: string | null;
+  nextCursor: string | null;
+  shown: number;
+  pageSize: number;
+  onPageSize: (size: number) => void;
+  onGo: (cursor: string | null) => void;
+}>): DataTablePager {
+  const [visited, setVisited] = useState<readonly (string | null)[]>([null]);
+  const at = visited.indexOf(cursor);
+  const reached = at === -1 ? [cursor] : visited.slice(0, at + 1);
+  const restart = () => {
+    setVisited([null]);
+    onGo(null);
+  };
   return {
+    range: {
+      ...pageRange(reached.length, pageSize, shown),
+      cursor: true,
+      noun: 'issues',
+    },
+    pageSize: {
+      value: pageSize,
+      onChange: (size) => {
+        onPageSize(size);
+        restart();
+      },
+    },
     canPrev: Boolean(cursor),
     canNext: Boolean(nextCursor),
-    onFirst: () => {
-      setTrail([]);
-      onGo(null);
-    },
-    onPrev: () => {
-      setTrail(followed.slice(0, -1));
-      onGo(followed.at(-1) ?? null);
-    },
+    onFirst: restart,
+    onPrev: () => onGo(reached.at(-2) ?? null),
     onNext: () => {
       if (!nextCursor) return;
-      setTrail([...followed, cursor]);
+      setVisited([...reached, nextCursor]);
       onGo(nextCursor);
     },
   };

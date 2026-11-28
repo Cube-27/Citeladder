@@ -134,7 +134,7 @@ export function RunsTable({
               title
               primary={
                 <TextLink href={`/runs/${audit.id}`} underline="hover">
-                  {`${runKind(audit)} · ${formatDisplayTimestamp(audit.created_at, timeZone)}`}
+                  {`${formatDisplayTimestamp(audit.created_at, timeZone)} · ${runKind(audit)}`}
                 </TextLink>
               }
               secondary={runCaption({

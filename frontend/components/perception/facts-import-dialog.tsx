@@ -2,16 +2,19 @@ import type { BrandFactImportResult } from '@citeladder/contracts/fact-checking'
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
-import { CsvImportFileInput, CsvImportPreview, useCsvImportFile } from '@/components/ui/csv-import';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import {
+  CsvImportFileInput,
+  CsvImportPreview,
+  CsvPreviewTable,
+  CsvRowStatus,
+  useCsvImportFile,
+} from '@/components/ui/csv-import';
 import { Dialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
 import { StatusMark } from '@/components/ui/status-mark';
-import { TableCell, TableRow } from '@/components/ui/table';
 import { useToast } from '@/components/ui/toast';
 import { Download } from '@/lib/icons';
 import { humanizeApiError } from '@/lib/api/errors';
@@ -29,13 +32,6 @@ import { useBrandFacts } from '@/lib/project/use-brand-facts';
 import { pluralCount } from '@/lib/format';
 
 type Outcome = BrandFactImportResult['rows'][number];
-
-const PREVIEW_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'line', label: 'Row', width: 'index', kind: 'number' },
-  { key: 'topic', label: 'Topic', width: 'figure' },
-  { key: 'statement', label: 'Statement' },
-  { key: 'status', label: 'Status', width: 'category' },
-];
 
 export function FactsImportDialog({
   open,
@@ -134,20 +130,13 @@ export function FactsImportDialog({
         fileName={fileName}
       >
         {parsed ? (
-          <DataTable label="Parsed facts" columns={PREVIEW_COLUMNS}>
-            {parsed.rows.map((row) => (
-              <TableRow key={row.line} dimmed={row.errors.length > 0}>
-                <TableCell numeric tone="ink-2">
-                  {row.line}
-                </TableCell>
-                <TableCell>{row.input.topic || <Absence state="not_set" />}</TableCell>
-                <TableCell>{row.input.statement || <Absence state="not_set" />}</TableCell>
-                <TableCell>
-                  <RowStatus row={row} outcome={outcomes?.get(row.line)} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </DataTable>
+          <CsvPreviewTable
+            label="Parsed facts"
+            textLabel="Statement"
+            rows={parsed.rows}
+            text={(row) => row.input.statement}
+            status={(row) => <RowStatus row={row} outcome={outcomes?.get(row.line)} />}
+          />
         ) : null}
       </CsvImportPreview>
     </Dialog>
@@ -155,8 +144,7 @@ export function FactsImportDialog({
 }
 
 function RowStatus({ row, outcome }: Readonly<{ row: ParsedFactRow; outcome?: Outcome }>) {
-  if (row.errors.length) return <StatusMark tone="negative">{row.errors.join(' ')}</StatusMark>;
-  if (!outcome) return <StatusMark tone="positive">Ready</StatusMark>;
+  if (row.errors.length || !outcome) return <CsvRowStatus errors={row.errors} />;
   switch (outcome.kind) {
     case 'created':
       return <StatusMark tone="positive">Added as draft</StatusMark>;

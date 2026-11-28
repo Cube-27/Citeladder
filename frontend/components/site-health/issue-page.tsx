@@ -26,7 +26,8 @@ import { IssueSeverityMark } from '@/components/site-health/issue-metadata';
 import { formatCount, formatPercent } from '@/lib/format';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pager } from '@/components/ui/pager';
-import { Skeleton } from '@/components/ui/skeleton';
+import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
+import { cursorControls, pageRange, type useCursorTable } from '@/lib/table/use-cursor-table';
 import { Text } from '@/components/ui/typography';
 import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import type {
@@ -91,9 +92,7 @@ export function IssuePage({
   crawlId,
   pageKind,
   detailQuery,
-  canPrevious,
-  onPrevious,
-  onNext,
+  occurrences,
   onClose,
 }: Readonly<{
   issue: IssueHead;
@@ -101,9 +100,7 @@ export function IssuePage({
   crawlId: string;
   pageKind?: string;
   detailQuery: UseQueryResult<SiteIssueDetail>;
-  canPrevious: boolean;
-  onPrevious: () => void;
-  onNext: () => void;
+  occurrences: ReturnType<typeof useCursorTable>;
   onClose: () => void;
 }>) {
   const loaded = detailQuery.isError ? undefined : detailQuery.data;
@@ -172,16 +169,24 @@ export function IssuePage({
                 detail={detail}
                 crawlId={crawlId}
                 query={detailQuery}
-                firstPage={!canPrevious}
+                firstPage={!occurrences.canPrev}
               />
-              {canPrevious || detail?.next_cursor ? (
+              {occurrences.canPrev ||
+              detail?.next_cursor ||
+              occurrences.pageSize > TABLE_DEFAULT_PAGE_SIZE ? (
                 <SectionFooter>
                   <Pager
-                    hideWhenSinglePage
-                    canPrev={canPrevious}
-                    canNext={Boolean(detail?.next_cursor)}
-                    onPrev={onPrevious}
-                    onNext={onNext}
+                    range={{
+                      ...pageRange(
+                        occurrences.page,
+                        occurrences.pageSize,
+                        detail?.occurrences.length ?? 0,
+                      ),
+                      total: detail?.occurrence_count ?? 0,
+                      noun: 'occurrences',
+                    }}
+                    pageSize={{ value: occurrences.pageSize, onChange: occurrences.setPageSize }}
+                    {...cursorControls(occurrences, detail?.next_cursor)}
                     busy={detailQuery.isFetching}
                   />
                 </SectionFooter>
@@ -291,7 +296,9 @@ function OccurrenceList({
       />
     );
   if (query.isPending || !detail) {
-    return <Skeleton variant="list" rows={3} label="Loading affected pages" />;
+    return (
+      <StateBlock kind="loading" label="Loading affected pages" shape={{ kind: 'list', rows: 3 }} />
+    );
   }
   if (detail.occurrences.length === 0)
     return <StateBlock kind="empty" inline message="No affected URLs found." />;

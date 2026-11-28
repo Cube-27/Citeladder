@@ -13,7 +13,6 @@ import { choiceFilter, rangeFilter, singleFilter, type FilterIcon } from './all-
 import { FilterBar } from './filter-bar';
 import { DataTable } from './data-table';
 import { Meter } from './meter';
-import { Pager, pageNumberControls } from './pager';
 import { StateBlock } from './state-block';
 import { SearchField } from './search-field';
 import { FigureStrip } from './figure-strip';
@@ -498,33 +497,6 @@ describe('Table head', () => {
     );
     expect(screen.getAllByText(/Last 7 days/)).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Status: Open' })).toHaveAttribute('data-active');
-  });
-});
-
-describe('Pager', () => {
-  it('steps page numbers and hides when there is nowhere to go', () => {
-    const onPageChange = vi.fn();
-    const { rerender } = render(
-      <Pager
-        range={{ from: 1, to: 10, total: 12, noun: 'prompts' }}
-        {...pageNumberControls(1, 2, onPageChange)}
-      />,
-    );
-    expect(screen.getByRole('status')).toHaveTextContent('1–10 of 12 prompts');
-    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    expect(onPageChange).toHaveBeenCalledWith(2);
-
-    rerender(
-      <Pager
-        hideWhenSinglePage
-        canPrev={false}
-        canNext={false}
-        onPrev={vi.fn()}
-        onNext={vi.fn()}
-      />,
-    );
-    expect(screen.queryByRole('button')).toBeNull();
   });
 });
 

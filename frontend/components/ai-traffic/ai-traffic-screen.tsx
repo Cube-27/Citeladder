@@ -92,12 +92,8 @@ function TrafficDataView({
   const idle = trafficIdle({ tab, ga4, sources: sources.data, overview: summary.data });
   const frame = {
     tabs: <TabRow {...tabs} />,
-    filters: idle
-      ? undefined
-      : {
-          filters: trafficFilters({ model, crawlAvailable }),
-          actions: tab === 'overview' ? undefined : <TrafficExport model={model} />,
-        },
+    actions: idle || tab === 'overview' ? undefined : <TrafficExport model={model} />,
+    filters: idle ? undefined : { filters: trafficFilters({ model, crawlAvailable }) },
   };
   if (idle)
     return (

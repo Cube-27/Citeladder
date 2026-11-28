@@ -1,7 +1,10 @@
 import { useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { Input } from '@/components/ui/input';
+import { Absence } from '@/components/ui/absence';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { StatusMark } from '@/components/ui/status-mark';
+import { TableCell, TableRow } from '@/components/ui/table';
 import { READ_FAILED_MESSAGE, readCsvFileText } from '@/lib/csv/read-file-text';
 
 export function useCsvImportFile<T>(parse: (text: string) => T) {
@@ -102,5 +105,51 @@ export function CsvImportPreview({
       </output>
       {counts ? children : null}
     </>
+  );
+}
+
+type PreviewRow = Readonly<{
+  line: number;
+  errors: readonly string[];
+  input: { topic?: string | null };
+}>;
+
+export function CsvRowStatus({ errors }: Readonly<{ errors: readonly string[] }>) {
+  if (errors.length > 0) return <StatusMark tone="negative">{errors.join(' ')}</StatusMark>;
+  return <StatusMark tone="positive">Ready</StatusMark>;
+}
+
+export function CsvPreviewTable<R extends PreviewRow>({
+  label,
+  textLabel,
+  rows,
+  text,
+  status = (row) => <CsvRowStatus errors={row.errors} />,
+}: Readonly<{
+  label: string;
+  textLabel: string;
+  rows: readonly R[];
+  text: (row: R) => string;
+  status?: (row: R) => ReactNode;
+}>) {
+  const columns: readonly DataTableColumn[] = [
+    { key: 'line', label: 'Row', width: 'index', kind: 'number' },
+    { key: 'topic', label: 'Topic', width: 'name' },
+    { key: 'text', label: textLabel },
+    { key: 'status', label: 'Status', width: 'category' },
+  ];
+  return (
+    <DataTable label={label} columns={columns}>
+      {rows.map((row) => (
+        <TableRow key={row.line} dimmed={row.errors.length > 0}>
+          <TableCell numeric tone="ink-2">
+            {row.line}
+          </TableCell>
+          <TableCell>{row.input.topic || <Absence state="not_set" />}</TableCell>
+          <TableCell>{text(row) || <Absence state="not_set" />}</TableCell>
+          <TableCell>{status(row)}</TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }

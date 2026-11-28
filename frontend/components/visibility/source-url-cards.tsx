@@ -5,7 +5,6 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
-import { Skeleton } from '@/components/ui/skeleton';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
@@ -14,6 +13,7 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 import { count } from '@/lib/visibility/sources';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionBleed, TitledSection } from '@/components/ui/section';
+import { ClampText } from '@/components/ui/clamp-text';
 
 type UrlDetail = z.infer<typeof visibilitySourceUrlSchema>;
 
@@ -50,7 +50,7 @@ function SectionBody({
   empty: string;
   children: ReactNode | null;
 }>) {
-  if (loading) return <Skeleton variant="list" />;
+  if (loading) return <StateBlock kind="loading" shape={{ kind: 'list' }} />;
   if (children) return <>{children}</>;
   return <StateBlock kind="empty" inline message={empty} />;
 }
@@ -124,7 +124,7 @@ export function BrandsCard({
           {brands.map((brand) => (
             <Inline as="li" key={`${brand.kind}:${brand.name}`}>
               <BrandMark name={brand.name} logoUrl={brand.logo_url} websiteUrl={brand.website} />
-              <span className="min-w-0 flex-1 truncate">{brand.name}</span>
+              <ClampText box="fill">{brand.name}</ClampText>
               <StatusMark
                 variant="classification"
                 value={brand.kind === 'brand' ? 'owned' : 'competitor'}

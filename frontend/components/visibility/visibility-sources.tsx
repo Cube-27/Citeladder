@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 
 import { AppGrid } from '@/components/ui/app-grid';
-import type { DataTableState } from '@/components/ui/data-table';
-import { readErrorProps } from '@/components/ui/notice';
+import { queryTableState } from '@/components/ui/state-block';
 import { SectionStack } from '@/components/ui/section';
 import { TopMoversCard, useSourceMovers } from '@/components/visibility/source-movers';
 import { NearMissTable, useSourceNearMisses } from '@/components/visibility/source-near-misses';
@@ -172,7 +171,7 @@ function SourcesPanel({
             toolbar,
             pageSize,
             busy: { active: sourceQuery.isFetching, label: 'Updating sources' },
-            state: tableState({
+            ...tableState({
               query: sourceQuery,
               rows,
               narrowed: Boolean(search || sourceType),
@@ -232,23 +231,19 @@ export function tableState({
   narrowed: boolean;
   searching: boolean;
   gapOnly: boolean;
-}>): DataTableState | undefined {
-  if (query.isError) {
-    return {
-      kind: 'error',
-      ...readErrorProps(query),
-      title: "Couldn't load the sources",
-      fallback: 'The request failed or timed out.',
-    };
-  }
-  if (!query.data) return { kind: 'loading', label: 'Loading sources…' };
-  if (rows.length) return undefined;
-  return {
-    kind: 'empty',
-    headingLevel: 3,
-    icon: Globe,
-    heading: emptyHeading(searching, gapOnly, narrowed),
-  };
+}>) {
+  return queryTableState(query, {
+    subject: 'the sources',
+    empty: () =>
+      rows.length
+        ? undefined
+        : {
+            kind: 'empty',
+            headingLevel: 3,
+            icon: Globe,
+            heading: emptyHeading(searching, gapOnly, narrowed),
+          },
+  });
 }
 
 function emptyHeading(searching: boolean, gapOnly: boolean, narrowed: boolean): string {

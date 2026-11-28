@@ -84,9 +84,9 @@ it('opens on the status a deep link names and asks the server for that status', 
   renderRuns();
 
   const table = within(await screen.findByRole('table', { name: 'All runs' }));
-  expect(table.getByRole('link', { name: 'Brand audit · Jul 30, 2026, 12:00 AM' })).toBeVisible();
+  expect(table.getByRole('link', { name: 'Jul 30, 2026, 12:00 AM · Brand audit' })).toBeVisible();
   expect(
-    table.queryByRole('link', { name: 'Brand audit · Aug 1, 2026, 12:00 AM' }),
+    table.queryByRole('link', { name: 'Aug 1, 2026, 12:00 AM · Brand audit' }),
   ).not.toBeInTheDocument();
   expect(screen.getByRole('tab', { name: /Failed/ })).toHaveAttribute('aria-selected', 'true');
   expect(asked.at(-1)?.getAll('status')).toEqual(['failed', 'cancelled']);
@@ -129,16 +129,16 @@ it('shows no rows from the previous status tab while the new one loads', async (
   vi.spyOn(runsApi, 'listSchedules').mockResolvedValue([]);
   renderRuns();
   expect(
-    await screen.findByRole('link', { name: 'Brand audit · Aug 4, 2026, 12:00 AM' }),
+    await screen.findByRole('link', { name: 'Aug 4, 2026, 12:00 AM · Brand audit' }),
   ).toBeVisible();
 
   await user.click(screen.getByRole('tab', { name: /Failed/ }));
-  expect(screen.queryByRole('link', { name: 'Brand audit · Aug 4, 2026, 12:00 AM' })).toBeNull();
+  expect(screen.queryByRole('link', { name: 'Aug 4, 2026, 12:00 AM · Brand audit' })).toBeNull();
   release();
   expect(
-    await screen.findByRole('link', { name: 'Brand audit · Aug 1, 2026, 12:00 AM' }),
+    await screen.findByRole('link', { name: 'Aug 1, 2026, 12:00 AM · Brand audit' }),
   ).toBeVisible();
-  expect(screen.queryByRole('link', { name: 'Brand audit · Aug 4, 2026, 12:00 AM' })).toBeNull();
+  expect(screen.queryByRole('link', { name: 'Aug 4, 2026, 12:00 AM · Brand audit' })).toBeNull();
 });
 
 it('counts every run under exactly one status tab', async () => {

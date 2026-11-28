@@ -4,15 +4,25 @@ import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { SectionBleed } from '@/components/ui/section';
 import { ChevronRight } from '@/lib/icons';
+import { cn } from '@/lib/utils';
 
 export function LinkRows({
   label,
+  ticked = false,
   children,
   more,
-}: Readonly<{ label: string; children: ReactNode; more?: ReactNode }>) {
+}: Readonly<{ label: string; ticked?: boolean; children: ReactNode; more?: ReactNode }>) {
   return (
     <SectionBleed>
-      <ul aria-label={label} className="divide-rule divide-y">
+      <ul
+        aria-label={label}
+        className={cn(
+          'divide-rule grid gap-x-3 divide-y',
+          ticked
+            ? 'grid-cols-[auto_minmax(0,1fr)_auto_auto_auto]'
+            : 'grid-cols-[minmax(0,1fr)_auto_auto_auto]',
+        )}
+      >
         {children}
       </ul>
       {more}
@@ -34,15 +44,15 @@ export function LinkRow({
   facts: readonly [ReactNode, ReactNode];
 }>) {
   return (
-    <li className="hover:overlay-hover px-panel-inset relative flex h-10 items-center gap-3">
-      {tick ? <span className="z-raised relative flex shrink-0">{tick}</span> : null}
+    <li className="hover:overlay-hover px-panel-inset min-h-row relative col-span-full grid grid-cols-subgrid items-center">
+      {tick ? <span className="z-raised relative flex">{tick}</span> : null}
       <ProjectLink href={href} onClick={onClick} look="list-row">
         {name}
       </ProjectLink>
-      <span className="text-caption text-ink-2 phone:hidden w-24 shrink-0 truncate">
-        {facts[0]}
+      <span className="text-caption text-ink-2 whitespace-nowrap">
+        <span className="phone:hidden">{facts[0]}</span>
       </span>
-      <span className="text-caption text-ink-2 flex w-24 shrink-0 truncate tabular-nums">
+      <span className="text-caption text-ink-2 flex whitespace-nowrap tabular-nums">
         {facts[1]}
       </span>
       <Icon icon={ChevronRight} tone="ink-2" />

@@ -40,7 +40,7 @@ export type SourceFilters = ReturnType<typeof useVisibilityFilters>;
 
 export type SourceTableFrame = Pick<
   ComponentProps<typeof DataTable>,
-  'toolbar' | 'pager' | 'busy' | 'state' | 'pageSize'
+  'toolbar' | 'pager' | 'busy' | 'state' | 'refreshError' | 'pageSize'
 >;
 
 export function OpenSource({

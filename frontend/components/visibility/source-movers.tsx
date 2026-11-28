@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { z } from 'zod';
 
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { readErrorProps } from '@/components/ui/notice';
+import { queryTableState } from '@/components/ui/state-block';
 import { ClampText } from '@/components/ui/clamp-text';
 import { SearchField } from '@/components/ui/search-field';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -68,25 +68,23 @@ const empty = (heading: string): DataTableState => ({
   heading,
 });
 
-function moversState(
-  query: ReturnType<typeof useSourceMovers>,
-  comparable: boolean,
-): DataTableState | undefined {
-  if (!comparable) return empty(NO_BASELINE);
-  if (query.isError) {
-    return {
-      kind: 'error',
-      ...readErrorProps(query),
-      title: "Couldn't load the top movers",
-      fallback: 'The request failed or timed out.',
-    };
-  }
-  const data = query.data;
-  if (!data) return { kind: 'loading', label: 'Loading top movers…' };
-  if (data.comparison_status !== 'comparable') {
-    return empty(STATUS_COPY[data.comparison_status] ?? IDENTITY_UNAVAILABLE);
-  }
-  return undefined;
+function moversState({
+  query,
+  comparable,
+  noRows,
+}: Readonly<{
+  query: ReturnType<typeof useSourceMovers>;
+  comparable: boolean;
+  noRows: DataTableState | undefined;
+}>) {
+  if (!comparable) return { state: empty(NO_BASELINE) };
+  return queryTableState(query, {
+    subject: 'the top movers',
+    empty: (data) =>
+      data.comparison_status === 'comparable'
+        ? noRows
+        : empty(STATUS_COPY[data.comparison_status] ?? IDENTITY_UNAVAILABLE),
+  });
 }
 
 const DIRECTIONS = [
@@ -145,7 +143,7 @@ export function TopMoversCard({
           />
         ),
       }}
-      state={moversState(query, comparable) ?? (movers.length ? undefined : noRows)}
+      {...moversState({ query, comparable, noRows: movers.length ? undefined : noRows })}
     >
       {movers.map((mover) => (
         <TableRow key={mover.key}>

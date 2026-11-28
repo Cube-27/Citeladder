@@ -1,7 +1,13 @@
 import type { ReactNode } from 'react';
 
 import type { TableToolbarProps } from '@/components/ui/filter-bar';
-import { DataTable, type DataTableColumn, type DataTablePager } from '@/components/ui/data-table';
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTablePager,
+  type DataTableState,
+} from '@/components/ui/data-table';
+import { queryTableState } from '@/components/ui/state-block';
 import {
   TableActionsCell,
   TableCell,
@@ -230,7 +236,7 @@ export function ProductsTable({
         onAllChange: (next) => onCheck(owned, next),
         noun: 'products on this page',
       }}
-      state={tableState({ query, empty, onRetry })}
+      {...tableState({ query, empty, onRetry })}
       pager={pager}
     >
       {rows.map((row) => (
@@ -287,22 +293,20 @@ function tableState({
   empty: ProductsEmpty;
   onRetry: () => void;
 }>) {
-  if (query.isPending) return { kind: 'loading', label: 'Loading products' } as const;
-  if (query.isError)
-    return {
-      kind: 'error',
-      title: "Couldn't load products",
-      error: query.error,
-      fallback: 'Products could not be loaded.',
-      onRetry,
-      pending: query.isFetching,
-    } as const;
-  if (query.data.items.length) return undefined;
-  if (empty.kind === 'filtered')
-    return {
-      kind: 'filtered',
-      heading: 'No products match these filters',
-      onClear: empty.onClear,
-    } as const;
-  return { kind: 'empty', icon: PackageOpen, ...EMPTY_COPY[empty.source] } as const;
+  return queryTableState(
+    { ...query, refetch: onRetry },
+    {
+      subject: 'products',
+      empty: (data): DataTableState | undefined => {
+        if (data.items.length) return undefined;
+        if (empty.kind === 'filtered')
+          return {
+            kind: 'filtered',
+            heading: 'No products match these filters',
+            onClear: empty.onClear,
+          };
+        return { kind: 'empty', icon: PackageOpen, ...EMPTY_COPY[empty.source] };
+      },
+    },
+  );
 }

@@ -26,7 +26,7 @@ export function ObjectionQuotesRow({
         <DataTable label={label} columns={QUOTE_COLUMNS}>
           {quotes.map((quote, index) => (
             <TableRow key={`${quote.execution_id}:${index}`}>
-              <TableCell className="whitespace-normal">
+              <TableCell wrap="normal">
                 <AnswerLink answer={quote} text="inherit">
                   “{quote.text}”
                 </AnswerLink>

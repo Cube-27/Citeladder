@@ -100,31 +100,38 @@ export function TableRow({
   children,
   className,
   highlight,
-  focusable = false,
+  onOpen,
   well = false,
   dimmed = false,
   ...props
 }: Readonly<
-  HTMLAttributes<HTMLTableRowElement> & {
+  Omit<HTMLAttributes<HTMLTableRowElement>, 'onClick'> & {
     highlight?: boolean;
-    focusable?: boolean;
+    onOpen?: () => void;
     well?: boolean;
     dimmed?: boolean;
   }
 >) {
-  const pressable = props.onClick !== undefined;
+  const pressable = onOpen !== undefined;
   return (
     <tr
       {...props}
+      onClick={
+        onOpen
+          ? (event) => {
+              if (isRowSurfaceClick(event)) onOpen();
+            }
+          : undefined
+      }
       data-pressable={pressable || undefined}
       className={cn(
         'h-row transition-colors duration-fast',
+        pressable && 'cursor-pointer',
         pressable &&
           !highlight &&
           '[[data-public-surface]_&]:not-aria-selected:hover:overlay-hover',
         '[[data-public-surface]_&]:aria-selected:overlay-selected',
         highlight && '[[data-public-surface]_&]:bg-accent-wash',
-        focusable && 'focus-ring',
         well && 'bg-well hover:bg-well',
         dimmed && 'opacity-disabled',
         className,
@@ -198,22 +205,25 @@ export const mutedWhenMissing = (value: number | null): TextTone | undefined =>
 
 export function TableCell({
   children,
-  className,
   numeric,
   desktopOnly,
   nested,
   tone,
   tight = false,
+  wrap,
+  alignTop = false,
   ground = 'table',
   ...props
 }: Readonly<
-  Omit<TdHTMLAttributes<HTMLTableCellElement>, 'children'> &
+  Omit<TdHTMLAttributes<HTMLTableCellElement>, 'children' | 'className'> &
     CellOptions & {
       children?: ReactNode | Absent;
       nested?: boolean | 2;
       tone?: TextTone;
       ground?: 'table' | 'well';
       tight?: boolean;
+      wrap?: 'nowrap' | 'normal';
+      alignTop?: boolean;
     }
 >) {
   return (
@@ -226,7 +236,9 @@ export function TableCell({
         nested === 2 && 'ps-[calc(var(--spacing-cell-x)_+_var(--spacing-indent-2))] cell-indent-2',
         tone && TEXT_TONE_CLASS[tone],
         tight && 'py-1',
-        className,
+        wrap === 'nowrap' && 'whitespace-nowrap',
+        wrap === 'normal' && 'whitespace-normal',
+        alignTop && 'align-top',
         ground === 'well' && 'bg-well table-ground-well',
       )}
     >
@@ -274,7 +286,7 @@ export function YouTag() {
   return <Tag strong>You</Tag>;
 }
 
-export function isRowSurfaceClick(event: MouseEvent<HTMLTableRowElement>): boolean {
+function isRowSurfaceClick(event: MouseEvent<HTMLTableRowElement>): boolean {
   const row = event.currentTarget;
   if (!(event.target instanceof Element) || !row.contains(event.target)) return false;
   for (let node: Element | null = event.target; node && node !== row; node = node.parentElement)

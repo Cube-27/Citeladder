@@ -17,7 +17,6 @@ type SkeletonProps = Readonly<{
     | Readonly<{ variant: 'table'; columns: number; rows?: number }>
     | Readonly<{ variant: 'stat'; count?: number }>
     | Readonly<{ variant: 'facts'; rows?: number }>
-    | Readonly<{ variant: 'list'; rows?: number }>
     | Readonly<{ variant: 'chart'; height?: ChartHeight }>
   );
 
@@ -41,8 +40,6 @@ function SkeletonBody(props: SkeletonProps) {
       return <FigureBlocks count={props.count ?? 4} />;
     case 'facts':
       return <ShapeBlocks shape={{ kind: 'facts', rows: props.rows }} />;
-    case 'list':
-      return <ShapeBlocks shape={{ kind: 'list', rows: props.rows }} />;
     case 'chart':
       return <ShapeBlocks shape={{ kind: 'chart', height: props.height }} />;
     case 'text':

@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 const LONG = 'Structured-data names match the visible title and h1 content of the page';
@@ -81,5 +81,61 @@ describe('table cell text', () => {
     await userEvent.hover(screen.getByText(LONG));
 
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+});
+
+describe('url text', () => {
+  it('drops the own origin and cuts a long path at a word, keeping its end', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <UrlText
+          url="https://harbor.test/blog/portland-coffee-roasters-2024-guide"
+          origin="https://harbor.test"
+        />
+      </TooltipProvider>,
+    );
+    const parts = [...container.querySelectorAll('[data-url-text] > span')].map(
+      (part) => part.textContent,
+    );
+    expect(parts).toEqual(['/blog/portland-', 'coffee-roasters-2024-guide']);
+  });
+});
+
+describe('openable row', () => {
+  it('opens once from its surface or its one keyboard stop, and not from its other controls', async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    const onRemove = vi.fn();
+    render(
+      <Table>
+        <TableBody>
+          <TableRow onOpen={onOpen}>
+            <TableCell>
+              <button type="button" onClick={onOpen}>
+                /pricing
+              </button>
+            </TableCell>
+            <TableCell>12 visits</TableCell>
+            <TableCell>
+              <button type="button" onClick={onRemove}>
+                Remove
+              </button>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>,
+    );
+
+    await user.tab();
+    expect(screen.getByRole('button', { name: '/pricing' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(onOpen).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('cell', { name: '12 visits' }));
+    expect(onOpen).toHaveBeenCalledTimes(2);
+
+    await user.click(screen.getByRole('button', { name: 'Remove' }));
+    expect(onRemove).toHaveBeenCalledTimes(1);
+    expect(onOpen).toHaveBeenCalledTimes(2);
   });
 });

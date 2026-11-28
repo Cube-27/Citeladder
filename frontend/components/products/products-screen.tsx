@@ -39,6 +39,7 @@ import { useDebounced } from '@/lib/use-debounced';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { pageRange } from '@/lib/table/use-cursor-table';
 
 import { BulkActions } from './bulk-actions';
 import { categoryFilter, productScopeFilters } from './product-scope-filters';
@@ -98,15 +99,15 @@ function useCursorStack(search: string) {
   };
 }
 
-function pageRange({
+function productRange({
   page,
   pageSize,
   shown,
   total,
 }: Readonly<{ page: number; pageSize: number; shown: number; total: number | undefined }>) {
-  if (total === undefined || shown === 0) return undefined;
-  const from = (page - 1) * pageSize + 1;
-  return { from, to: from + shown - 1, total, noun: 'products' };
+  const span = pageRange(page, pageSize, shown);
+  const noun = 'products';
+  return total === undefined ? { ...span, cursor: true as const, noun } : { ...span, total, noun };
 }
 
 function narrowed(filters: ProductFilters): boolean {
@@ -286,7 +287,7 @@ function ProductsContent({
               if (isTablePageSize(size)) setPageSize(size);
             },
           },
-          range: pageRange({
+          range: productRange({
             page: cursors.page,
             pageSize,
             shown: rows.length,
@@ -299,7 +300,6 @@ function ProductsContent({
             if (page.data?.next_cursor) cursors.next(page.data.next_cursor);
           },
           onFirst: cursors.first,
-          page: cursors.page,
           busy: page.isFetching,
         }}
       />

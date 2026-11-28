@@ -55,7 +55,7 @@ function runHref(crawl: Pick<SiteCrawlListItem, 'id' | 'run'>) {
 function CrawlRow({ crawl, onView }: Readonly<{ crawl: SiteCrawlListItem; onView: () => void }>) {
   const summary = crawl.score_summary;
   return (
-    <TableRow onClick={onView} className="cursor-pointer">
+    <TableRow onOpen={onView}>
       <TableCell>
         <Inline as="span">
           <TextLink

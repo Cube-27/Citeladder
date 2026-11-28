@@ -2,8 +2,11 @@ import { useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-q
 
 import type { DataTablePager, DataTableState } from '@/components/ui/data-table';
 import { cursorControls, pageRange, useCursorTable } from './use-cursor-table';
-import { readErrorProps } from '@/components/ui/notice';
-import { READ_FAILED } from '@/components/ui/state-block';
+import {
+  queryTableState,
+  type QueryTableState,
+  type RefreshError,
+} from '@/components/ui/state-block';
 
 type CursorPage = Readonly<{ items: readonly unknown[]; next_cursor: string | null }>;
 
@@ -11,7 +14,8 @@ type CursorPageRequest = Readonly<{ cursor: string | undefined; limit: number }>
 
 type CursorTableProps = Readonly<{
   pageSize: number;
-  state: DataTableState | undefined;
+  state: QueryTableState['state'];
+  refreshError: RefreshError | undefined;
   busy: Readonly<{ active: boolean; label: string }>;
   pager: DataTablePager | undefined;
 }>;
@@ -25,7 +29,7 @@ type CursorTableQueryOptions<TPage extends CursorPage, TKey extends QueryKey> = 
   loading: string;
   subject: string;
   empty: (page: TPage) => DataTableState;
-  fixedPageSize?: number;
+  pageSizes?: readonly [number, ...number[]];
   enabled?: boolean;
   total?: (page: TPage | undefined) => number | undefined;
 }>;
@@ -39,12 +43,12 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
   loading,
   subject,
   empty,
-  fixedPageSize,
+  pageSizes,
   enabled = true,
   total: totalOf,
 }: CursorTableQueryOptions<TPage, TKey>) {
-  const cursor = useCursorTable(JSON.stringify([workspaceId, scopeId, scope]));
-  const pageSize = fixedPageSize ?? cursor.pageSize;
+  const cursor = useCursorTable(JSON.stringify([workspaceId, scopeId, scope]), pageSizes);
+  const pageSize = cursor.pageSize;
   const query = useQuery({
     ...pageQuery({ cursor: cursor.cursor, limit: pageSize }),
     enabled: enabled && workspaceId !== null,
@@ -59,37 +63,28 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
     },
   });
   const page = query.data;
-  let state: DataTableState | undefined;
-  if (query.isPending) state = { kind: 'loading', label: loading };
-  else if (query.isError)
-    state = {
-      kind: 'error',
-      ...readErrorProps(query),
-      title: `Couldn't load ${subject}`,
-      fallback: READ_FAILED,
-    };
-  else if (query.data.items.length === 0) state = empty(query.data);
+  const { state, refreshError } = queryTableState(query, {
+    subject,
+    loading,
+    empty: (data) => (data.items.length === 0 ? empty(data) : undefined),
+  });
   const total = totalOf?.(page);
+  const shown = pageRange(
+    cursor.page,
+    pageSize,
+    shownRows({ query, total, page: cursor.page, pageSize }),
+  );
   const table: CursorTableProps = {
     pageSize,
     state,
+    refreshError,
     busy: { active: query.isFetching && !query.isPending, label: loading },
     pager:
       total !== undefined || (page && (page.items.length > 0 || cursor.canPrev))
         ? {
-            range: {
-              ...pageRange(
-                cursor.page,
-                pageSize,
-                shownRows({ query, total, page: cursor.page, pageSize }),
-              ),
-              total,
-              noun,
-            },
-            pageSize:
-              fixedPageSize === undefined
-                ? { value: cursor.pageSize, onChange: cursor.setPageSize }
-                : undefined,
+            range:
+              total === undefined ? { ...shown, cursor: true, noun } : { ...shown, total, noun },
+            pageSize: { value: pageSize, onChange: cursor.setPageSize, options: pageSizes },
             ...cursorControls(cursor, page?.next_cursor),
             busy: query.isFetching,
           }

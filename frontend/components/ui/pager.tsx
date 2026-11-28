@@ -13,16 +13,14 @@ import { formatCount } from '@/lib/format';
 import { useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { cn } from '@/lib/utils';
 
-type PagerRange = Readonly<{
-  from: number;
-  to: number;
-  total?: number;
-  noun: string;
-}>;
+type PagerRange = Readonly<
+  { from: number; to: number; noun: string } & ({ total: number } | { cursor: true })
+>;
 
 type PagerPageSize = Readonly<{
   value: number;
   onChange: (size: number) => void;
+  options?: readonly number[];
 }>;
 
 type PagerProps = Readonly<{
@@ -31,12 +29,9 @@ type PagerProps = Readonly<{
   onPrev: () => void;
   onNext: () => void;
   onFirst?: () => void;
-  range?: PagerRange;
-  page?: number;
-  pageCount?: number;
-  pageSize?: PagerPageSize;
+  range: PagerRange;
+  pageSize: PagerPageSize;
   busy?: boolean;
-  hideWhenSinglePage?: boolean;
   className?: string;
 }>;
 
@@ -46,8 +41,6 @@ export function pageNumberControls(
   onPageChange: (page: number) => void,
 ) {
   return {
-    page,
-    pageCount,
     canPrev: page > 1,
     canNext: page < pageCount,
     onPrev: () => onPageChange(page - 1),
@@ -55,26 +48,12 @@ export function pageNumberControls(
   };
 }
 
-function PagerSummary({
-  range,
-  page,
-  pageCount,
-}: Readonly<{ range?: PagerRange; page?: number; pageCount?: number }>) {
-  const face = 'text-body text-ink-2 pe-2 whitespace-nowrap tabular-nums';
-  if (range) {
-    return (
-      <output className={face}>
-        {`${formatCount(range.from)}–${formatCount(range.to)}`}
-        {range.total === undefined ? null : ` of ${formatCount(range.total)}`}
-        <span className="sr-only">{` ${range.noun}`}</span>
-      </output>
-    );
-  }
-  if (!page) return null;
+function PagerSummary({ range }: Readonly<{ range: PagerRange }>) {
   return (
-    <output className={face}>
-      Page {page}
-      {pageCount ? <span className="text-ink-2">{` of ${pageCount}`}</span> : null}
+    <output className="text-body text-ink-2 pe-2 whitespace-nowrap tabular-nums">
+      {`${formatCount(range.from)}–${formatCount(range.to)}`}
+      {'total' in range ? ` of ${formatCount(range.total)}` : null}
+      <span className="sr-only">{` ${range.noun}`}</span>
     </output>
   );
 }
@@ -91,7 +70,7 @@ function PageSizeSelect({ pageSize, noun }: Readonly<{ pageSize: PagerPageSize; 
         ariaLabel={`Rows per page for ${noun}`}
         value={String(pageSize.value)}
         onValueChange={(value) => pageSize.onChange(Number(value))}
-        options={TABLE_PAGE_SIZE_OPTIONS.map((size) => ({
+        options={(pageSize.options ?? TABLE_PAGE_SIZE_OPTIONS).map((size) => ({
           value: String(size),
           label: String(size),
         }))}
@@ -147,29 +126,19 @@ function PagerSteps({
   );
 }
 
-export function Pager({
-  range,
-  page,
-  pageCount,
-  pageSize,
-  busy = false,
-  hideWhenSinglePage = false,
-  className,
-  ...steps
-}: PagerProps) {
-  if (hideWhenSinglePage && !steps.canPrev && !steps.canNext) return null;
+export function Pager({ range, pageSize, busy = false, className, ...steps }: PagerProps) {
   return (
     <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-2', className)}>
       <div className="flex items-center gap-2">
-        <PagerSummary range={range} page={page} pageCount={pageCount} />
+        <PagerSummary range={range} />
         <PagerSteps {...steps} busy={busy} />
       </div>
-      {pageSize ? <PageSizeSelect pageSize={pageSize} noun={range?.noun ?? 'rows'} /> : null}
+      <PageSizeSelect pageSize={pageSize} noun={range.noun} />
     </div>
   );
 }
 
-export function useTablePage(
+function useTablePage(
   total: number,
   {
     pageSize,

@@ -3,14 +3,15 @@ import { useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, X } from '@/lib/icons';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
-import { CsvImportFileInput, CsvImportPreview, useCsvImportFile } from '@/components/ui/csv-import';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import {
+  CsvImportFileInput,
+  CsvImportPreview,
+  CsvPreviewTable,
+  useCsvImportFile,
+} from '@/components/ui/csv-import';
 import { Dialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import { StatusMark } from '@/components/ui/status-mark';
-import { TableCell, TableRow } from '@/components/ui/table';
-import { Absence } from '@/components/ui/absence';
 import type { PromptImportRowRequest } from '@citeladder/contracts/prompt-requests';
 import { downloadCsv } from '@/lib/csv/download';
 import {
@@ -22,18 +23,6 @@ import {
   type PromptCsvLimits,
 } from '@/lib/prompts/csv';
 import { Notice } from '@/components/ui/notice';
-
-function RowStatus({ errors }: Readonly<{ errors: readonly string[] }>) {
-  if (errors.length > 0) return <StatusMark tone="negative">{errors.join(' ')}</StatusMark>;
-  return <StatusMark tone="positive">Ready</StatusMark>;
-}
-
-const PREVIEW_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'line', label: 'Row', width: 'index', kind: 'number' },
-  { key: 'topic', label: 'Topic', width: 'name' },
-  { key: 'prompt', label: 'Prompt' },
-  { key: 'status', label: 'Status', width: 'status' },
-];
 
 function downloadSample() {
   downloadCsv('prompts-sample.csv', PROMPT_CSV_COLUMNS, PROMPT_CSV_SAMPLE_ROWS);
@@ -122,7 +111,14 @@ export function CsvImportDialog({
       ) : null}
 
       <CsvImportPreview counts={parsedCounts(parsed)} fileName={fileName}>
-        {parsed ? <ParsedRows parsed={parsed} /> : null}
+        {parsed ? (
+          <CsvPreviewTable
+            label="Parsed rows"
+            textLabel="Prompt"
+            rows={parsed.rows}
+            text={(row) => row.input.text}
+          />
+        ) : null}
       </CsvImportPreview>
     </Dialog>
   );
@@ -134,26 +130,4 @@ function parsedCounts(parsed: ParsedCsv | null) {
     rows: parsed.rows.length,
     skipped: parsed.rows.filter((row) => row.errors.length > 0).length,
   };
-}
-
-function ParsedRows({ parsed }: Readonly<{ parsed: ParsedCsv }>) {
-  return (
-    <DataTable label="Parsed rows" columns={PREVIEW_COLUMNS}>
-      {parsed.rows.map((row) => {
-        const invalid = row.errors.length > 0;
-        return (
-          <TableRow key={row.line} dimmed={invalid}>
-            <TableCell numeric tone="ink-2">
-              {row.line}
-            </TableCell>
-            <TableCell>{row.input.topic || <Absence state="not_set" />}</TableCell>
-            <TableCell>{row.input.text || <Absence state="not_set" />}</TableCell>
-            <TableCell>
-              <RowStatus errors={row.errors} />
-            </TableCell>
-          </TableRow>
-        );
-      })}
-    </DataTable>
-  );
 }

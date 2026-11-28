@@ -68,7 +68,7 @@ export function TreeGroupingRow({
     <div
       className={cn(
         'text-label text-ink',
-        'hover:overlay-hover rounded-control relative flex h-10 items-center gap-2 px-2',
+        'hover:overlay-hover rounded-control relative flex min-h-row items-center gap-2 px-2',
         !open && 'text-ink-2',
       )}
     >
@@ -99,7 +99,9 @@ export function TreeLeaf({ children }: Readonly<{ children: ReactNode }>) {
 
 export function TreeQuiet({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <p className="text-body text-ink-2 phone:ml-2 ml-5 flex h-10 items-center px-2">{children}</p>
+    <p className="text-body text-ink-2 phone:ml-2 min-h-row ml-5 flex items-center px-2">
+      {children}
+    </p>
   );
 }
 
