@@ -31,17 +31,43 @@ export function SearchIntelligenceHistory({
   dataset,
 }: Readonly<{ dataset: SearchIntelligenceDataset }>) {
   const query = useHistory(dataset.id);
+  const observations = query.isSuccess ? historyObservations(query.data.rows) : [];
+  const [first] = observations;
+  const last = observations.at(-1);
+  const range =
+    first && last && observations.length >= 2 ? (
+      <Text as="p" variant="caption">
+        {formatWindowDate(first.date)} to {formatWindowDate(last.date)}
+      </Text>
+    ) : undefined;
   return (
     <Section aria-labelledby="backlink-history">
-      <SectionHeader>
+      <SectionHeader actions={range}>
         <SectionTitle id="backlink-history">Backlink history</SectionTitle>
       </SectionHeader>
-      <HistoryBody query={query} />
+      <HistoryBody query={query} observations={observations} />
     </Section>
   );
 }
 
-function HistoryBody({ query }: Readonly<{ query: ReturnType<typeof useHistory> }>) {
+type HistoryRows = NonNullable<ReturnType<typeof useHistory>['data']>['rows'];
+
+function historyObservations(rows: HistoryRows): HistoryRow[] {
+  return rows
+    .map((row) => ({
+      date: String(row.auxiliary.date ?? '').slice(0, 10),
+      backlinks: row.backlinks,
+      new: numeric(row.auxiliary.new_backlinks),
+      lost: numeric(row.auxiliary.lost_backlinks),
+    }))
+    .filter(({ date }) => validHistoryDate(date))
+    .sort((left, right) => left.date.localeCompare(right.date));
+}
+
+function HistoryBody({
+  query,
+  observations,
+}: Readonly<{ query: ReturnType<typeof useHistory>; observations: readonly HistoryRow[] }>) {
   if (query.isError)
     return (
       <Notice
@@ -52,16 +78,6 @@ function HistoryBody({ query }: Readonly<{ query: ReturnType<typeof useHistory> 
       />
     );
   if (query.isPending) return <Skeleton variant="chart" />;
-  const rows = query.data.rows;
-  const observations = rows
-    .map((row) => ({
-      date: String(row.auxiliary.date ?? '').slice(0, 10),
-      backlinks: row.backlinks,
-      new: numeric(row.auxiliary.new_backlinks),
-      lost: numeric(row.auxiliary.lost_backlinks),
-    }))
-    .filter(({ date }) => validHistoryDate(date))
-    .sort((left, right) => left.date.localeCompare(right.date));
   const [first] = observations;
   const last = observations.at(-1);
   if (!first || !last || observations.length < 2)
@@ -80,11 +96,6 @@ function HistoryBody({ query }: Readonly<{ query: ReturnType<typeof useHistory> 
     }));
   return (
     <AppGrid layout="halves">
-      <div className="shell:col-span-2">
-        <Text as="p" variant="caption">
-          {formatWindowDate(first.date)} to {formatWindowDate(last.date)}
-        </Text>
-      </div>
       <Stack gap="compact" box="shrink" content="start">
         <SectionHeader>
           <SectionTitle level={3}>Total backlinks</SectionTitle>
@@ -130,7 +141,11 @@ function validHistoryDate(date: string): boolean {
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
 }
 
-function fillMonths(rows: HistoryRow[], firstDate: string, lastDate: string): HistoryRow[] {
+function fillMonths(
+  rows: readonly HistoryRow[],
+  firstDate: string,
+  lastDate: string,
+): HistoryRow[] {
   const byMonth = new Map(rows.map((row) => [row.date.slice(0, 7), row]));
   const start = new Date(`${firstDate.slice(0, 7)}-01T00:00:00Z`);
   const end = lastDate.slice(0, 7);

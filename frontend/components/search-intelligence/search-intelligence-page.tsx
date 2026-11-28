@@ -252,7 +252,7 @@ function researchView({
 }>): Readonly<{ filters?: FilterBarProps; body: ReactNode }> {
   if (readiness.isPending)
     return {
-      filters: RESERVED_CONTROLS,
+      filters: tab === 'overview' ? undefined : RESERVED_CONTROLS,
       body: statePanels((value) => <ResearchLoading tab={value} />),
     };
   if (readiness.isError)
@@ -440,6 +440,7 @@ function pageControls({
     savedView: FilterDefinition[];
   } & CollectionActions
 >) {
+  if (!collection && !savedView.length) return undefined;
   return scopeControls({
     savedView,
     collection: collection ?? undefined,

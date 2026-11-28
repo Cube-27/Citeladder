@@ -77,7 +77,7 @@ export function SearchIntelligenceDatasetView({
   if (!hasRows) return <EmptyDataset dataset={dataset} />;
   return (
     <DataTable
-      title={title}
+      label={title}
       description={description}
       toolbar={{
         search: (
