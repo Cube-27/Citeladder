@@ -21,37 +21,62 @@ function percentOf(value: number | null, max: number) {
   return (Math.min(max, Math.max(0, value)) / max) * 100;
 }
 
-function MeterTrack({
+const TRACK_SHAPE = {
+  meter: 'rounded-mark app:h-2 h-1.5 w-full [[data-public-surface]_&]:bg-rule',
+  cell: 'rounded-mark h-2 w-30',
+  bar: 'rounded-mark h-2',
+  score: 'rounded-mark h-2 min-w-24',
+  progress: 'rounded-full h-1',
+} as const;
+
+type TrackSemantics =
+  | Readonly<{ kind: 'meter'; labelledBy?: string; label?: string; valueText: string }>
+  | Readonly<{ kind: 'decorative' }>;
+
+export function MeterTrack({
   value,
   max,
   fill,
-  labelledBy,
-  label,
-  valueText,
+  shape,
+  semantics,
+  toneName,
 }: Readonly<{
   value: number | null;
   max: number;
   fill: string;
-  labelledBy?: string;
-  label?: string;
-  valueText: string;
+  shape: keyof typeof TRACK_SHAPE;
+  semantics: TrackSemantics;
+  toneName?: string;
 }>) {
   const percent = percentOf(value, max);
+  const bar = (
+    <>
+      {percent === null ? null : (
+        <span className={cn(FILL_MOTION, fill)} style={{ '--share': `${percent}%` }} />
+      )}
+    </>
+  );
+  const track = cn('bg-well block overflow-hidden', TRACK_SHAPE[shape]);
+  if (semantics.kind === 'decorative')
+    return (
+      <span aria-hidden className={track}>
+        {bar}
+      </span>
+    );
   return (
     <div // NOSONAR
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="meter"
-      aria-labelledby={labelledBy}
-      aria-label={labelledBy ? undefined : label}
+      aria-labelledby={semantics.labelledBy}
+      aria-label={semantics.labelledBy ? undefined : semantics.label}
       aria-valuemin={0}
       aria-valuemax={max}
       aria-valuenow={value === null ? undefined : Math.min(max, Math.max(0, value))}
-      aria-valuetext={valueText}
-      className="bg-well [[data-public-surface]_&]:bg-rule rounded-mark app:h-2 block h-1.5 w-full overflow-hidden"
+      aria-valuetext={semantics.valueText}
+      data-meter-tone={toneName}
+      className={track}
     >
-      {percent === null ? null : (
-        <span className={cn(FILL_MOTION, fill)} style={{ '--share': `${percent}%` }} />
-      )}
+      {bar}
     </div>
   );
 }
@@ -97,8 +122,8 @@ export function Meter({
         value={value}
         max={METER_MAX}
         fill={METER_FILL[tone]}
-        labelledBy={labelId}
-        valueText={shown}
+        shape="meter"
+        semantics={{ kind: 'meter', labelledBy: labelId, valueText: shown }}
       />
     </div>
   );
@@ -111,22 +136,15 @@ export function CellMeter({
   valueText,
   tone,
 }: Readonly<{ label: string; value: number; max: number; valueText: string; tone: MeterTone }>) {
-  const shown = Math.min(max, Math.max(0, value));
-  const percent = max > 0 ? (shown / max) * 100 : 100;
   return (
-    <div // NOSONAR
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
-      role="meter"
-      aria-label={label}
-      aria-valuemin={0}
-      aria-valuemax={max}
-      aria-valuenow={shown}
-      aria-valuetext={valueText}
-      data-meter-tone={tone}
-      className="bg-well rounded-mark block h-2 w-30 overflow-hidden"
-    >
-      <span className={cn(FILL_MOTION, METER_FILL[tone])} style={{ '--share': `${percent}%` }} />
-    </div>
+    <MeterTrack
+      value={value}
+      max={max}
+      fill={METER_FILL[tone]}
+      shape="cell"
+      semantics={{ kind: 'meter', label, valueText }}
+      toneName={tone}
+    />
   );
 }
 
@@ -155,10 +173,13 @@ export function MeterRow({
         value={value}
         max={max}
         fill={ROW_FILL[tone]}
-        label={label}
-        valueText={
-          percent === null ? availabilityLabel('not_measured') : formatPercent(percent / 100)
-        }
+        shape="meter"
+        semantics={{
+          kind: 'meter',
+          label,
+          valueText:
+            percent === null ? availabilityLabel('not_measured') : formatPercent(percent / 100),
+        }}
       />
       <span className="text-body text-ink text-right tabular-nums">{figure}</span>
     </div>

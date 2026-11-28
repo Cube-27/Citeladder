@@ -1,9 +1,9 @@
 import { useId, type ReactNode } from 'react';
 
 import { Absence } from '@/components/ui/absence';
+import { MeterTrack } from '@/components/ui/meter';
 import { StatusMark } from '@/components/ui/status-mark';
 import { scoreBand, type ScoreBand } from '@/lib/score-band';
-import { cn } from '@/lib/utils';
 
 const ARC_RADIUS = 76;
 const ARC_SWEEP_DEGREES = 220;
@@ -135,31 +135,27 @@ export function BarRows({ label, rows }: Readonly<{ label: string; rows: readonl
         >
           <span className="text-body text-ink min-w-0 text-pretty">{row.label}</span>
           <span className="text-body text-ink min-w-10 text-right tabular-nums">{row.figure}</span>
-          <span className="bg-well rounded-mark block h-2 overflow-hidden" aria-hidden>
-            {row.share === null ? null : (
-              <span
-                className={cn('block h-full w-(--share)', BAR_FILL[row.tone])}
-                style={{ '--share': `${Math.max(0, Math.min(1, row.share)) * 100}%` }}
-              />
-            )}
-          </span>
+          <MeterTrack
+            value={row.share}
+            max={1}
+            fill={BAR_FILL[row.tone]}
+            shape="bar"
+            semantics={{ kind: 'decorative' }}
+          />
         </li>
       ))}
     </ul>
   );
 }
 
-const percent = (share: number) => `${share * 100}%`;
-
 export function ScoreBar({ score }: Readonly<{ score: number | null }>) {
   return (
-    <span aria-hidden className="bg-well rounded-mark block h-2 min-w-24 overflow-hidden">
-      {score === null ? null : (
-        <span
-          className={cn('block h-full w-(--fill)', BAR_FILL[scoreTone(score)])}
-          style={{ '--fill': percent(Math.max(0, Math.min(100, score)) / 100) }}
-        />
-      )}
-    </span>
+    <MeterTrack
+      value={score}
+      max={100}
+      fill={score === null ? '' : BAR_FILL[scoreTone(score)]}
+      shape="score"
+      semantics={{ kind: 'decorative' }}
+    />
   );
 }
