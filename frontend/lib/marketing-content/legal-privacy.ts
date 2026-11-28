@@ -56,8 +56,9 @@ We share, transfer or disclose data received from Google APIs only with the reci
 - You, in the exports you request.
 - Authorities or advisers where the law requires it, and a successor in a merger, acquisition or sale of assets.
 
-## recipients | Recipients and external clients
-We disclose data as needed to infrastructure, AI, research, monitoring and support providers that help us run the Service; to our payment processor; and to connected platforms under your instructions.
+## recipients | Recipients of other data and external clients
+This section covers data other than Google user data. Google user data goes only to the recipients listed under Who receives Google user data, never to the other providers named here.
+We disclose other data as needed to infrastructure, AI, research, monitoring and support providers that help us run the Service; to our payment processor; and to connected platforms under your instructions.
 Workspace administrators and authorised members may access information according to their roles. If you authorise an API or MCP client, that client receives the data returned within its permissions and its provider may retain it independently. Once delivered, that data is handled under the client’s terms, not ours, and we are not responsible for it. Revoking access stops future requests.
 We may also disclose information to advisers or authorities where necessary and lawful.
 
