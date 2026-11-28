@@ -104,7 +104,7 @@ function EntityRow({ entity, mark }: Readonly<{ entity: PageEntity; mark: Mark }
             logoUrl={mark.logoUrl}
             websiteUrl={mark.websiteUrl}
           />
-          <span className="min-w-0 truncate">{entity.entity_name}</span>
+          <ClampText>{entity.entity_name}</ClampText>
         </Inline>
       </TableCell>
       <TableCell numeric>

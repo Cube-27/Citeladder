@@ -53,7 +53,7 @@ export function IssueRow({
   return (
     <TableRow onOpen={onOpen}>
       <TableCell>{renderName(title)}</TableCell>
-      <TableCell className="whitespace-nowrap">
+      <TableCell wrap="nowrap">
         <IssueSeverityMark issue={issue} />
       </TableCell>
       <TableCell numeric>{formatCount(issue.affected_url_count)}</TableCell>

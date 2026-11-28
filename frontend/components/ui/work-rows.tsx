@@ -73,7 +73,7 @@ export function WorkRow({
       className={cn(
         GRID,
         onPage && PAD,
-        'border-rule hover:overlay-hover relative min-h-10 not-first:border-t',
+        'border-rule hover:overlay-hover relative min-h-row not-first:border-t',
       )}
     >
       <td className="z-raised relative flex">{tick}</td>

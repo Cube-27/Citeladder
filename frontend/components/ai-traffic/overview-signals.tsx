@@ -26,6 +26,7 @@ import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { Section } from '@/components/ui/section';
 import { TableCell, TableRow } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
 
 type Overview = z.infer<typeof aiTrafficOverviewSchema>;
 type CrawlSummary = z.infer<typeof crawlSummarySchema>;
@@ -292,9 +293,9 @@ function CrawlProcessed({
   if (!available || !crawl.last_processed_at) return null;
   return (
     <PageTabEnd fallback={null}>
-      <span className="min-w-0 truncate">
+      <ClampText>
         Processed <DisplayTime value={crawl.last_processed_at} />
-      </span>
+      </ClampText>
     </PageTabEnd>
   );
 }

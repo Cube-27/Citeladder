@@ -304,7 +304,7 @@ function LinkTable({
             )}
           </TableCell>
           <TableCell numeric>{formatCount(row.anchor_count)}</TableCell>
-          <TableCell className="whitespace-nowrap">
+          <TableCell wrap="nowrap">
             {row.main_content ? 'Main content' : 'Navigation or footer'}
           </TableCell>
         </TableRow>

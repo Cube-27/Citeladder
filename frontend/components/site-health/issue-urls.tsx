@@ -109,7 +109,7 @@ export function IssueUrlTable({
               <UrlText url={row.display_url} origin={origin} />
             </PageLink>
           </TableCell>
-          <TableCell className="whitespace-nowrap">
+          <TableCell wrap="nowrap">
             <PageKindBadge pageKind={row.page_kind} />
           </TableCell>
           <TableCell>

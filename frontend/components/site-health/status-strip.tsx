@@ -21,6 +21,7 @@ import { Notice } from '@/components/ui/notice';
 import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { Text } from '@/components/ui/typography';
+import { ClampText } from '@/components/ui/clamp-text';
 
 export function StatusStrip({
   crawl,
@@ -136,7 +137,7 @@ function DashboardNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
     <PageTabEnd fallback={<ProgressRow crawl={crawl} narration={narration} counts={[]} />}>
       <Inline as="span">
         <CrawlStatusBadge crawl={crawl} />
-        <span className="min-w-0 truncate">{narration}</span>
+        <ClampText>{narration}</ClampText>
       </Inline>
     </PageTabEnd>
   );

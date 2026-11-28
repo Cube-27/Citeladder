@@ -97,7 +97,7 @@ function MemberRow({
           {member.is_self ? <YouTag /> : null}
         </Inline>
       </TableCell>
-      <TableCell className="whitespace-nowrap">
+      <TableCell wrap="nowrap">
         {inert || !isOneOf(ASSIGNABLE_WORKSPACE_ROLES, member.role) ? (
           <Tag>{roleLabel(member.role)}</Tag>
         ) : (

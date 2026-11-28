@@ -106,7 +106,7 @@ function SignalRow({
           secondaryTooltip={signalPage(signal)}
         />
       </TableCell>
-      <TableCell className="whitespace-nowrap">
+      <TableCell wrap="nowrap">
         <SignalChip signalType={signal.signal_type} />
       </TableCell>
       <TableCell numeric>

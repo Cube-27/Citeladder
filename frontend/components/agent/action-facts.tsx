@@ -13,6 +13,7 @@ import type { ActionDetail } from '@/lib/api/actions';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { UrlText } from '@/components/ui/table';
 import { formatDisplayDate } from '@/lib/format';
+import { ClampText } from '@/components/ui/clamp-text';
 
 function StatusValue({
   action,
@@ -51,7 +52,7 @@ export function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
           <UrlText url={action.target_url} />
         </span>
       ) : (
-        <span className="min-w-0 truncate">{source}</span>
+        <ClampText>{source}</ClampText>
       ),
   });
   if (!placement)

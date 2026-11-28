@@ -16,6 +16,7 @@ import { formatCount, formatDisplayTimestamp } from '@/lib/format';
 import { INTERNAL_LINK_STATES, pollInternalLinks } from '@/lib/site-health/status';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Button } from '@/components/ui/button';
+import { ClampText } from '@/components/ui/clamp-text';
 
 type Scope = Readonly<{ projectId: string; workspaceId: string }>;
 type LinkParam = 'analysis' | 'link' | 'links_q' | 'links_status';
@@ -150,9 +151,9 @@ function linksControls({
       ...savedAnalysisFilter(data.history, analysis.id, update, timeZone),
     ],
     status: (
-      <span className="truncate" title={analysisSummary(analysis)}>
+      <ClampText>
         {analysisSummary(analysis)} · <DisplayTime value={analysis.created_at} />
-      </span>
+      </ClampText>
     ),
   };
 }

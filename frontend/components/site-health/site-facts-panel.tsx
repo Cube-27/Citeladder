@@ -168,7 +168,7 @@ function CrawlerTable({
                   <TableCell>{bot.label}</TableCell>
                   <TableCell>{bot.operator}</TableCell>
                   <TableCell>{crawlerMatchedLabels[bot.matched]}</TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell wrap="nowrap">
                     <Tag>{crawlerRootAccessLabels[bot.root_access]}</Tag>
                   </TableCell>
                   <TableCell>

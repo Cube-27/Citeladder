@@ -268,7 +268,7 @@ function LinksTable({
             <PageCell page={link.target} />
           </TableCell>
           <TableCell>{link.anchor}</TableCell>
-          <TableCell className="whitespace-nowrap">
+          <TableCell wrap="nowrap">
             <LinkActionStatus status={link.action_status} />
           </TableCell>
           <TableCell>

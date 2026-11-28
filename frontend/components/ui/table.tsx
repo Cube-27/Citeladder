@@ -205,22 +205,25 @@ export const mutedWhenMissing = (value: number | null): TextTone | undefined =>
 
 export function TableCell({
   children,
-  className,
   numeric,
   desktopOnly,
   nested,
   tone,
   tight = false,
+  wrap,
+  alignTop = false,
   ground = 'table',
   ...props
 }: Readonly<
-  Omit<TdHTMLAttributes<HTMLTableCellElement>, 'children'> &
+  Omit<TdHTMLAttributes<HTMLTableCellElement>, 'children' | 'className'> &
     CellOptions & {
       children?: ReactNode | Absent;
       nested?: boolean | 2;
       tone?: TextTone;
       ground?: 'table' | 'well';
       tight?: boolean;
+      wrap?: 'nowrap' | 'normal';
+      alignTop?: boolean;
     }
 >) {
   return (
@@ -233,7 +236,9 @@ export function TableCell({
         nested === 2 && 'ps-[calc(var(--spacing-cell-x)_+_var(--spacing-indent-2))] cell-indent-2',
         tone && TEXT_TONE_CLASS[tone],
         tight && 'py-1',
-        className,
+        wrap === 'nowrap' && 'whitespace-nowrap',
+        wrap === 'normal' && 'whitespace-normal',
+        alignTop && 'align-top',
         ground === 'well' && 'bg-well table-ground-well',
       )}
     >

@@ -176,7 +176,7 @@ export function PendingInvitations({
                 }
               />
             </TableCell>
-            <TableCell className="whitespace-nowrap">
+            <TableCell wrap="nowrap">
               <Tag>{roleLabel(invitation.role)}</Tag>
             </TableCell>
             <TableActionsCell>

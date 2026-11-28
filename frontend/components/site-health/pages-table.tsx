@@ -134,12 +134,12 @@ export function PagesTable({
                 <LinkedFromLine page={page} />
               </Stack>
             </TableCell>
-            <TableCell className="whitespace-nowrap">
+            <TableCell wrap="nowrap">
               <StatusMark tone={pageStatusBadgeValue(page.analysis_status)}>
                 {statusLabel(page.analysis_status)}
               </StatusMark>
             </TableCell>
-            <TableCell className="whitespace-nowrap">
+            <TableCell wrap="nowrap">
               <PageKindBadge pageKind={page.page_kind} />
             </TableCell>
             <TableCell numeric tone={page.issue_count === 0 ? 'ink-2' : undefined}>

@@ -10,6 +10,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { TOPIC_LABELS, VERDICT_TONE } from '@/lib/visibility/accuracy';
 import { Text } from '@/components/ui/typography';
+import { ClampText } from '@/components/ui/clamp-text';
 
 export const CLAIM_COLUMNS = [
   { key: 'prompt', label: 'Prompt', kind: 'identity' },
@@ -36,18 +37,18 @@ export function ClaimRow({
   return (
     <TableRow>
       <TableCell>
-        <span className="block min-w-0 truncate" title={claim.prompt}>
+        <ClampText>
           <AnswerLink answer={claim} text="inherit">
             {claim.prompt}
           </AnswerLink>
-        </span>
+        </ClampText>
       </TableCell>
       <TableCell>
-        <span className="block min-w-0 truncate" title={claim.quote}>
+        <ClampText>
           <AnswerLink answer={claim} text="inherit" tone="muted">
             “{claim.quote}”
           </AnswerLink>
-        </span>
+        </ClampText>
       </TableCell>
       <TableCell>
         {facts ? (

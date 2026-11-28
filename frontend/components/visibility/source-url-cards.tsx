@@ -14,6 +14,7 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 import { count } from '@/lib/visibility/sources';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionBleed, TitledSection } from '@/components/ui/section';
+import { ClampText } from '@/components/ui/clamp-text';
 
 type UrlDetail = z.infer<typeof visibilitySourceUrlSchema>;
 
@@ -124,7 +125,7 @@ export function BrandsCard({
           {brands.map((brand) => (
             <Inline as="li" key={`${brand.kind}:${brand.name}`}>
               <BrandMark name={brand.name} logoUrl={brand.logo_url} websiteUrl={brand.website} />
-              <span className="min-w-0 flex-1 truncate">{brand.name}</span>
+              <ClampText box="fill">{brand.name}</ClampText>
               <StatusMark
                 variant="classification"
                 value={brand.kind === 'brand' ? 'owned' : 'competitor'}
