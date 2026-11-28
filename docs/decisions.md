@@ -343,10 +343,12 @@ how to add or change an entry.
 [Design](design.md) holds the values; these are the rules behind them.
 
 - **AR-1 Look:** HeroUI's tokens, surfaces and controls (light neutrals, dark per AR-33, shadows,
-  control sizes, focus), keeping CiteLadder's corner radii; Inter as the
-  sans face (2026-11-28, replacing Google Sans) and an inset content panel (2026-11-26). The HeroUI move changes
-  layout and styling only, never behaviour (2026-11-26). **AR-2 Text:** body
-  and labels 14px, captions 12px and the page header 48px (2026-11-22); the
+  control sizes, focus), keeping CiteLadder's corner radii, in the flat panel
+  look: Switzer as the sans face, the content column flush beside the sidebar,
+  cards drawn by a hairline with no shadow (2026-11-28, #1304, replacing Inter
+  and the inset panel). The HeroUI move changes layout and styling only, never
+  behaviour (2026-11-26). **AR-2 Text:** body
+  and labels 14px, captions 13px and the page header 56px (2026-11-28, #1304); the
   Agent chat's conversation is the one exception at 15px (2026-11-28); phone
   fields stay 14px, accepting the iOS focus zoom (2026-11-27).
 - **AR-3 Metrics** sit in one strip with hairline dividers, never cards, with no
@@ -375,7 +377,8 @@ how to add or change an entry.
   **AR-11** A PR that grows the line count needs a reason.
 - **AR-12** Sign-in and account pages keep the split screen with the showcase
   and an unboxed form; setup keeps its own layout. **AR-13** Focus is a subtle
-  accent edge and glow; a field an overlay focuses on opening shows the ring
+  accent edge and glow; text areas and the Agent composer use a 1px accent
+  edge and a faint glow, never the thick frame (2026-11-28, D13); a field an overlay focuses on opening shows the ring
   when a key opened the overlay and only the caret when a press did (owner,
   2026-11-27).
 - **AR-14 No helper text** under a heading or field unless it carries what the
@@ -439,7 +442,9 @@ how to add or change an entry.
 - **AR-30 Phone header** (2026-11-27, C18): below 900 the header shows the page
   title and the h1 stays for screen readers only.
 - **AR-31 Control height 32** (2026-11-27): every control is 32 high with 12
-  side padding; small 24, large 40; 44 on phones and coarse pointers stays.
+  side padding; small 28 (2026-11-28, #1304), large 40; 44 on phones and
+  coarse pointers stays. Button side padding follows the text, the same
+  everywhere (2026-11-28, B8).
 - **AR-32 One page spacing** (2026-11-27): page side padding, the gaps between
   sections and cards and the card inset are one 16 role on every page except
   the narrow ones.
@@ -447,6 +452,34 @@ how to add or change an entry.
   Claude Console's neutral grey (design.md "Tokens" holds the values); our
   orange, accent and status hues stay, and a reference grey that fails AA is
   lightened by the smallest step that passes. The website's dark is unchanged.
+- **AR-34 Cards and strips** (2026-11-28, D1, D2): a card with a head is a
+  tray and a headless card is plain; a strip follows the same rule, and no
+  title is invented to make one a tray. Run detail has no figure strip: one
+  line under the title holds the status pill, the requested, completed and
+  failed counts and the start time, plus the progress bar while running; no
+  market tag (D3).
+- **AR-35 One status look** (2026-11-28, D4): the tinted pill; `StateDot` and
+  any second tone vocabulary fold into it.
+- **AR-36 Remove and confirm** (2026-11-28, D5, D6): a row removes with a
+  trash icon, a row with three or more actions uses a "…" menu, a chip or
+  token uses ×, and a section-level act is a danger button; retiring a fact
+  keeps the archive icon. Every destructive confirm is `ConfirmDialog`
+  (warning icon, no close ×, solid red confirm naming the act, plain Cancel);
+  a plan downgrade is a normal dialog with one primary.
+- **AR-37 Save** stays in the card foot, sticky while the page scrolls; a card
+  whose only content is one text input (Agent instructions) draws it with no
+  padding around it (2026-11-28, D7 amending B6).
+- **AR-38 Tables** (2026-11-28): every paged table shows range, total, arrows
+  and Rows per page, the total omitted only where the API cannot count (D8);
+  every table and grid head is 13px at 500 in grey (D9); a table is as tall as
+  its rows, and fill space goes after a page's last card, never inside a table
+  card (B9).
+- **AR-39 Shared looks** (2026-11-28): dialog footers match drawers' (hairline
+  above, 12 by 24) (D10); Prompt builder and onboarding share one step mark,
+  done the primary tick and current the ink ring (D11); list rows are 44,
+  Actions tree, Site health issue and action URL rows included (D12); a count
+  is a muted number after the title, timestamps share one format and chart
+  date ticks read "Sep 5" (D14); the sidebar is 240 wide (D15).
 
 ## Audit remediation (owner 2026-11-12)
 
