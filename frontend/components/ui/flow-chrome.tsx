@@ -18,7 +18,10 @@ export function FlowBar({
 }>) {
   return (
     <header
-      className={cn('shrink-0', sticky && 'border-rule bg-ground z-raised sticky top-0 border-b')}
+      className={cn(
+        'shrink-0',
+        sticky ? 'border-rule bg-ground z-raised sticky top-0 border-b' : 'relative',
+      )}
     >
       <div className="min-h-masthead px-gutter grid-cols-lead-body-end grid items-center gap-4">
         <a
