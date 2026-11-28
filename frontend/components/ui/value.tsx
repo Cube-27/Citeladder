@@ -11,7 +11,7 @@ const SLOT: Record<ValueText, string> = {
   body: 'min-h-body-line',
 };
 
-export type ValueProps = Readonly<{
+type ValueProps = Readonly<{
   value: Formatted | null;
   absent?: DataAvailabilityState;
   absentLabel?: string;

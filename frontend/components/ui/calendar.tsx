@@ -40,12 +40,12 @@ function monthLabel(date: Date): string {
   return monthLabelFormat.format(date);
 }
 
-function addMonths(date: Date, delta: number): Date {
+function addMonths(date: Date, delta = 0): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + delta, 1, 12));
 }
 
 function monthGrid(month: Date): string[] {
-  const first = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), 1, 12));
+  const first = addMonths(month);
   const start = new Date(first);
   start.setUTCDate(first.getUTCDate() - weekdayIndex(first));
   const days: string[] = [];
@@ -73,10 +73,10 @@ export function Calendar({
 }>) {
   const selected = anchor(value);
   const [month, setMonth] = useState<Date>(() =>
-    addMonths(selected ?? anchor(max ?? '') ?? new Date(), 0),
+    addMonths(selected ?? anchor(max ?? '') ?? new Date()),
   );
   const days = monthGrid(month);
-  const monthIndex = month.getUTCMonth();
+  const monthKey = toIso(month).slice(0, 7);
 
   const weeks: string[][] = [];
   for (let index = 0; index < days.length; index += 7) {
@@ -124,9 +124,7 @@ export function Calendar({
           {weeks.map((week) => (
             <tr key={week[0]}>
               {week.map((iso) => {
-                const day = anchor(iso);
-                if (!day) return null;
-                const outside = day.getUTCMonth() !== monthIndex;
+                const outside = !iso.startsWith(monthKey);
                 const disabled =
                   (min !== undefined && iso < min) || (max !== undefined && iso > max);
                 const isSelected = iso === value;
@@ -144,7 +142,7 @@ export function Calendar({
                       selected={isSelected}
                       tone={outside && !isSelected ? 'ink-2' : undefined}
                     >
-                      {day.getUTCDate()}
+                      {Number(iso.slice(8))}
                     </Pressable>
                   </td>
                 );

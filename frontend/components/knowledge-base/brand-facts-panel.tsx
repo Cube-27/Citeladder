@@ -15,7 +15,7 @@ import { Inline } from '@/components/ui/layout';
 import { Notice } from '@/components/ui/notice';
 import { SettingsGroup } from '@/components/ui/setting-row';
 import { useToast } from '@/components/ui/toast';
-import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
@@ -188,11 +188,7 @@ function FactRow({ fact, actions }: Readonly<{ fact: BrandFact; actions: ReactNo
           <ClampText lines={2} box="shrink">
             {fact.statement}
           </ClampText>
-          {fact.status === 'draft' ? (
-            <StatusMark variant="status" value="warning">
-              Draft
-            </StatusMark>
-          ) : null}
+          {fact.status === 'draft' ? <Tag kind="draft">Draft</Tag> : null}
         </Inline>
       </TableCell>
       <TableCell>{TOPIC_LABELS[fact.topic]}</TableCell>

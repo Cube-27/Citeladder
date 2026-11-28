@@ -6,7 +6,7 @@ import type { TableToolbarProps } from '@/components/ui/filter-bar';
 import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { ClampText } from '@/components/ui/clamp-text';
-import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
+import { TableActionsCell, TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { SearchX, Trash2 } from '@/lib/icons';
 import {
   ASSIGNABLE_WORKSPACE_ROLES,
@@ -121,7 +121,7 @@ function MemberRow({
         <Inline>
           <Avatar name={member.email} />
           <ClampText lines={1}>{member.email}</ClampText>
-          {member.is_self ? <Tag>You</Tag> : null}
+          {member.is_self ? <YouTag /> : null}
         </Inline>
       </TableCell>
       <TableCell className="whitespace-nowrap">

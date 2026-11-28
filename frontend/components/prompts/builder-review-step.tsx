@@ -21,11 +21,11 @@ import { Text } from '@/components/ui/typography';
 
 const STATE: Record<
   PlannedCoverage,
-  { label: string; badge: 'success' | 'warning' | 'danger' | 'info' }
+  { label: string; badge: 'positive' | 'warning' | 'negative' | 'info' }
 > = {
-  on_target: { label: 'On target', badge: 'success' },
+  on_target: { label: 'On target', badge: 'positive' },
   short: { label: 'Short', badge: 'warning' },
-  empty: { label: 'Empty', badge: 'danger' },
+  empty: { label: 'Empty', badge: 'negative' },
   not_planned: { label: 'Not planned', badge: 'info' },
 };
 
@@ -40,9 +40,7 @@ function CoverageValue({
       <Text variant="body" numeric>
         {row.actual} of {row.target}
       </Text>
-      <StatusMark variant="status" value={STATE[row.state].badge}>
-        {STATE[row.state].label}
-      </StatusMark>
+      <StatusMark tone={STATE[row.state].badge}>{STATE[row.state].label}</StatusMark>
       <Button
         variant="quiet"
         onClick={onMore}

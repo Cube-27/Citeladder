@@ -20,7 +20,7 @@ import { Select } from '@/components/ui/select';
 import { SectionBleed } from '@/components/ui/section';
 import { SettingsGroup } from '@/components/ui/setting-row';
 import type { BusinessMap } from '@citeladder/contracts';
-import { Check, X } from '@/lib/icons';
+import { Check, Trash2 } from '@/lib/icons';
 import { formatCount, pluralCount } from '@/lib/format';
 import {
   acceptAll,
@@ -95,7 +95,7 @@ function OfferingRow({
     <MapGridRow aria-label={map.offering}>
       <MapGridLead label={map.offering}>
         <IconButton
-          icon={X}
+          icon={Trash2}
           label={`Remove ${map.offering}`}
           disabled={disabled}
           onClick={onRemove}
@@ -118,7 +118,7 @@ function OfferingRow({
       ))}
       <MapGridEnd>
         <IconButton
-          icon={X}
+          icon={Trash2}
           label={`Remove ${map.offering}`}
           disabled={disabled}
           onClick={onRemove}

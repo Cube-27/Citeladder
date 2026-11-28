@@ -24,16 +24,14 @@ const composerClasses =
 const sizesItself = () => globalThis.CSS?.supports('field-sizing', 'content') ?? false;
 
 export function Textarea({
-  className,
   placement = 'field',
   rows: rowsProp,
   maxRows = 8,
   numeric = false,
-  style,
   ref,
   ...props
 }: Readonly<
-  ComponentPropsWithoutRef<'textarea'> & {
+  Omit<ComponentPropsWithoutRef<'textarea'>, 'className' | 'style'> & {
     placement?: 'field' | 'composer';
     maxRows?: number;
     numeric?: boolean;
@@ -52,7 +50,6 @@ export function Textarea({
     [ref],
   );
   const growStyle: CSSProperties & Record<'--field-max-rows' | '--field-min-rows', number> = {
-    ...style,
     '--field-max-rows': maxRows,
     '--field-min-rows': grows && rowsProp === undefined ? 1 : rows,
   };
@@ -72,7 +69,6 @@ export function Textarea({
         textareaClasses,
         grows ? composerClasses : fieldClasses,
         numeric && 'tabular-nums',
-        className,
       )}
       {...props}
     />

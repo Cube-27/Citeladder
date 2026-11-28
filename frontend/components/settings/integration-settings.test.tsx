@@ -336,16 +336,16 @@ describe('IntegrationSettings — disconnect and remove', () => {
 
     const card = await screen.findByTestId('grant-card-google');
     await ue.click(within(card).getByRole('button', { name: 'Disconnect Google' }));
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await screen.findByRole('alertdialog', { name: 'Disconnect Google?' });
     await ue.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     expect(deleted).toBe('');
 
     await ue.click(within(card).getByRole('button', { name: 'Disconnect Google' }));
     await ue.click(
-      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Disconnect' }),
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Disconnect' }),
     );
     await waitFor(() => expect(deleted).toBe(CONN_GSC));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
   });
 
   it("folds Change, Test and Remove into the row's More menu, Remove removing only this project's property", async () => {

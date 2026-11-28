@@ -114,11 +114,7 @@ function FeatureFlags({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
 
 function StatusChip({ status, engine }: Readonly<{ status: ExecutionStatus; engine: string }>) {
   const label = executionStatusLabel(status, useEngineCatalog().label(engine));
-  return (
-    <StatusMark variant="status" value={EXECUTION_STATES[status].badge}>
-      {label}
-    </StatusMark>
-  );
+  return <StatusMark tone={EXECUTION_STATES[status].badge}>{label}</StatusMark>;
 }
 
 function AnswerBody({

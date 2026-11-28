@@ -49,9 +49,7 @@ export function CompetitorSources({ focus }: Readonly<{ focus: CompetitorFocus }
             {source.answers_naming_you > 0 ? (
               <Tag>You’re cited too</Tag>
             ) : (
-              <StatusMark variant="status" value="warning">
-                Not citing you
-              </StatusMark>
+              <StatusMark tone="warning">Not citing you</StatusMark>
             )}
           </TableCell>
         </TableRow>

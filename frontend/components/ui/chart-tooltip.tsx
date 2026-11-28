@@ -106,7 +106,7 @@ export function ShapeMark({
   }
 }
 
-export type TooltipRow = Readonly<{
+type TooltipRow = Readonly<{
   name: string;
   color: string;
   value: Formatted;
@@ -135,7 +135,7 @@ export function ChartTooltipCard({
   );
 }
 
-export type LineTooltipRow = Readonly<{
+type LineTooltipRow = Readonly<{
   key: string;
   name: string;
   color: string;

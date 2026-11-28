@@ -249,6 +249,11 @@ a.focus-ring:active .text-caption.text-ink-2 {
   border-color: var(--field-focus-edge, var(--color-focus));
   box-shadow: 0 0 0 var(--focus-width) var(--field-focus-edge, var(--color-focus));
 }
+:root:not([data-public-surface])
+  :is(textarea.focus-input:focus-visible, .focus-frame:has(textarea:focus-visible)) {
+  box-shadow: 0 0 0 3px
+    color-mix(in oklch, var(--field-focus-edge, var(--color-focus)) 16%, transparent);
+}
 
 :root:not([data-public-surface])
   :is([data-quiet-focus]:focus-visible, .focus-frame:has([data-quiet-focus]:focus-visible)) {

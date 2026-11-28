@@ -33,17 +33,9 @@ const API_BASE_URL = `${API_HOST_ORIGIN}/v1`;
 function KeyStateMark({ state }: Readonly<{ state: ApiKey['state'] }>) {
   switch (state) {
     case 'active':
-      return (
-        <StatusMark variant="status" value="success">
-          Active
-        </StatusMark>
-      );
+      return <StatusMark tone="positive">Active</StatusMark>;
     case 'expired':
-      return (
-        <StatusMark variant="status" value="warning">
-          Expired
-        </StatusMark>
-      );
+      return <StatusMark tone="warning">Expired</StatusMark>;
     case 'revoked':
       return <StatusMark>Revoked</StatusMark>;
     default: {

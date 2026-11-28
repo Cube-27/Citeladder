@@ -172,7 +172,7 @@ function CompetitorRows({
             .filter(Boolean)
             .join(' · ')}
           meta={
-            <StatusMark variant="status" value={competitorState(row.state).tone}>
+            <StatusMark tone={competitorState(row.state).tone}>
               {competitorState(row.state).label}
             </StatusMark>
           }

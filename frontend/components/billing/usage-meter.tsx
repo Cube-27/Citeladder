@@ -150,7 +150,7 @@ function UsageBar({
     <CellMeter
       label={label}
       value={consumed}
-      max={allowance}
+      max={allowance > 0 ? allowance : consumed}
       valueText={`${formatCount(consumed)} of ${formatCount(allowance)} ${unit}`}
       tone={toneOf(consumed, allowance)}
     />

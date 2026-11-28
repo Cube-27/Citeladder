@@ -3,8 +3,7 @@ import { useState } from 'react';
 import { PlanCard } from '@/components/billing/plan-row';
 import { CardGroup, CardRow } from '@/components/ui/section';
 import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import { Dialog } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Text } from '@/components/ui/typography';
 import type {
@@ -13,7 +12,6 @@ import type {
   CatalogPlan,
   SelfServePlanKey,
 } from '@/lib/api/billing';
-import { X } from '@/lib/icons';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   formatMoney,
@@ -111,40 +109,32 @@ export function PlanChanges({
           Upgrades unavailable: checkout is closed.
         </Text>
       ) : null}
-      <Dialog
-        open={downgradeTo !== null}
-        onOpenChange={(open) => {
-          if (!open) setDowngradeTo(null);
-        }}
-        title={downgradeTo ? `Downgrade to ${downgradeTo.plan.name}?` : 'Downgrade?'}
-        footer={
-          <>
-            <Button variant="quiet" onClick={() => setDowngradeTo(null)}>
-              <Icon icon={X} />
-              Keep {currentPlan.name}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                if (downgradeTo) controls.downgrade(downgradeTo.key);
-                setDowngradeTo(null);
-              }}
-            >
-              Schedule downgrade
-            </Button>
-          </>
+      <ConfirmDialog
+        request={
+          downgradeTo
+            ? {
+                question: `Downgrade to ${downgradeTo.plan.name}`,
+                body: (
+                  <>
+                    {currentPlan.name} continues until{' '}
+                    <DisplayTime
+                      value={subscription.current_period_end}
+                      dateOnly
+                      fallback="the end of this period"
+                    />
+                    . No refund.
+                  </>
+                ),
+                confirmLabel: 'Schedule downgrade',
+                onConfirm: () => {
+                  controls.downgrade(downgradeTo.key);
+                  setDowngradeTo(null);
+                },
+              }
+            : null
         }
-      >
-        <Text as="p" variant="body" tone="ink-2">
-          {currentPlan.name} continues until{' '}
-          <DisplayTime
-            value={subscription.current_period_end}
-            dateOnly
-            fallback="the end of this period"
-          />
-          . No refund.
-        </Text>
-      </Dialog>
+        onCancel={() => setDowngradeTo(null)}
+      />
     </CardGroup>
   );
 }

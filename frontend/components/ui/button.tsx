@@ -20,7 +20,7 @@ import './button.css';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'danger-confirm';
 
-export type ButtonSize = 'sm' | 'md' | 'lg';
+type ButtonSize = 'sm' | 'md';
 
 const HOVER_OVERLAY =
   'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed not-disabled:active:overlay-pressed';
@@ -34,7 +34,6 @@ const BUTTON_BASE =
 const BUTTON_SIZE: Record<ButtonSize, string> = {
   sm: 'min-h-control-sm px-control-x',
   md: 'min-h-control-md px-control-x',
-  lg: 'min-h-control-lg px-4',
 };
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {

@@ -95,9 +95,7 @@ export function CsvImportPreview({
             </span>
             {counts.skipped > 0 ? ' ' : null}
             {counts.skipped > 0 ? (
-              <StatusMark variant="status" value="danger">
-                {counts.skipped} skipped
-              </StatusMark>
+              <StatusMark tone="negative">{counts.skipped} skipped</StatusMark>
             ) : null}
           </>
         ) : null}

@@ -10,8 +10,8 @@ const LABEL_SIZE = 8;
 const LABEL_BASELINE = 2.5;
 const RINGS = [25, 50, 75, 100];
 
-export type RadarAxis = Readonly<{ key: string; label: string }>;
-export type RadarShape = Readonly<{
+type RadarAxis = Readonly<{ key: string; label: string }>;
+type RadarShape = Readonly<{
   key: string;
   values: readonly number[];
   tone: ChartTone;

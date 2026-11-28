@@ -4,7 +4,7 @@ export type ChartRow =
   | Readonly<{ x: number; index: number; break: false } & Record<`l${number}`, number | null>>
   | Readonly<{ x: number; index: -1; break: true }>;
 
-export type GapRange = Readonly<{ from: number; to: number }>;
+type GapRange = Readonly<{ from: number; to: number }>;
 
 export function pointXs(data: readonly TrendPoint[]): number[] {
   const timed = data.length > 0 && data.every((point) => point.timestamp !== undefined);

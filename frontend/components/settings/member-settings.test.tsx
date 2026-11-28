@@ -104,7 +104,9 @@ describe('Workspace panel', () => {
     );
     expect(remove).not.toHaveBeenCalled();
 
-    await user.click(await screen.findByRole('button', { name: 'Revoke' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'Revoke invitation for sam@example.test' }),
+    );
     await user.click(
       within(await screen.findByRole('alertdialog', { name: 'Revoke invitation?' })).getByRole(
         'button',

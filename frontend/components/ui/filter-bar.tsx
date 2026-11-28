@@ -368,7 +368,7 @@ function DrillInFilters({ filters }: Readonly<{ filters: readonly FilterDefiniti
   );
 }
 
-export type FilterFit = Readonly<{
+type FilterFit = Readonly<{
   widths: readonly number[];
   values: readonly number[];
   available: number;

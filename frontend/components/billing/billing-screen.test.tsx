@@ -468,7 +468,7 @@ describe('BillingScreen', () => {
     );
     expect(deleted).toBe(0);
 
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await screen.findByRole('alertdialog', { name: 'Cancel subscription?' });
     await userEvent.click(within(dialog).getByRole('button', { name: /^Cancel on/ }));
     await waitFor(() => expect(deleted).toBe(1));
   });
@@ -531,15 +531,15 @@ describe('BillingScreen', () => {
     await userEvent.click(
       (await screen.findAllByRole('button', { name: 'Cancel subscription' }))[0]!,
     );
-    const dialog = await screen.findByRole('dialog');
+    const dialog = await screen.findByRole('alertdialog');
     await userEvent.click(within(dialog).getByRole('button', { name: /^Cancel on/ }));
     expect(await within(dialog).findByText('Cancellation is unavailable right now')).toBeVisible();
     expect(screen.getAllByText('Cancellation is unavailable right now')).toHaveLength(1);
 
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Keep plan' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await userEvent.click(screen.getByRole('button', { name: 'Cancel subscription' }));
     expect(
-      within(await screen.findByRole('dialog')).queryByText(
+      within(await screen.findByRole('alertdialog')).queryByText(
         'Cancellation is unavailable right now',
       ),
     ).toBeNull();

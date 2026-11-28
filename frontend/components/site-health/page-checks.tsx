@@ -83,17 +83,9 @@ function checkGroups(evaluations: readonly Evaluation[]) {
 function ResultMark({ result }: Readonly<{ result: CheckResult }>) {
   switch (result) {
     case 'passed':
-      return (
-        <StatusMark variant="status" value="success">
-          Passed
-        </StatusMark>
-      );
+      return <StatusMark tone="positive">Passed</StatusMark>;
     case 'failed':
-      return (
-        <StatusMark variant="status" value="danger">
-          Failed
-        </StatusMark>
-      );
+      return <StatusMark tone="negative">Failed</StatusMark>;
     case 'not_checked':
       return <StatusMark tone="neutral">Not checked</StatusMark>;
     case 'not_applicable':

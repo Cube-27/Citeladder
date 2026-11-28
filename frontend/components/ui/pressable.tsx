@@ -6,7 +6,6 @@ import {
   type TextRole,
   type TextTone,
 } from '@/components/ui/text-role';
-import { pressableRowClasses } from '@/components/ui/open-row-skeleton';
 import { cn } from '@/lib/utils';
 
 export type PressableProps = Omit<
@@ -37,6 +36,12 @@ const BOX = {
   'target-square': 'min-h-target w-auto min-w-target text-center',
 } as const;
 
+const pressableRowClasses =
+  'focus-ring -mx-3 flex min-h-control-md w-[calc(100%_+_24px)] min-w-0 items-center gap-3 px-3 py-2 text-start';
+
+const SQUARE = 'inline-flex size-control-md items-center justify-center';
+const SQUARE_FILL = 'enabled:hover:bg-state-fill enabled:active:bg-state-fill-hover';
+
 export const ROW_FACE = {
   base: 'relative rounded-control transition-tint duration-fast ease-standard',
   rest: 'text-ink-2 hover:overlay-hover hover:text-ink active:overlay-pressed',
@@ -45,20 +50,20 @@ export const ROW_FACE = {
 
 const LOOK = {
   plain: undefined,
+  inline: 'rounded-mark w-auto',
   jump: 'underline decoration-1 underline-offset-3 decoration-control-line hover:decoration-current',
-  square:
-    'enabled:hover:bg-state-fill enabled:active:bg-state-fill-hover size-control-md inline-flex items-center justify-center',
+  square: cn(SQUARE, SQUARE_FILL),
   chip: 'hover:text-ink rounded-mark inline-flex w-auto min-w-0 items-center gap-1',
   more: 'border-rule hover:overlay-hover hover:text-ink flex h-10 items-center justify-center border-t',
   'tree-row': 'hover:overlay-hover flex h-10 items-center gap-2 px-2',
   disclosure: cn(ROW_FACE.base, ROW_FACE.rest, pressableRowClasses, 'min-h-10'),
 } as const;
 
-const DAY = 'inline-flex size-control-md items-center justify-center transition-colors';
+const DAY = cn(SQUARE, 'transition-colors');
 
 const SELECTABLE_LOOK = {
   day: {
-    rest: cn(DAY, 'enabled:hover:bg-state-fill enabled:active:bg-state-fill-hover'),
+    rest: cn(DAY, SQUARE_FILL),
     selected: cn(
       DAY,
       'bg-primary text-on-primary enabled:hover:bg-primary-hover enabled:active:bg-primary-hover',

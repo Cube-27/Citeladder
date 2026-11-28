@@ -153,7 +153,7 @@ function AcceptAll({
       },
     );
   return (
-    <Button variant="primary" onClick={run} pending={accept.isPending} disabled={!newCount}>
+    <Button variant="secondary" onClick={run} pending={accept.isPending} disabled={!newCount}>
       <Icon icon={Check} />
       {newCount ? `Accept ${pluralCount(newCount, 'action')}` : 'Accept actions'}
     </Button>

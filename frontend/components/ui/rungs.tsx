@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-export type RungLevel = 0 | 1 | 2 | 3;
+type RungLevel = 0 | 1 | 2 | 3;
 
 const RUNG_LABELS = ['Not cited', 'Mentioned', 'Cited', 'Top source'] as const;
 const RUNG_HEIGHTS = ['h-1.5', 'h-2.5', 'h-3.5'] as const;

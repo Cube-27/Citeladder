@@ -143,9 +143,7 @@ function ImportResults({
                 Row {row.row_number}
               </Text>
               {row.status === 'rejected' ? (
-                <StatusMark variant="status" value="danger">
-                  {STATUS_LABEL[row.status]}
-                </StatusMark>
+                <StatusMark tone="negative">{STATUS_LABEL[row.status]}</StatusMark>
               ) : (
                 <Tag>{STATUS_LABEL[row.status]}</Tag>
               )}

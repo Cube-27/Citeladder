@@ -1,4 +1,4 @@
-import { ACTION_STATUS_TONE, GroupingRows } from '@/components/agent/actions-rows';
+import { ACTION_PROGRESS, GroupingRows } from '@/components/agent/actions-rows';
 import { useStatusTree } from '@/components/agent/use-actions-page';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -48,7 +48,7 @@ export function StatusSection({
     <section aria-label={ACTION_STATUS_LABEL[status]}>
       <TreeStatusRow
         open={open}
-        tone={ACTION_STATUS_TONE[status]}
+        progress={ACTION_PROGRESS[status]}
         name={ACTION_STATUS_LABEL[status]}
         count={shown}
         aria-label={[ACTION_STATUS_LABEL[status], shown].filter(Boolean).join(', ')}

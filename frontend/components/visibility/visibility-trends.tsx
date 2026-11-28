@@ -277,10 +277,10 @@ export function TrendSection({ query, keyed, ...chart }: TrendSectionProps) {
     );
   if (!query.data.length)
     return <StateBlock kind="empty" inline message="No runs in this period." />;
-  return <TrendChart points={query.data} busy={query.isFetching} {...chart} />;
+  return <VisibilityTrendChart points={query.data} busy={query.isFetching} {...chart} />;
 }
 
-function TrendChart({
+function VisibilityTrendChart({
   points,
   metric,
   lines,

@@ -50,7 +50,7 @@ type ReadFailure = Readonly<{
   className?: string;
 }>;
 
-export type NoticeProps = MessageNotice | MutationFailure | ReadFailure;
+type NoticeProps = MessageNotice | MutationFailure | ReadFailure;
 
 export type RetryableRead = Readonly<{
   error: unknown;

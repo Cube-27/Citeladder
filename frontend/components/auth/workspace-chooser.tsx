@@ -90,28 +90,16 @@ function AccessBadge({ workspaceId }: Readonly<{ workspaceId: string }>) {
       return null;
     case 'trial_active':
       return (
-        <StatusMark variant="status" value="info">
+        <StatusMark tone="info">
           Trial until <DisplayTime value={data.expires_at} dateOnly />
         </StatusMark>
       );
     case 'trial_expired':
-      return (
-        <StatusMark variant="status" value="warning">
-          Trial ended
-        </StatusMark>
-      );
+      return <StatusMark tone="warning">Trial ended</StatusMark>;
     case 'subscription_lapsed':
-      return (
-        <StatusMark variant="status" value="warning">
-          Plan ended
-        </StatusMark>
-      );
+      return <StatusMark tone="warning">Plan ended</StatusMark>;
     case 'access_unresolved':
-      return (
-        <StatusMark variant="status" value="danger">
-          Access unavailable
-        </StatusMark>
-      );
+      return <StatusMark tone="negative">Access unavailable</StatusMark>;
     default: {
       const _exhaustive: never = data.status;
       return _exhaustive;

@@ -148,7 +148,7 @@ type TabStripProps<T extends string> = {
   onIntent?: (value: T) => void;
 };
 
-export type TabsProps<T extends string> = TabStripProps<T> & {
+type TabsProps<T extends string> = TabStripProps<T> & {
   value: T;
   onValueChange: (value: T) => void;
   children?: ReactNode;
@@ -431,7 +431,6 @@ export function SegmentedControl<T extends string>({
   ariaLabel,
   id,
   'aria-describedby': describedBy,
-  className,
   disabled = false,
   trailing,
 }: Readonly<{
@@ -441,7 +440,6 @@ export function SegmentedControl<T extends string>({
   ariaLabel?: string;
   id?: string;
   'aria-describedby'?: string;
-  className?: string;
   disabled?: boolean;
   trailing?: ReactNode;
 }>) {
@@ -469,7 +467,7 @@ export function SegmentedControl<T extends string>({
             strip.current = node;
           }}
           data-segmented-track=""
-          className={cn(TAB_STRIP, PILL_TRACK, className)}
+          className={cn(TAB_STRIP, PILL_TRACK)}
         >
           <div
             id={id}

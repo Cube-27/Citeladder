@@ -148,6 +148,7 @@
   --z-index-sticky: 20;
   --z-index-overlay: 40;
   --z-index-modal: 50;
+  --z-index-toast: 60;
 
   --spacing-control-sm: 28px;
   --spacing-control-md: 32px;

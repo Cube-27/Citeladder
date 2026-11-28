@@ -235,7 +235,7 @@ describe('SettingsScreen', () => {
     renderScreen({ entitlement: { grants: ['project_deletion'] } });
 
     await ue.click(screen.getByRole('button', { name: /delete project/i }));
-    const dialog = screen.getByRole('dialog', { name: 'Delete project' });
+    const dialog = screen.getByRole('alertdialog', { name: `Delete ${activeProject.name}?` });
     await ue.click(within(dialog).getByRole('button', { name: 'Delete project' }));
 
     expect(deleteProject).toHaveBeenCalledWith(activeProject.id);
@@ -248,7 +248,7 @@ describe('SettingsScreen', () => {
     renderScreen({ entitlement: { grants: ['project_deletion'] } });
 
     await ue.click(screen.getByRole('button', { name: /delete project/i }));
-    const dialog = screen.getByRole('dialog', { name: 'Delete project' });
+    const dialog = screen.getByRole('alertdialog', { name: `Delete ${activeProject.name}?` });
     await ue.click(within(dialog).getByRole('button', { name: 'Delete project' }));
 
     await waitFor(() => expect(setActiveProjectId).toHaveBeenCalledWith(nextProject.id));

@@ -186,7 +186,7 @@ function urlFacts(detail: PageDetail, timeZone: string): FactRow[] {
           {
             label: 'Status',
             value: (
-              <StatusMark variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>
+              <StatusMark tone={pageStatusBadgeValue(detail.analysis_status)}>
                 {statusLabel(detail.analysis_status)}
               </StatusMark>
             ),

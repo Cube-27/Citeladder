@@ -2,15 +2,14 @@ import { useEffect, useRef, type InputHTMLAttributes, type ReactNode } from 'rea
 import { Search, X } from '@/lib/icons';
 
 import { Icon } from './icon';
-import { FieldEndButton, Input, type InputFrame } from './input';
+import { FieldEndButton, Input } from './input';
 import { Kbd } from './kbd';
 import { Spinner } from './spinner';
 
-export type SearchFieldProps = Omit<
+type SearchFieldProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
   'type' | 'value' | 'onChange' | 'size' | 'width' | 'className' | 'style'
 > & {
-  frame?: InputFrame;
   value: string;
   onValueChange: (value: string) => void;
   pending?: boolean;
@@ -24,7 +23,6 @@ export function SearchField({
   pending = false,
   onClear,
   shortcut,
-  frame,
   onKeyDown,
   'aria-label': ariaLabel = 'Search',
   ...props
@@ -76,7 +74,6 @@ export function SearchField({
       }}
       aria-label={ariaLabel}
       aria-busy={pending || undefined}
-      frame={frame}
       search
       startContent={pending ? <Spinner /> : <Icon icon={Search} tone="placeholder" />}
       endContent={

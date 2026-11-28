@@ -1,7 +1,7 @@
 import { useId, type ComponentProps, type HTMLAttributes, type ReactNode } from 'react';
 
 import { IconButton } from '@/components/ui/button';
-import { FieldFoot, type ControlProps } from '@/components/ui/field';
+import { FieldFoot, FieldName, type ControlProps } from '@/components/ui/field';
 import {
   Section,
   SectionBleed,
@@ -182,12 +182,7 @@ export function SettingField({
     <div data-setting-row="" className={layout.row}>
       <div className={cn('grid min-w-0 basis-60 content-start gap-0.5', layout.label)}>
         <label htmlFor={id} className="text-label text-ink">
-          {label}
-          {required ? (
-            <span aria-hidden="true" className="text-ink-2 ms-0.5">
-              *
-            </span>
-          ) : null}
+          <FieldName label={label} required={required} />
         </label>
         {hint ? (
           <p id={hintId} className="text-caption text-ink-2">

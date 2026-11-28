@@ -1,5 +1,6 @@
 import { useId } from 'react';
 
+import { MeterTrack } from '@/components/ui/meter';
 import { formatPercent } from '@/lib/format';
 
 const MAX = 100;
@@ -20,12 +21,13 @@ export function ProgressMeter({ label, value }: Readonly<{ label: string; value:
         value={clamped}
         aria-valuetext={shown}
       />
-      <span aria-hidden className="bg-well block h-1 overflow-hidden rounded-full">
-        <span
-          className="bg-data-you fill-share transition-meter block h-full"
-          style={{ '--share': `${clamped}%` }}
-        />
-      </span>
+      <MeterTrack
+        value={clamped}
+        max={MAX}
+        fill="bg-data-you"
+        shape="progress"
+        semantics={{ kind: 'decorative' }}
+      />
       <span className="text-caption text-ink whitespace-nowrap tabular-nums">{shown}</span>
     </div>
   );

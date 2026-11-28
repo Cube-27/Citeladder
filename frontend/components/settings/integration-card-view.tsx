@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { ConnectionRow } from '@/components/settings/integration-connection-row';
-import { Dialog } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/dialog';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   FAMILY_META,
@@ -11,7 +11,7 @@ import {
   type GrantFamily,
   type GrantModel,
 } from '@/components/settings/grant-model';
-import { StatusMark } from '@/components/ui/status-mark';
+import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { GlyphMark } from '@/components/ui/engine-mark';
@@ -27,16 +27,12 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice } from '@/components/ui/notice';
 
 type GrantStatus = IntegrationConnection['grant_status'];
-type GrantBadge =
-  | { variant: 'status'; value: 'success' | 'warning' | 'danger' }
-  | { variant: 'neutral' };
-
-const GRANT_STATUS_BADGE: Record<GrantStatus, GrantBadge> = {
-  connected: { variant: 'status', value: 'success' },
-  needs_reauth: { variant: 'status', value: 'warning' },
-  pending_revocation: { variant: 'status', value: 'warning' },
-  error: { variant: 'status', value: 'danger' },
-  revoked: { variant: 'neutral' },
+const GRANT_STATUS_TONE: Record<GrantStatus, StatusTone> = {
+  connected: 'positive',
+  needs_reauth: 'warning',
+  pending_revocation: 'warning',
+  error: 'negative',
+  revoked: 'neutral',
 };
 
 const GRANT_STATUS_LABEL: Record<GrantStatus, string> = {
@@ -63,14 +59,13 @@ function GrantStatus({
   family,
   grant,
 }: Readonly<{ family: GrantFamily; grant: GrantModel | null }>) {
-  const badge = grant ? GRANT_STATUS_BADGE[grant.status] : { variant: 'neutral' as const };
-  const label = grant ? GRANT_STATUS_LABEL[grant.status] : 'Not connected';
-  return badge.variant === 'status' ? (
-    <StatusMark variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
-      {label}
+  return (
+    <StatusMark
+      tone={grant ? GRANT_STATUS_TONE[grant.status] : 'neutral'}
+      data-testid={`grant-status-${family}`}
+    >
+      {grant ? GRANT_STATUS_LABEL[grant.status] : 'Not connected'}
     </StatusMark>
-  ) : (
-    <StatusMark data-testid={`grant-status-${family}`}>{label}</StatusMark>
   );
 }
 
@@ -146,32 +141,21 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
       <Button variant="danger" onClick={() => setOpen(true)}>
         Disconnect {title}
       </Button>
-      <Dialog
-        open={open}
-        onOpenChange={(next) => {
-          if (!disconnect.isPending) setOpen(next);
-        }}
-        title={`Disconnect ${title}`}
-        description={`CiteLadder's access to ${sources} is revoked and their properties stop importing.`}
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => setOpen(false)}
-              disabled={disconnect.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => disconnect.mutate(connection.id, { onSuccess: () => setOpen(false) })}
-              pending={disconnect.isPending}
-              pendingLabel="Disconnecting…"
-            >
-              Disconnect
-            </Button>
-          </>
+      <ConfirmDialog
+        request={
+          open
+            ? {
+                question: `Disconnect ${title}`,
+                body: `CiteLadder's access to ${sources} is revoked and their properties stop importing.`,
+                confirmLabel: 'Disconnect',
+                destructive: true,
+                onConfirm: () =>
+                  disconnect.mutate(connection.id, { onSuccess: () => setOpen(false) }),
+              }
+            : null
         }
+        pending={disconnect.isPending}
+        onCancel={() => setOpen(false)}
       >
         {disconnect.isError ? (
           <Notice
@@ -181,7 +165,7 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
             })}
           />
         ) : null}
-      </Dialog>
+      </ConfirmDialog>
     </>
   );
 }

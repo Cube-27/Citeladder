@@ -80,7 +80,7 @@ function SeriesSwatch({ tone, shape }: Readonly<{ tone: SeriesTone; shape?: Mark
   );
 }
 
-export type KeyEntry = Readonly<{
+type KeyEntry = Readonly<{
   name: string;
   mark?: ReactNode;
   tone: SeriesTone;
@@ -171,7 +171,7 @@ export function ChartTipSheet({
       aria-hidden
       className={cn(
         SHEET_FACE,
-        'rounded-card pointer-events-none absolute left-(--tip-x) top-(--tip-y) z-[20] flex w-54 flex-col gap-1 p-3',
+        'rounded-card pointer-events-none absolute left-(--tip-x) top-(--tip-y) z-sticky flex w-54 flex-col gap-1 p-3',
       )}
       style={{ '--tip-x': `${chartTipLeft(x, frameWidth)}px`, '--tip-y': `${Math.round(top)}px` }}
     >

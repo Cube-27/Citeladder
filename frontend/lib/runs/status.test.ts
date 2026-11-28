@@ -25,8 +25,8 @@ describe('badge folding', () => {
     expect(AUDIT_STATES.partially_completed.badge).toBe('partial');
   });
 
-  it('shows a failed execution as a danger and a waiting one as a warning', () => {
-    expect(EXECUTION_STATES.failed.badge).toBe('danger');
+  it('shows a failed execution as negative and a waiting one as a warning', () => {
+    expect(EXECUTION_STATES.failed.badge).toBe('negative');
     expect(EXECUTION_STATES.retry_wait.badge).toBe('warning');
   });
 

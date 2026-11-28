@@ -125,7 +125,12 @@ function DashboardNotice({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   const timeZone = useDisplayTimeZone();
   const notice = dashboardRunNotice(crawl);
   const ranAt = crawl.completed_at ?? crawl.started_at ?? crawl.created_at;
-  if (notice) return <ProgressRow crawl={crawl} narration={notice.message} counts={[]} />;
+  if (notice)
+    return (
+      <Notice tone={notice.tone}>
+        <RunNotice crawl={crawl} message={notice.message} />
+      </Notice>
+    );
   const narration = `Latest crawl · ${formatDisplayTimestamp(ranAt, timeZone)}`;
   return (
     <PageTabEnd fallback={<ProgressRow crawl={crawl} narration={narration} counts={[]} />}>

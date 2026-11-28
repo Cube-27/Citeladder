@@ -59,7 +59,7 @@ it('lays a connection out in columns and revokes it only after confirmation', as
   expect(list.mock.calls.map(([id]) => id)).toEqual([undefined]);
 
   await user.click(within(row!).getByRole('button', { name: 'Revoke Claude' }));
-  const dialog = screen.getByRole('dialog', { name: 'Revoke Claude?' });
+  const dialog = screen.getByRole('alertdialog', { name: 'Revoke Claude?' });
   expect(revoke).not.toHaveBeenCalled();
   await user.click(within(dialog).getByRole('button', { name: 'Revoke' }));
   expect(revoke).toHaveBeenCalledWith(GRANT, undefined);
@@ -84,7 +84,7 @@ it("shows an Owner/Admin their own and members' connections once, each with its 
 
   await user.click(within(member).getByRole('button', { name: /Remove/u }));
   await user.click(
-    within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove access' }),
+    within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Remove access' }),
   );
   expect(revoke).toHaveBeenCalledWith(OTHER_GRANT, WORKSPACE);
 });
