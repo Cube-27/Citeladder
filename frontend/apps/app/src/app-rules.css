@@ -534,6 +534,10 @@ label {
   }
 }
 
+:is([data-main-column] > *, [data-page-width], [data-page-body]):has([data-route-fill]) {
+  min-height: 0;
+}
+
 :root:not([data-public-surface]) [data-state-frame] {
   --state-title-gap: 8px;
   --state-action-gap: 12px;

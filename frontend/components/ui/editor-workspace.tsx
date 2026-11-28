@@ -3,12 +3,13 @@ import type { ReactNode, RefObject } from 'react';
 import { cn } from '@/lib/utils';
 import { PanelFrame, SurfaceContext } from '@/components/ui/section';
 
-const FILL = 'h-route-fill min-h-0';
+const FILL = 'min-h-0 flex-1';
 
 export function EditorWorkspace({ page, rail }: Readonly<{ page: ReactNode; rail: ReactNode }>) {
   return (
     <div
       data-editor-workspace="wide"
+      data-route-fill=""
       className={cn(FILL, 'grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-workspace')}
     >
       {page}
@@ -22,7 +23,11 @@ export function EditorStack({
   children,
 }: Readonly<{ tabs: ReactNode; children: ReactNode }>) {
   return (
-    <div data-editor-workspace="narrow" className={cn(FILL, 'flex flex-col gap-band')}>
+    <div
+      data-editor-workspace="narrow"
+      data-route-fill=""
+      className={cn(FILL, 'flex flex-col gap-band')}
+    >
       {tabs}
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </div>

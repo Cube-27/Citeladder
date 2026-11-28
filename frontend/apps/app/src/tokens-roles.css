@@ -204,7 +204,6 @@
 }
 
 @theme inline {
-  --spacing-route-fill: calc(100dvh - var(--route-chrome-height));
   --color-control-face: var(--control-face, var(--color-raised));
   --color-control-face-hover: var(--control-face-hover, var(--color-raised-2));
   --grid-template-columns-label-value: 160px minmax(0, 1fr);

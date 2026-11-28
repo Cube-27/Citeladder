@@ -151,7 +151,7 @@ export function ThreadLayout({
   children: ReactNode;
 }>) {
   return (
-    <div className="min-h-route-fill flex flex-col">
+    <div className="flex flex-1 flex-col">
       <section
         ref={scrollRef}
         aria-label={scrollLabel}
