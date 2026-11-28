@@ -152,7 +152,7 @@ export function HeatScale({ note }: Readonly<{ note: string }>) {
   );
 }
 
-export type RankChip = {
+type RankChip = {
   key: string;
   mark: ReactNode;
   name: string;

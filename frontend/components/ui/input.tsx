@@ -22,12 +22,8 @@ const inputWidths = {
   'grow-basis': 'min-w-0 flex-1 basis-32',
 } as const;
 
-const INPUT_FRAME = { none: undefined, filter: 'phone:w-full w-60' } as const;
-
 const SEARCH_INPUT =
   'appearance-textfield [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden';
-
-export type InputFrame = keyof typeof INPUT_FRAME;
 
 const INPUT_ROOM = {
   none: undefined,
@@ -36,7 +32,6 @@ const INPUT_ROOM = {
 } as const;
 
 export function Input({
-  frame = 'none',
   search = false,
   startContent,
   endContent,
@@ -48,7 +43,6 @@ export function Input({
 }: Readonly<
   Omit<ComponentPropsWithoutRef<'input'>, 'size' | 'width' | 'className' | 'style'> & {
     width?: keyof typeof inputWidths;
-    frame?: InputFrame;
     search?: boolean;
     room?: keyof typeof INPUT_ROOM;
     startContent?: ReactNode;
@@ -66,7 +60,6 @@ export function Input({
           FIELD_BOX,
           'placeholder:text-ink-placeholder disabled:cursor-not-allowed disabled:bg-raised-2 disabled:text-ink-2 app:disabled:opacity-disabled',
           inputWidths[width],
-          INPUT_FRAME[frame],
           search && SEARCH_INPUT,
           INPUT_ROOM[room],
         )}
@@ -83,7 +76,6 @@ export function Input({
         FIELD_BOX,
         props.disabled && 'cursor-not-allowed opacity-disabled',
         endContentFlush && 'pe-1',
-        INPUT_FRAME[frame],
       )}
     >
       {startContent ? (

@@ -35,7 +35,7 @@ export type ControlName =
   | { ariaLabel: string; id?: string }
   | { ariaLabel?: undefined; id: string };
 
-export type SelectProps<T extends string> = ControlName & {
+type SelectProps<T extends string> = ControlName & {
   value?: T;
   defaultValue?: T;
   onValueChange?: (value: T) => void;

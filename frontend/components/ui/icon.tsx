@@ -15,7 +15,7 @@ const ICON_SIZE = {
 
 const ICON_TONE = { ...TEXT_TONE_CLASS, accent: 'text-accent' } as const;
 
-export type IconSize = keyof typeof ICON_SIZE;
+type IconSize = keyof typeof ICON_SIZE;
 
 const ICON_FLAGS = [
   ['muted', 'opacity-muted'],

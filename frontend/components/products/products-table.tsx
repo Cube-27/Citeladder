@@ -38,7 +38,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { AddToTracking } from './product-catalog-controls';
 import { Inline } from '@/components/ui/layout';
 import { Text } from '@/components/ui/typography';
-import { InlinePress } from '@/components/ui/inline-press';
+import { Pressable } from '@/components/ui/pressable';
 
 const SORTABLE: Partial<Record<ProductColumnKey, CommerceProductSort>> = {
   visibility: 'visibility',
@@ -83,7 +83,9 @@ function FirstOfList({ text }: Readonly<{ text: string }>) {
     <Inline as="span" inline nowrap align="baseline">
       {first}
       <Tooltip content={rest.join(', ')}>
-        <InlinePress tone="ink-2">+{rest.length} more</InlinePress>
+        <Pressable look="inline" tone="ink-2">
+          +{rest.length} more
+        </Pressable>
       </Tooltip>
     </Inline>
   );

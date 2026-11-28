@@ -11,7 +11,7 @@ export const CITATION_FACE =
 
 const CITATION_PRESS = 'focus-ring hover:overlay-hover';
 
-export const HEADING_LINK_FACE =
+const HEADING_LINK_FACE =
   'text-ink inline-flex items-center gap-2 rounded-mark text-heading no-underline';
 
 export const LINK_LOOK = {

@@ -19,7 +19,6 @@ export function DateField({
   'aria-invalid': ariaInvalid,
   invalid = false,
   disabled = false,
-  className,
 }: Readonly<{
   value: string;
   onChange: (iso: string) => void;
@@ -30,7 +29,6 @@ export function DateField({
   'aria-invalid'?: boolean;
   invalid?: boolean;
   disabled?: boolean;
-  className?: string;
 }>) {
   const [open, setOpen] = useState(false);
   const openId = useId();
@@ -42,7 +40,6 @@ export function DateField({
         'focus-frame flex items-center gap-2 pe-1',
         FIELD_BOX,
         disabled && 'cursor-not-allowed opacity-disabled',
-        className,
       )}
     >
       <input

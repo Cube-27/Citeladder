@@ -10,7 +10,7 @@ type AccessibleCheckbox =
   | { label: VisibleCheckboxLabel; description?: ReactNode; 'aria-label'?: never }
   | { label?: never; description?: never; 'aria-label': string };
 
-export type CheckboxProps = AccessibleCheckbox & {
+type CheckboxProps = AccessibleCheckbox & {
   checked: boolean | 'indeterminate';
   onCheckedChange: (checked: boolean | 'indeterminate') => void;
   disabled?: boolean;

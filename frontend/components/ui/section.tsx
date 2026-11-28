@@ -20,7 +20,7 @@ import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import './section.css';
 
-export type SurfaceDepth = 'page' | 'surface';
+type SurfaceDepth = 'page' | 'surface';
 
 export const SurfaceContext = createContext<SurfaceDepth>('page');
 

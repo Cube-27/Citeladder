@@ -1,12 +1,17 @@
+import type { ComponentProps } from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
 import { EXECUTION_STATES } from '@/lib/runs/status';
 import { pageStatusBadgeValue } from '@/lib/site-health/status';
 import { competitorState } from '@/components/products/commerce-format';
-import { StatusMark, type StatusMarkProps } from './status-mark';
+import { StatusMark } from './status-mark';
 
-type Case = [label: string, props: Omit<StatusMarkProps, 'children'>, tone: string];
+type Case = [
+  label: string,
+  props: Omit<ComponentProps<typeof StatusMark>, 'children'>,
+  tone: string,
+];
 
 const CASES: readonly Case[] = [
   ['run completed', { variant: 'run-status', value: 'completed' }, 'positive'],

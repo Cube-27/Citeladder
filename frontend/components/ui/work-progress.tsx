@@ -5,7 +5,7 @@ import { ProgressMeter } from '@/components/ui/progress-meter';
 import { Section } from '@/components/ui/section';
 import { Spinner } from '@/components/ui/spinner';
 
-export type WorkMeter = Readonly<{ label: string; value: number }>;
+type WorkMeter = Readonly<{ label: string; value: number }>;
 
 export function WorkProgress({
   label,

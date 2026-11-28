@@ -5,7 +5,7 @@ import { Button } from './button';
 import { useToast } from './toast';
 import { Icon } from '@/components/ui/icon';
 
-export type CopyButtonProps = Omit<
+type CopyButtonProps = Omit<
   ComponentPropsWithoutRef<typeof Button>,
   'asChild' | 'onClick' | 'pending'
 > & {

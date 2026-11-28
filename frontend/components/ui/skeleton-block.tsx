@@ -48,7 +48,7 @@ const SKELETON_HEIGHT = {
   'chart-lg': 'h-chart-lg',
 } as const;
 
-export type SkeletonHeight = keyof typeof SKELETON_HEIGHT;
+type SkeletonHeight = keyof typeof SKELETON_HEIGHT;
 
 const SKELETON_SHAPE = {
   mark: undefined,

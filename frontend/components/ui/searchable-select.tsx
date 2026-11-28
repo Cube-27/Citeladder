@@ -137,10 +137,8 @@ export function SearchableSelect({
             close();
           }
         }}
-        onBlur={() => {
-          setTimeout(() => {
-            if (!containerRef.current?.contains(document.activeElement)) close({ blurred: true });
-          }, 0);
+        onBlur={(event) => {
+          if (!containerRef.current?.contains(event.relatedTarget)) close({ blurred: true });
         }}
       />
       {showList ? (

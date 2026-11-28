@@ -3,7 +3,7 @@ import * as RadioGroupPrimitive from '@radix-ui/react-radio-group';
 
 import { cn } from '@/lib/utils';
 
-export type RadioOption<T extends string> = {
+type RadioOption<T extends string> = {
   value: T;
   label: ReactNode;
   disabled?: boolean;
@@ -23,7 +23,6 @@ export function RadioGroup<T extends string>({
   onValueChange,
   options,
   ariaLabel,
-  className,
   variant = 'list',
   columns = 1,
 }: Readonly<{
@@ -31,7 +30,6 @@ export function RadioGroup<T extends string>({
   onValueChange: (value: T) => void;
   options: readonly RadioOption<T>[];
   ariaLabel: string;
-  className?: string;
   variant?: 'list' | 'inline' | 'cards';
   columns?: 1 | 2 | 3;
 }>) {
@@ -52,7 +50,6 @@ export function RadioGroup<T extends string>({
               columns === 3 && 'column-split:grid-cols-3',
             )
           : LIST_LAYOUT[variant],
-        className,
       )}
     >
       {options.map((option) =>

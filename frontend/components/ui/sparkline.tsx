@@ -8,7 +8,7 @@ const PAD = 3;
 
 const SPARK_TONE = { accent: 1, ink: 2, muted: 3 } as const satisfies Record<string, ChartTone>;
 
-export type SparklineTone = keyof typeof SPARK_TONE;
+type SparklineTone = keyof typeof SPARK_TONE;
 
 function sparkPoints(values: readonly (number | null)[]) {
   const measured = values.filter((value): value is number => value !== null);

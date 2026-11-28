@@ -27,7 +27,7 @@ const TONE: Record<BadgeTone, string> = {
 const BADGE_FACE =
   'inline-flex min-h-5.5 max-w-full shrink-0 items-center gap-0.5 rounded-[2px] px-2 align-middle font-sans text-caption whitespace-nowrap';
 
-export type BadgeProps = {
+type BadgeProps = {
   children: ReactNode;
   className?: string;
   dot?: boolean;

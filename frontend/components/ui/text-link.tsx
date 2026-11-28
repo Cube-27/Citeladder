@@ -2,9 +2,8 @@ import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { Slot, Slottable } from '@radix-ui/react-slot';
 import { ProjectLink } from '@/components/ui/project-link';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
-import { HEADING_LINK_FACE } from '@/components/ui/link-look';
 import { textRoleClass, type TextRole } from '@/components/ui/text-role';
-import { ArrowRight, ArrowUpRight } from '@/lib/icons';
+import { ArrowUpRight } from '@/lib/icons';
 import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
 import { cn } from '@/lib/utils';
 
@@ -176,29 +175,5 @@ export function TextLink({
         {content}
       </ProjectLink>
     </Slot>
-  );
-}
-
-export function ArrowLink({
-  href,
-  projectId,
-  children,
-}: Readonly<{ href?: string; projectId?: string | null; children: ReactNode }>) {
-  const content = (
-    <>
-      <span className="decoration-control-line underline decoration-1 underline-offset-4 transition-[text-decoration-color] [@media(hover:hover)_and_(pointer:fine)]:group-hover:decoration-current">
-        {children}
-      </span>
-      <ArrowRight
-        aria-hidden
-        className="size-3.5 shrink-0 transition-transform motion-reduce:transition-none motion-safe:[@media(hover:hover)_and_(pointer:fine)]:group-hover:translate-x-0.5"
-      />
-    </>
-  );
-  if (!href) return <span className={HEADING_LINK_FACE}>{content}</span>;
-  return (
-    <ProjectLink href={href} projectId={projectId} look="heading">
-      {content}
-    </ProjectLink>
   );
 }

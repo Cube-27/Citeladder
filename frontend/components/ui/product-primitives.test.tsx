@@ -23,7 +23,7 @@ import { SegmentedControl } from './tabs';
 import { focusByKeyboard } from '@/test/keyboard-focus';
 import { renderWithProviders } from '@/test/render';
 
-import { ArrowLink, TextLink } from './text-link';
+import { TextLink } from './text-link';
 import { TooltipProvider } from './tooltip';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
@@ -304,20 +304,6 @@ describe('TextLink', () => {
     expect(screen.queryByRole('link')).toBeNull();
     expect(screen.getByText('unsafe')).toBeInTheDocument();
     expect(screen.queryByText('(opens in a new tab)')).toBeNull();
-  });
-});
-
-describe('ArrowLink', () => {
-  it('links to a route under its label, and is plain text inside a linked card', () => {
-    const { unmount } = renderWithProviders(<ArrowLink href="/runs">View all runs</ArrowLink>, {
-      projectSelection: null,
-    });
-    expect(screen.getByRole('link', { name: 'View all runs' })).toHaveAttribute('href', '/runs');
-    unmount();
-
-    render(<ArrowLink>Open the report</ArrowLink>);
-    expect(screen.queryByRole('link')).toBeNull();
-    expect(screen.getByText('Open the report')).toBeInTheDocument();
   });
 });
 

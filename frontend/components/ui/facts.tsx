@@ -14,7 +14,7 @@ export type Fact = Readonly<{
   end?: ReactNode;
 }>;
 
-export type FactLayout = 'ruled' | 'inline' | 'spread' | 'columns' | 'record';
+type FactLayout = 'ruled' | 'inline' | 'spread' | 'columns' | 'record';
 
 const LIST = {
   ruled: 'divide-rule grid divide-y [:root:not([data-public-surface])_&]:not-data-ruled:divide-y-0',

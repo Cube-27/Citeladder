@@ -74,7 +74,7 @@ export const MERGE_ROLES = {
   duration: ['fast', 'close', 'open', 'turn', 'slide'],
   transition: ['field', 'tint', 'edge'],
   opacity: ['disabled', 'muted'],
-  z: ['behind', 'base', 'raised', 'sticky', 'overlay', 'modal'],
+  z: ['behind', 'base', 'raised', 'sticky', 'overlay', 'modal', 'toast'],
   gridCols: ['label-value', 'lead-body-end'],
   fontWeight: ['plain', 'emphasis'],
   fontFamily: ['sans', 'display', 'mono', 'figure'],
