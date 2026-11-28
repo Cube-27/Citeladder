@@ -63,7 +63,6 @@ const CONTROL_ROLES = [
   'button.height',
   'input.height',
   'select.height',
-  'segmented.height',
   'data-table-actions.height',
 ] as const;
 const STRIP_ROLES = ['page-tab.height', 'tabs-strip.height'] as const;
@@ -250,8 +249,9 @@ function measure({ route }: { route: string }) {
   for (const box of all(boxes)) {
     if (nestedState(box)) continue;
     const boxStyle = getComputedStyle(box);
-    add('card.padding', box, px(boxStyle.paddingTop));
-    add('card.radius', box, px(boxStyle.borderTopLeftRadius));
+    const kind = px(boxStyle.borderLeftWidth) > 0 ? 'tray' : 'card';
+    add(`${kind}.padding`, box, px(boxStyle.paddingTop));
+    add(`${kind}.radius`, box, px(boxStyle.borderTopLeftRadius));
     const item = box.parentElement;
     const listed = item?.matches('li') && item.childElementCount === 1;
     const next = listed
@@ -282,8 +282,8 @@ function measure({ route }: { route: string }) {
     const edge = box.getBoundingClientRect();
     const top = edge.top + Number.parseFloat(boxStyle.borderTopWidth);
     const left = edge.left + Number.parseFloat(boxStyle.borderLeftWidth);
-    add('card.inset-top', box, Math.min(...ink.map((rect) => rect.top)) - top);
-    add('card.inset-left', box, Math.min(...ink.map((rect) => rect.left)) - left);
+    add(`${kind}.inset-top`, box, Math.min(...ink.map((rect) => rect.top)) - top);
+    add(`${kind}.inset-left`, box, Math.min(...ink.map((rect) => rect.left)) - left);
   }
   for (const element of all('[data-state-block]:not([data-state-block-inline])')) {
     if (!element.matches('[data-state-frame]') && !nestedState(element))

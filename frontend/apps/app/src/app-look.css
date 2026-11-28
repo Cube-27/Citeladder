@@ -29,13 +29,11 @@
   --shadow-raised: 0 0 0 var(--rule-width) var(--color-edge-control);
   --shadow-raised-primary: 0 0 0 0 var(--ramp-black-a4);
   --shadow-nav-current: 0 0 0 0 var(--ramp-black-a4);
-  --shadow-segment-thumb: 0 0 0 var(--rule-width) var(--color-edge-control);
+  --shadow-segment-thumb: 0 0 0 var(--rule-width) var(--color-edge-card);
   --spacing-shell-inset: 0px;
   --spacing-sidebar-pad: 12px;
   --spacing-nav-row-x: 10px;
   --spacing-nav-icon: 16px;
-  --radius-segment-track: 9px;
-  --radius-segment-thumb: 7px;
   --spacing-cell-x: 14px;
   --spacing-tray-frame: 5px;
   --spacing-tray-head-top: 12px;
@@ -81,7 +79,7 @@
   --shadow-raised: 0 0 0 var(--rule-width) var(--color-edge-control);
   --shadow-raised-primary: 0 0 0 0 var(--ramp-black-a4);
   --shadow-nav-current: 0 0 0 0 var(--ramp-black-a4);
-  --shadow-segment-thumb: 0 0 0 var(--rule-width) var(--color-edge-control);
+  --shadow-segment-thumb: 0 0 0 var(--rule-width) var(--color-edge-card);
   --weight-regular: 400;
   --weight-medium: 500;
 }
@@ -355,10 +353,6 @@
 :root:not([data-public-surface]) [data-sidebar-frame] [data-segmented-track] {
   --color-nav-current: var(--color-panel);
   --shadow-card: var(--shadow-segment-thumb);
-  border-radius: var(--radius-segment-track);
-}
-:root:not([data-public-surface]) [data-sidebar-frame] [data-segmented-track] > * {
-  border-radius: var(--radius-segment-thumb);
 }
 :root:not([data-public-surface])
   [data-sidebar-frame]
@@ -396,10 +390,6 @@
 }
 :root:not([data-public-surface]) [data-section-description] button[data-button-variant] {
   margin-block: calc((var(--spacing-body-line) - var(--spacing-control-md)) / 2);
-}
-
-:root:not([data-public-surface]) [data-sidebar-frame] [data-segmented-track] > * {
-  padding-inline: calc(2 * var(--spacing));
 }
 
 :root:not([data-public-surface]) [data-panel='card'] > header:first-child > #insights-headline {
