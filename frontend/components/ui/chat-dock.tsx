@@ -184,7 +184,9 @@ export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: Rea
   return (
     <div className="flex justify-end">
       <div className={wellClasses('flex max-w-bubble min-w-0 flex-col gap-2 px-4 py-3')}>
-        <p className="text-body text-ink wrap-anywhere whitespace-pre-wrap">{text}</p>
+        <p data-user-turn="" className="text-body text-ink wrap-anywhere whitespace-pre-wrap">
+          {text}
+        </p>
         {footer}
       </div>
     </div>

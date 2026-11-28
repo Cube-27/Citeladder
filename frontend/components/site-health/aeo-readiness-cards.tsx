@@ -5,8 +5,6 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { CellMeter } from '@/components/ui/meter';
 import { ScoreBar, scoreTone } from '@/components/ui/score-gauge';
-import { TitledSection } from '@/components/ui/section';
-import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
@@ -46,30 +44,33 @@ export function ReadableCard({
     return passing + failing > 0 ? [{ rule, label, passing, failing }] : [];
   });
   return (
-    <TitledSection title="What answer engines can read">
-      {rows.length === 0 ? (
-        <StateBlock kind="empty" inline message="No page checks were resolved in this crawl." />
-      ) : (
-        <DataTable label="Pages passing and failing each check" columns={READABLE_COLUMNS}>
-          {rows.map((row) => (
-            <TableRow key={row.rule}>
-              <TableCell>{row.label}</TableCell>
-              <TableCell>
-                <CellMeter
-                  label={`${row.label} passing`}
-                  value={row.passing}
-                  max={row.passing + row.failing}
-                  valueText={`${formatCount(row.passing)} of ${formatCount(row.passing + row.failing)} pages`}
-                  tone="ink"
-                />
-              </TableCell>
-              <TableCell numeric>{formatCount(row.passing)}</TableCell>
-              <TableCell numeric>{formatCount(row.failing)}</TableCell>
-            </TableRow>
-          ))}
-        </DataTable>
-      )}
-    </TitledSection>
+    <DataTable
+      title="What answer engines can read"
+      label="Pages passing and failing each check"
+      columns={READABLE_COLUMNS}
+      state={
+        rows.length === 0
+          ? { kind: 'empty', inline: true, message: 'No page checks were resolved in this crawl.' }
+          : undefined
+      }
+    >
+      {rows.map((row) => (
+        <TableRow key={row.rule}>
+          <TableCell>{row.label}</TableCell>
+          <TableCell>
+            <CellMeter
+              label={`${row.label} passing`}
+              value={row.passing}
+              max={row.passing + row.failing}
+              valueText={`${formatCount(row.passing)} of ${formatCount(row.passing + row.failing)} pages`}
+              tone="ink"
+            />
+          </TableCell>
+          <TableCell numeric>{formatCount(row.passing)}</TableCell>
+          <TableCell numeric>{formatCount(row.failing)}</TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }
 

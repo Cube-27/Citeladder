@@ -24,7 +24,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
-import { Section, TitledSection } from '@/components/ui/section';
+import { Section } from '@/components/ui/section';
 import { TableCell, TableRow } from '@/components/ui/table';
 
 type Overview = z.infer<typeof aiTrafficOverviewSchema>;
@@ -306,27 +306,25 @@ export function RequestsByPurpose({ series }: Readonly<{ series: CrawlSummary['s
     urlKey: 'purpose_page',
   });
   return (
-    <TitledSection title="Recognized requests by purpose">
-      <DataTable
-        label="Recognized requests by purpose"
-        columns={PURPOSE_COLUMNS}
-        pageSize={PURPOSE_PAGE_SIZE}
-        pager={{
-          range: { from, to, total: rows.length, noun: 'rows' },
-          ...pageNumberControls(page, pageCount, setPage),
-        }}
-      >
-        {rows.slice(from - 1, to).map((s) => (
-          <TableRow key={s.date + s.purpose}>
-            <TableCell>
-              <time dateTime={s.date}>{formatWindowDate(s.date)}</time>
-            </TableCell>
-            <TableCell>{words(s.purpose)}</TableCell>
-            <TableCell numeric>{formatCount(s.requests)}</TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
+    <DataTable
+      title="Recognized requests by purpose"
+      columns={PURPOSE_COLUMNS}
+      pageSize={PURPOSE_PAGE_SIZE}
+      pager={{
+        range: { from, to, total: rows.length, noun: 'rows' },
+        ...pageNumberControls(page, pageCount, setPage),
+      }}
+    >
+      {rows.slice(from - 1, to).map((s) => (
+        <TableRow key={s.date + s.purpose}>
+          <TableCell>
+            <time dateTime={s.date}>{formatWindowDate(s.date)}</time>
+          </TableCell>
+          <TableCell>{words(s.purpose)}</TableCell>
+          <TableCell numeric>{formatCount(s.requests)}</TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }
 

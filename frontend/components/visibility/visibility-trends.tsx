@@ -60,7 +60,7 @@ export function InsightsLede({ selected }: Readonly<{ selected: Visibility }>) {
   return (
     <Section aria-labelledby="insights-headline">
       <SectionHeader>
-        <Text as="h2" variant="title" id="insights-headline">
+        <Text as="h2" variant="heading" id="insights-headline">
           {headline}
         </Text>
         {sub ? (

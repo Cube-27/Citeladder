@@ -31,7 +31,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
-import { SectionStack, TitledSection } from '@/components/ui/section';
+import { SectionStack } from '@/components/ui/section';
 
 const CRAWLER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'crawler', label: 'Crawler', width: 'name' },
@@ -327,26 +327,24 @@ function CoverageTable({
     }),
   });
   return (
-    <TitledSection title="Coverage by source and reporting day">
-      <DataTable label="Coverage by source and reporting day" columns={COVERAGE_COLUMNS} {...table}>
-        {data?.items.map((r) => (
-          <TableRow key={r.source_id + r.reporting_date + r.reporting_timezone}>
-            <TableCell>
-              <CellLines lines={[formatWindowDate(r.reporting_date), r.reporting_timezone]} />
-            </TableCell>
-            <TableCell>
-              <SourceLines source={data.sources.find((s) => s.id === r.source_id)} />
-            </TableCell>
-            <TableCell>
-              <CellLines lines={[coverageLabel(r.coverage), reasonLabel(r.reason)]} />
-            </TableCell>
-            <TableCell numeric>
-              {formatCount(r.batch_count)} / {formatCount(r.heartbeat_count)}
-            </TableCell>
-            <TableCell numeric>{formatMean(r.max_gap_minutes)} minutes</TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
+    <DataTable title="Coverage by source and reporting day" columns={COVERAGE_COLUMNS} {...table}>
+      {data?.items.map((r) => (
+        <TableRow key={r.source_id + r.reporting_date + r.reporting_timezone}>
+          <TableCell>
+            <CellLines lines={[formatWindowDate(r.reporting_date), r.reporting_timezone]} />
+          </TableCell>
+          <TableCell>
+            <SourceLines source={data.sources.find((s) => s.id === r.source_id)} />
+          </TableCell>
+          <TableCell>
+            <CellLines lines={[coverageLabel(r.coverage), reasonLabel(r.reason)]} />
+          </TableCell>
+          <TableCell numeric>
+            {formatCount(r.batch_count)} / {formatCount(r.heartbeat_count)}
+          </TableCell>
+          <TableCell numeric>{formatMean(r.max_gap_minutes)} minutes</TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }

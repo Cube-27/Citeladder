@@ -5,7 +5,6 @@ import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
 import { Pressable } from '@/components/ui/pressable';
-import { TitledSection } from '@/components/ui/section';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { Tags } from '@/lib/icons';
@@ -55,51 +54,49 @@ export function VisibilityByTopic({
   onSelectTopic: (topic: string) => void;
 }>) {
   return (
-    <TitledSection title="By topic">
-      <DataTable label="By topic" columns={COLUMNS} state={topicsState(query)}>
-        {(query.data?.items ?? []).map((row) => (
-          <TableRow key={row.topic_id}>
-            <TableCell>
-              <TextLink asChild text="inherit" underline="hover">
-                <Pressable
-                  box="auto"
-                  aria-current={row.topic_id === topic ? 'true' : undefined}
-                  onClick={() => onSelectTopic(row.topic_id)}
-                >
-                  {row.name}
-                </Pressable>
-              </TextLink>
-              {row.renamed_from.length ? (
-                <Text variant="body" tone="ink-2">
-                  {' · was '}
-                  {row.renamed_from.map((name) => `“${name}”`).join(', ')}
-                </Text>
-              ) : null}
-            </TableCell>
-            {row.kind === 'measured' ? (
-              <>
-                <TableCell numeric>{formatCount(row.answers)}</TableCell>
-                <TableCell numeric>{formatRate(row.visibility_rate)}</TableCell>
-                <TableCell numeric>{formatRate(row.share_of_voice)}</TableCell>
-                <TableCell numeric>{formatPositionExact(row.avg_position)}</TableCell>
-                <TableCell numeric>
-                  {row.rank === null ? (
-                    <Absence reason="No tracked brand was named" />
-                  ) : (
-                    `${row.rank} of ${row.ranked_brands}`
-                  )}
-                </TableCell>
-              </>
-            ) : (
-              VALUE_KEYS.map((key) => (
-                <TableCell key={key} numeric>
-                  <Absence state="not_run" label={READING_LABELS.not_run} />
-                </TableCell>
-              ))
-            )}
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
+    <DataTable title="By topic" columns={COLUMNS} state={topicsState(query)}>
+      {(query.data?.items ?? []).map((row) => (
+        <TableRow key={row.topic_id}>
+          <TableCell>
+            <TextLink asChild text="inherit" underline="hover">
+              <Pressable
+                box="auto"
+                aria-current={row.topic_id === topic ? 'true' : undefined}
+                onClick={() => onSelectTopic(row.topic_id)}
+              >
+                {row.name}
+              </Pressable>
+            </TextLink>
+            {row.renamed_from.length ? (
+              <Text variant="body" tone="ink-2">
+                {' · was '}
+                {row.renamed_from.map((name) => `“${name}”`).join(', ')}
+              </Text>
+            ) : null}
+          </TableCell>
+          {row.kind === 'measured' ? (
+            <>
+              <TableCell numeric>{formatCount(row.answers)}</TableCell>
+              <TableCell numeric>{formatRate(row.visibility_rate)}</TableCell>
+              <TableCell numeric>{formatRate(row.share_of_voice)}</TableCell>
+              <TableCell numeric>{formatPositionExact(row.avg_position)}</TableCell>
+              <TableCell numeric>
+                {row.rank === null ? (
+                  <Absence reason="No tracked brand was named" />
+                ) : (
+                  `${row.rank} of ${row.ranked_brands}`
+                )}
+              </TableCell>
+            </>
+          ) : (
+            VALUE_KEYS.map((key) => (
+              <TableCell key={key} numeric>
+                <Absence state="not_run" label={READING_LABELS.not_run} />
+              </TableCell>
+            ))
+          )}
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }

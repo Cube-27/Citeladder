@@ -258,7 +258,7 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
     expect(
       screen.queryByRole('heading', { name: 'Classification completeness' }),
     ).not.toBeInTheDocument();
-    const breakdown = screen.getByTestId('page-kind-scores');
+    const breakdown = screen.getByRole('region', { name: 'Scores by page kind' });
     expect(breakdown).toBeInTheDocument();
     expect(within(breakdown).getByText('Article')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Run new crawl' })).toBeInTheDocument();

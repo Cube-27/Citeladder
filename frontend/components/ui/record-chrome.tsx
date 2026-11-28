@@ -34,7 +34,7 @@ export function StepsScroller({
       tabIndex={-1}
       data-quiet-focus=""
       data-page-scroller=""
-      className="desktop:flex-row gap-page-top relative flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto outline-none"
+      className="desktop:flex-row gap-page-top relative -mx-1 -mt-1 flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-1 pt-1 outline-none"
     >
       {children}
     </div>
@@ -49,11 +49,24 @@ export function StepsNav({
   return (
     <nav
       aria-label={label}
+      data-steps-nav=""
       className="desktop:sticky desktop:top-0 desktop:self-start w-section-rail flex shrink-0 flex-col"
     >
       <ol className="flex min-w-0 flex-col gap-1">{children}</ol>
       {note ? <p className="text-caption text-ink-2 px-2 pt-3">{note}</p> : null}
     </nav>
+  );
+}
+
+export function StepsBody({
+  label,
+  narrow,
+  children,
+}: Readonly<{ label: string | undefined; narrow: boolean; children: ReactNode }>) {
+  return (
+    <section aria-label={label} className={cn('min-w-0 flex-1', narrow && 'max-w-form')}>
+      {children}
+    </section>
   );
 }
 
@@ -65,9 +78,8 @@ export function StepsRowMark({
     <span
       aria-hidden
       className={cn(
-        'text-caption text-ink-2',
-        'grid size-4 shrink-0 place-items-center rounded-full tabular-nums',
-        state === 'current' && 'border-mark-ink text-ink border',
+        'text-caption grid size-5 shrink-0 place-items-center rounded-full tabular-nums',
+        state === 'current' && 'bg-mark-ink text-on-ink font-emphasis',
         state === 'next' && 'border-control-line text-ink-2 border',
       )}
     >

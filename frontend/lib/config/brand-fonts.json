@@ -1,6 +1,6 @@
 {
   "repository": "Cube-27/cube27-fonts",
-  "revision": "48855e374e28d6b2bd2ba909496b3f126a99bd62",
+  "revision": "6b5ba35a080d19f5fcbbcbd47e49696e0255d53b",
   "faces": {
     "display": {
       "family": "Stack Sans Notch",
@@ -15,26 +15,26 @@
       }
     },
     "sans": {
-      "family": "Inter",
-      "file": "InterVariable.woff2",
+      "family": "Switzer",
+      "file": "Switzer-Variable.woff2",
       "preload": ["app", "public", "docs"],
       "weights": "300 600",
       "fallback": {
-        "sizeAdjust": "105.18%",
-        "ascentOverride": "92.1%",
-        "descentOverride": "22.93%",
-        "lineGapOverride": "0%"
+        "sizeAdjust": "102.31%",
+        "ascentOverride": "95.79%",
+        "descentOverride": "24.44%",
+        "lineGapOverride": "8.8%"
       }
     },
     "mono": {
-      "family": "Geist Mono",
-      "file": "GeistMono-Variable.woff2",
+      "family": "JetBrains Mono",
+      "file": "JetBrainsMono-Variable.woff2",
       "preload": ["app", "docs"],
       "weights": "300 600",
       "fallback": {
         "sizeAdjust": "100%",
-        "ascentOverride": "100.5%",
-        "descentOverride": "29.5%",
+        "ascentOverride": "102%",
+        "descentOverride": "30%",
         "lineGapOverride": "0%"
       }
     }

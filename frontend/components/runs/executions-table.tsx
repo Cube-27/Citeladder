@@ -2,7 +2,6 @@ import { useExecutionFilters } from '@/components/runs/executions-filters';
 import { StatusMark } from '@/components/ui/status-mark';
 import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager';
 import { IconButton } from '@/components/ui/button';
-import { TitledSection } from '@/components/ui/section';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
@@ -48,63 +47,59 @@ export function ExecutionsTable({
         }
       : undefined;
   return (
-    <TitledSection title="Executions">
-      <DataTable
-        label="Executions"
-        toolbar={!state || state.kind === 'loading' ? { filters: filters.definitions } : undefined}
-        columns={COLUMNS}
-        state={state ?? unmatched}
-        pageSize={pageCount > 1 ? pageSize : undefined}
-        pager={{
-          range: { from, to, total: filters.rows.length, noun: 'executions' },
-          pageSize: pageSizeControl,
-          ...pageNumberControls(page, pageCount, setPage),
-        }}
-      >
-        {pageRows.map((execution) => {
-          const prompt = execution.prompt_text || `Prompt #${execution.prompt_index + 1}`;
-          return (
-            <TableRow key={execution.id}>
-              <TableCell>
-                <ClampText>{prompt}</ClampText>
-              </TableCell>
-              <TableCell>
-                <TableCellLines title primary={engines.label(execution.logical_engine)} />
-              </TableCell>
-              <TableCell>
-                <Inline as="span">
-                  <StatusBadge execution={execution} />
-                  {execution.status === 'failed' ? (
-                    <ClampText tone="ink-2">
-                      {executionFailureReason(execution.error_code)}
-                    </ClampText>
-                  ) : null}
-                </Inline>
-              </TableCell>
-              <TableCell numeric>
-                {execution.latency_ms == null ? (
-                  <Absence state="not_measured" />
-                ) : (
-                  `${formatCount(execution.latency_ms)} ms`
-                )}
-              </TableCell>
-              <TableActionsCell>
-                {execution.status === 'succeeded' ? (
-                  <IconButton
-                    icon={FileSearch}
-                    variant="quiet"
-                    onClick={() => onSelectEvidence(execution)}
-                    label={`View evidence for ${prompt}, ${engines.label(execution.logical_engine)}`}
-                  />
-                ) : (
-                  <Absence state="unavailable" />
-                )}
-              </TableActionsCell>
-            </TableRow>
-          );
-        })}
-      </DataTable>
-    </TitledSection>
+    <DataTable
+      title="Executions"
+      toolbar={!state || state.kind === 'loading' ? { filters: filters.definitions } : undefined}
+      columns={COLUMNS}
+      state={state ?? unmatched}
+      pageSize={pageCount > 1 ? pageSize : undefined}
+      pager={{
+        range: { from, to, total: filters.rows.length, noun: 'executions' },
+        pageSize: pageSizeControl,
+        ...pageNumberControls(page, pageCount, setPage),
+      }}
+    >
+      {pageRows.map((execution) => {
+        const prompt = execution.prompt_text || `Prompt #${execution.prompt_index + 1}`;
+        return (
+          <TableRow key={execution.id}>
+            <TableCell>
+              <ClampText>{prompt}</ClampText>
+            </TableCell>
+            <TableCell>
+              <TableCellLines title primary={engines.label(execution.logical_engine)} />
+            </TableCell>
+            <TableCell>
+              <Inline as="span">
+                <StatusBadge execution={execution} />
+                {execution.status === 'failed' ? (
+                  <ClampText tone="ink-2">{executionFailureReason(execution.error_code)}</ClampText>
+                ) : null}
+              </Inline>
+            </TableCell>
+            <TableCell numeric>
+              {execution.latency_ms == null ? (
+                <Absence state="not_measured" />
+              ) : (
+                `${formatCount(execution.latency_ms)} ms`
+              )}
+            </TableCell>
+            <TableActionsCell>
+              {execution.status === 'succeeded' ? (
+                <IconButton
+                  icon={FileSearch}
+                  variant="quiet"
+                  onClick={() => onSelectEvidence(execution)}
+                  label={`View evidence for ${prompt}, ${engines.label(execution.logical_engine)}`}
+                />
+              ) : (
+                <Absence state="unavailable" />
+              )}
+            </TableActionsCell>
+          </TableRow>
+        );
+      })}
+    </DataTable>
   );
 }
 

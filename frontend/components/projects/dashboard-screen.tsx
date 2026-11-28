@@ -10,7 +10,7 @@ import { warmOverviewWidgets } from '@/lib/overview/widget-queries';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-import { DashboardActions, ProjectMeta } from './dashboard-sections';
+import { DashboardActions } from './dashboard-sections';
 import { OverviewGrid } from './overview-grid';
 import { OverviewLayoutMenu } from './overview-layout-menu';
 import { OverviewStart, needsStart } from './overview-start';
@@ -117,7 +117,6 @@ function DashboardData({
         />
       }
     >
-      <ProjectMeta data={data} />
       {needsStart(data) ? <OverviewStart data={data} /> : null}
       {actions.downloadError ? (
         <Notice tone="negative">The report could not be downloaded. Try again.</Notice>

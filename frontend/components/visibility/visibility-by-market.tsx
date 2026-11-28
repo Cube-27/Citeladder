@@ -6,7 +6,6 @@ import type { VisibilityMarkets } from '@citeladder/contracts/visibility';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { TitledSection } from '@/components/ui/section';
 import { Delta } from '@/components/ui/delta';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
@@ -55,54 +54,52 @@ export function VisibilityByMarket({
 }>) {
   if (markets.length < 2) return null;
   return (
-    <TitledSection title="By market">
-      <DataTable label="By market" columns={COLUMNS} state={marketsState(query)}>
-        {(query.data?.markets ?? []).map((row) => (
-          <TableRow key={row.market.id ?? 'default'}>
-            <TableCell>
-              <TextLink asChild text="inherit" underline="hover">
-                <Pressable
-                  box="auto"
-                  aria-current={row.market.id === market ? 'true' : undefined}
-                  onClick={() => onSelectMarket(row.market.id)}
-                >
-                  {row.market.label}
-                </Pressable>
-              </TextLink>
-            </TableCell>
-            {row.state === 'measured' ? (
-              <>
-                <TableCell numeric>{formatRate(row.mention_rate)}</TableCell>
-                <TableCell numeric>
-                  <Delta
-                    value={row.mention_rate_delta}
-                    unit=" pp"
-                    missingReason="No comparable earlier run"
-                  />
-                </TableCell>
-                <TableCell numeric>{formatRate(row.share_of_voice)}</TableCell>
-                <TableCell numeric>
-                  <Delta
-                    value={row.share_of_voice_delta}
-                    unit=" pp"
-                    missingReason="No comparable earlier run"
-                  />
-                </TableCell>
-                <TableCell numeric>
-                  <SentimentValue sentiment={row.sentiment} tooFew="Too few" showCount={false} />
-                </TableCell>
-              </>
-            ) : (
-              <TableCell numeric colSpan={5}>
-                <Absence
-                  state="not_run"
-                  label={row.state === 'no_run' ? undefined : 'Being prepared'}
+    <DataTable title="By market" columns={COLUMNS} state={marketsState(query)}>
+      {(query.data?.markets ?? []).map((row) => (
+        <TableRow key={row.market.id ?? 'default'}>
+          <TableCell>
+            <TextLink asChild text="inherit" underline="hover">
+              <Pressable
+                box="auto"
+                aria-current={row.market.id === market ? 'true' : undefined}
+                onClick={() => onSelectMarket(row.market.id)}
+              >
+                {row.market.label}
+              </Pressable>
+            </TextLink>
+          </TableCell>
+          {row.state === 'measured' ? (
+            <>
+              <TableCell numeric>{formatRate(row.mention_rate)}</TableCell>
+              <TableCell numeric>
+                <Delta
+                  value={row.mention_rate_delta}
+                  unit=" pp"
+                  missingReason="No comparable earlier run"
                 />
               </TableCell>
-            )}
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
+              <TableCell numeric>{formatRate(row.share_of_voice)}</TableCell>
+              <TableCell numeric>
+                <Delta
+                  value={row.share_of_voice_delta}
+                  unit=" pp"
+                  missingReason="No comparable earlier run"
+                />
+              </TableCell>
+              <TableCell numeric>
+                <SentimentValue sentiment={row.sentiment} tooFew="Too few" showCount={false} />
+              </TableCell>
+            </>
+          ) : (
+            <TableCell numeric colSpan={5}>
+              <Absence
+                state="not_run"
+                label={row.state === 'no_run' ? undefined : 'Being prepared'}
+              />
+            </TableCell>
+          )}
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }

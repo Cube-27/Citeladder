@@ -22,13 +22,7 @@ import {
   ReferralLandingPages,
   ReferralQuality,
 } from './referral-details';
-import {
-  Section,
-  SectionHeader,
-  SectionStack,
-  SectionTitle,
-  TitledSection,
-} from '@/components/ui/section';
+import { Section, SectionHeader, SectionStack, SectionTitle } from '@/components/ui/section';
 import { Text } from '@/components/ui/typography';
 
 const REFERRAL_VIEWS = [
@@ -141,7 +135,7 @@ function SourceTotals({ data }: Readonly<{ data: AiReferrals }>) {
   const total = totalSourceSessions(data.sources);
   const measured = data.referral_volume.some((point) => point.value !== null);
   return (
-    <TitledSection
+    <DataTable
       title="AI referral sources"
       description={
         <>
@@ -151,25 +145,21 @@ function SourceTotals({ data }: Readonly<{ data: AiReferrals }>) {
             : ''}
         </>
       }
+      columns={sourceColumns(data.currency_code)}
+      state={
+        data.sources.length
+          ? undefined
+          : {
+              kind: 'empty',
+              icon: SearchX,
+              heading: measured
+                ? 'No sessions matched a known AI source in this window'
+                : 'Source totals unavailable: classification is not complete for this window',
+            }
+      }
     >
-      <DataTable
-        label="AI referral sources"
-        columns={sourceColumns(data.currency_code)}
-        state={
-          data.sources.length
-            ? undefined
-            : {
-                kind: 'empty',
-                icon: SearchX,
-                heading: measured
-                  ? 'No sessions matched a known AI source in this window'
-                  : 'Source totals unavailable: classification is not complete for this window',
-              }
-        }
-      >
-        <SourceTotalsRows data={data} />
-      </DataTable>
-    </TitledSection>
+      <SourceTotalsRows data={data} />
+    </DataTable>
   );
 }
 

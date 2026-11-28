@@ -166,7 +166,7 @@ export function SidebarNavGroup({
           onClick={onToggle}
           className="focus-ring text-caption-strong text-ink-2 hover:overlay-hover hover:text-ink rounded-control h-nav-row flex w-full min-w-0 items-center gap-2 px-2 text-left transition-colors"
         >
-          <span className="min-w-0 flex-1 truncate">{title}</span>
+          <span className="min-w-0 truncate">{title}</span>
           <ChevronDown
             aria-hidden
             className={cn(

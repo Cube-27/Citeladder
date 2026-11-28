@@ -1,5 +1,4 @@
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { TitledSection } from '@/components/ui/section';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { EngineLabel } from '@/components/ui/engine-mark';
 import { Pressable } from '@/components/ui/pressable';
@@ -29,40 +28,38 @@ export function EngineComparison({
   const catalog = useEngineCatalog();
   const engines = visibleEngines(visibility, filter, catalog.order);
   return (
-    <TitledSection title="By engine">
-      <DataTable
-        label="By engine"
-        columns={COLUMNS}
-        state={
-          engines.length
-            ? undefined
-            : { kind: 'empty', headingLevel: 3, icon: Bot, heading: 'No engine observations' }
-        }
-      >
-        {engines.map((engine) => (
-          <TableRow key={engine.logical_engine}>
-            <TableCell>
-              <TableCellLines
-                title
-                primary={
-                  onSelect ? (
-                    <TextLink asChild text="inherit" underline="hover">
-                      <Pressable box="target" onClick={() => onSelect(engine.logical_engine)}>
-                        <EngineLabel engine={engine.logical_engine} />
-                      </Pressable>
-                    </TextLink>
-                  ) : (
-                    <EngineLabel engine={engine.logical_engine} />
-                  )
-                }
-              />
-            </TableCell>
-            <TableCell numeric>{formatRate(engine.brand_mention_rate)}</TableCell>
-            <TableCell numeric>{formatRate(engine.owned_citation_rate)}</TableCell>
-            <TableCell numeric>{formatCount(engine.total_completed)}</TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
+    <DataTable
+      title="By engine"
+      columns={COLUMNS}
+      state={
+        engines.length
+          ? undefined
+          : { kind: 'empty', headingLevel: 3, icon: Bot, heading: 'No engine observations' }
+      }
+    >
+      {engines.map((engine) => (
+        <TableRow key={engine.logical_engine}>
+          <TableCell>
+            <TableCellLines
+              title
+              primary={
+                onSelect ? (
+                  <TextLink asChild text="inherit" underline="hover">
+                    <Pressable box="target" onClick={() => onSelect(engine.logical_engine)}>
+                      <EngineLabel engine={engine.logical_engine} />
+                    </Pressable>
+                  </TextLink>
+                ) : (
+                  <EngineLabel engine={engine.logical_engine} />
+                )
+              }
+            />
+          </TableCell>
+          <TableCell numeric>{formatRate(engine.brand_mention_rate)}</TableCell>
+          <TableCell numeric>{formatRate(engine.owned_citation_rate)}</TableCell>
+          <TableCell numeric>{formatCount(engine.total_completed)}</TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }

@@ -231,13 +231,7 @@ describe('DashboardScreen', () => {
       </TooltipProvider>,
     );
     expect(screen.queryByRole('heading', { name: 'Acme' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /^acme\.com/ })).toHaveAttribute(
-      'href',
-      'https://acme.com/',
-    );
-    expect(screen.getByTitle('ChatGPT API, Gemini API')).toHaveTextContent(
-      'ChatGPT API, Gemini API',
-    );
+    expect(screen.queryByRole('link', { name: /^acme\.com/ })).not.toBeInTheDocument();
     const state = within(screen.getByRole('region', { name: 'Project state' }));
     expect(state.getByText('Visibility')).toBeVisible();
     expect(state.getByText('72.5%')).toBeVisible();

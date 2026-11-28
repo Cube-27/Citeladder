@@ -31,7 +31,6 @@ import { StateBlock } from '@/components/ui/state-block';
 import {
   Section,
   SectionContent,
-  SectionDescription,
   SectionHeader,
   SectionStack,
   SectionTitle,
@@ -166,69 +165,63 @@ function PageKindTable({
   const pagesId = useId();
   const why = pageKindDescription(coverage, reasons);
   return (
-    <Section>
-      <SectionHeader
-        actions={
-          <StatusMark variant="status" value={coverage === 'complete' ? 'success' : 'warning'}>
-            {COVERAGE_LABELS[coverage]}
-          </StatusMark>
-        }
-      >
-        <SectionTitle>Page kinds</SectionTitle>
-        {why ? <SectionDescription>{why}</SectionDescription> : null}
-      </SectionHeader>
-      <DataTable
-        label="Page kinds"
-        columns={PAGE_KIND_COLUMNS}
-        state={
-          pageKinds.length === 0
-            ? {
-                kind: 'empty',
-                icon: ListTree,
-                headingLevel: 3,
-                heading: 'No page kinds were measured',
-              }
-            : undefined
-        }
-      >
-        {pageKinds.map((pageKind) => {
-          const open = openKind === pageKind.page_kind;
-          const pages = grouped.get(pageKind.page_kind) ?? [];
-          const listId = `${pagesId}-${pageKind.page_kind}`;
-          return (
-            <Fragment key={pageKind.page_kind}>
-              <TableRow>
-                <TableCell>
-                  <Pressable
-                    type="button"
-                    aria-expanded={open}
-                    aria-controls={listId}
-                    onClick={() => setOpenKind(open ? null : pageKind.page_kind)}
-                    box="auto"
-                  >
-                    <Inline as="span">
-                      <Icon icon={open ? ChevronDown : ChevronRight} tone="ink-2" />
-                      <PageKindBadge pageKind={pageKind.page_kind} />
-                    </Inline>
-                  </Pressable>
-                </TableCell>
-                <TableCell numeric>{pageKind.page_count}</TableCell>
-                <TableCell numeric>
-                  {pageKind.median_depth ?? <Absence state="not_measured" />}
-                </TableCell>
-                <TableCell numeric>
-                  {pageKind.indexable_count} / {pageKind.page_count}
-                </TableCell>
-                <TableCell numeric>
-                  {pageKind.orphan_count ?? <Absence state="not_measured" />}
-                </TableCell>
-              </TableRow>
-              {open ? <PageKindPages id={listId} pages={pages} crawlId={crawlId} /> : null}
-            </Fragment>
-          );
-        })}
-      </DataTable>
-    </Section>
+    <DataTable
+      title="Page kinds"
+      description={why || undefined}
+      actions={
+        <StatusMark variant="status" value={coverage === 'complete' ? 'success' : 'warning'}>
+          {COVERAGE_LABELS[coverage]}
+        </StatusMark>
+      }
+      columns={PAGE_KIND_COLUMNS}
+      state={
+        pageKinds.length === 0
+          ? {
+              kind: 'empty',
+              icon: ListTree,
+              headingLevel: 3,
+              heading: 'No page kinds were measured',
+            }
+          : undefined
+      }
+    >
+      {pageKinds.map((pageKind) => {
+        const open = openKind === pageKind.page_kind;
+        const pages = grouped.get(pageKind.page_kind) ?? [];
+        const listId = `${pagesId}-${pageKind.page_kind}`;
+        return (
+          <Fragment key={pageKind.page_kind}>
+            <TableRow>
+              <TableCell>
+                <Pressable
+                  type="button"
+                  aria-expanded={open}
+                  aria-controls={listId}
+                  onClick={() => setOpenKind(open ? null : pageKind.page_kind)}
+                  box="auto"
+                >
+                  <Inline as="span">
+                    <Icon icon={open ? ChevronDown : ChevronRight} tone="ink-2" />
+                    <PageKindBadge pageKind={pageKind.page_kind} />
+                  </Inline>
+                </Pressable>
+              </TableCell>
+              <TableCell numeric>{pageKind.page_count}</TableCell>
+              <TableCell numeric>
+                {pageKind.median_depth ?? <Absence state="not_measured" />}
+              </TableCell>
+              <TableCell numeric>
+                {pageKind.indexable_count} / {pageKind.page_count}
+              </TableCell>
+              <TableCell numeric>
+                {pageKind.orphan_count ?? <Absence state="not_measured" />}
+              </TableCell>
+            </TableRow>
+            {open ? <PageKindPages id={listId} pages={pages} crawlId={crawlId} /> : null}
+          </Fragment>
+        );
+      })}
+    </DataTable>
   );
 }
 

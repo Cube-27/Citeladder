@@ -101,7 +101,7 @@
   --radius-*: initial;
   --radius-sm: 4px;
   --radius-full: 9999px;
-  --rule-width: 1px;
+  --rule-width: 0.5px;
   --heading-weight: var(--weight-medium);
   --radius-mark: 2px;
   --radius-inner: var(--radius-sm);

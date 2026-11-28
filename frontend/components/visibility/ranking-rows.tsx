@@ -19,7 +19,6 @@ import {
   winRateAbsence,
 } from '@/lib/visibility/ranking';
 import { Delta } from '@/components/ui/delta';
-import { TitledSection } from '@/components/ui/section';
 import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { TextLink } from '@/components/ui/text-link';
 
@@ -40,77 +39,76 @@ export function RankingRowsTable({
   const anyPosition = ordered.some((row) => row.avg_position != null);
   const anySentiment = ordered.some((row) => row.sentiment != null);
   return (
-    <TitledSection title={TITLE} description={description}>
-      <DataTable
-        label={TITLE}
-        columns={rankingColumns({ anyPosition, anySentiment })}
-        state={
-          ordered.length
-            ? undefined
-            : {
-                kind: 'empty',
-                headingLevel: 3,
-                icon: Users,
-                heading: 'No measured responses in this selection',
-              }
-        }
-      >
-        {ordered.map((row) => {
-          const change = row.matched_visibility_delta ?? row.visibility_delta;
-          return (
-            <TableRow
-              key={rankingRowKey(row)}
-              highlight={row.is_brand}
-              {...(row.is_brand
-                ? {}
-                : {
-                    className: 'cursor-pointer',
-                    onClick: () => navigate(competitorHref(row.name)),
-                  })}
-            >
-              <TableCell>
-                <Inline as="span">
-                  <BrandMark name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
-                  <ClampText lines={1}>
-                    {row.is_brand ? (
-                      row.name
-                    ) : (
-                      <TextLink
-                        href={competitorHref(row.name)}
-                        text="inherit"
-                        underline="hover"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        {row.name}
-                      </TextLink>
-                    )}
-                  </ClampText>
-                  {row.is_brand ? <YouTag /> : null}
-                </Inline>
-              </TableCell>
+    <DataTable
+      title={TITLE}
+      description={description}
+      columns={rankingColumns({ anyPosition, anySentiment })}
+      state={
+        ordered.length
+          ? undefined
+          : {
+              kind: 'empty',
+              headingLevel: 3,
+              icon: Users,
+              heading: 'No measured responses in this selection',
+            }
+      }
+    >
+      {ordered.map((row) => {
+        const change = row.matched_visibility_delta ?? row.visibility_delta;
+        return (
+          <TableRow
+            key={rankingRowKey(row)}
+            highlight={row.is_brand}
+            {...(row.is_brand
+              ? {}
+              : {
+                  className: 'cursor-pointer',
+                  onClick: () => navigate(competitorHref(row.name)),
+                })}
+          >
+            <TableCell>
+              <Inline as="span">
+                <BrandMark name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
+                <ClampText lines={1}>
+                  {row.is_brand ? (
+                    row.name
+                  ) : (
+                    <TextLink
+                      href={competitorHref(row.name)}
+                      text="inherit"
+                      underline="hover"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {row.name}
+                    </TextLink>
+                  )}
+                </ClampText>
+                {row.is_brand ? <YouTag /> : null}
+              </Inline>
+            </TableCell>
+            <TableCell numeric>
+              <VisibilityValue row={row} />
+            </TableCell>
+            <TableCell numeric>{formatRate(row.share_of_voice)}</TableCell>
+            {anyPosition ? (
+              <TableCell numeric>{formatPositionExact(row.avg_position ?? null)}</TableCell>
+            ) : null}
+            <TableCell numeric>
+              <WinRateValue row={row} />
+            </TableCell>
+            {anySentiment ? (
               <TableCell numeric>
-                <VisibilityValue row={row} />
+                <SentimentValue sentiment={row.sentiment} />
               </TableCell>
-              <TableCell numeric>{formatRate(row.share_of_voice)}</TableCell>
-              {anyPosition ? (
-                <TableCell numeric>{formatPositionExact(row.avg_position ?? null)}</TableCell>
-              ) : null}
-              <TableCell numeric>
-                <WinRateValue row={row} />
-              </TableCell>
-              {anySentiment ? (
-                <TableCell numeric>
-                  <SentimentValue sentiment={row.sentiment} />
-                </TableCell>
-              ) : null}
-              <TableCell numeric>
-                <Delta value={change} unit=" pp" />
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </DataTable>
-    </TitledSection>
+            ) : null}
+            <TableCell numeric>
+              <Delta value={change} unit=" pp" />
+            </TableCell>
+          </TableRow>
+        );
+      })}
+    </DataTable>
   );
 }
 
@@ -138,14 +136,12 @@ function WinRateValue({ row }: Readonly<{ row: RankingRow }>) {
 
 export function RankingRowsPending({ brands }: Readonly<{ brands: number }>) {
   return (
-    <TitledSection title={TITLE}>
-      <DataTable
-        label={TITLE}
-        columns={rankingColumns({ anyPosition: true, anySentiment: true })}
-        pageSize={brands}
-        state={{ kind: 'loading', label: 'Loading the rankings…' }}
-      />
-    </TitledSection>
+    <DataTable
+      title={TITLE}
+      columns={rankingColumns({ anyPosition: true, anySentiment: true })}
+      pageSize={brands}
+      state={{ kind: 'loading', label: 'Loading the rankings…' }}
+    />
   );
 }
 

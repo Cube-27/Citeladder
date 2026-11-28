@@ -16,7 +16,6 @@ import { Columns3, PackageOpen } from '@/lib/icons';
 import { commerceQueries } from '@/lib/api/commerce';
 import { promptsQueries } from '@/lib/api/prompts';
 import { downloadCsv } from '@/lib/csv/download';
-import { formatCount } from '@/lib/format';
 import { useCatalogProjection } from '@/lib/products/use-catalog-projection';
 import { useCompetitorDiscovery } from '@/lib/products/competitor-discovery';
 import {
@@ -225,26 +224,6 @@ function ProductsContent({
             promptSets: promptSets.data?.prompt_sets ?? [],
           }),
         ],
-        status: page.data ? (
-          <>
-            <span>
-              <Text variant="caption" numeric>
-                {formatCount(page.data.total)}
-              </Text>
-              {page.data.total === 1 ? ' product' : ' products'}
-            </span>
-            <span>
-              <Text variant="caption" numeric>
-                {formatCount(page.data.executions)}
-              </Text>
-              {page.data.executions === 1 ? ' prompt run' : ' prompt runs'} in the last{' '}
-              <Text variant="caption" numeric>
-                {page.data.window_days}
-              </Text>{' '}
-              days
-            </span>
-          </>
-        ) : null,
       }}
     >
       {header.stats}

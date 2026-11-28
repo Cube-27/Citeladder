@@ -177,6 +177,7 @@ export function PromptBuilder(props: Readonly<PromptBuilderProps>) {
       steps={BUILDER_STEPS}
       current={step}
       onStep={setStep}
+      narrow={step === 'topics'}
       footerStart={<BuilderCancel />}
       footerEnd={
         <BuilderStepActions
