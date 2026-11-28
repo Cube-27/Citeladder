@@ -62,7 +62,7 @@
     "sources": [
       "frontend/components/site-health/issue-*.tsx",
       "frontend/components/site-health/issues-*.tsx",
-      "frontend/components/site-health/page-kind-select.tsx",
+      "frontend/components/site-health/page-kind-filter.tsx",
       "frontend/components/templates/page-frame.tsx",
       "frontend/components/templates/report-page.tsx",
       "frontend/components/ui/all-filters.tsx",
