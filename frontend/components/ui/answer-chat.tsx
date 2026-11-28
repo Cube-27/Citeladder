@@ -4,6 +4,7 @@ import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { CHIP_FACE } from '@/components/ui/link-look';
 import { TitleCount } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
+import { UserBubble } from '@/components/ui/user-bubble';
 
 import { ArrowUpRight } from '@/lib/icons';
 import { cn } from '@/lib/utils';
@@ -59,9 +60,7 @@ export function UserMessage({
 }: Readonly<{ avatar: ReactNode; children: ReactNode }>) {
   return (
     <li className="flex items-start justify-end gap-3">
-      <div className="bg-well text-ink text-body rounded-card max-w-bubble px-4 py-3">
-        {children}
-      </div>
+      <UserBubble>{children}</UserBubble>
       {avatar}
     </li>
   );

@@ -6,7 +6,7 @@ import {
   SetupMain,
   StepBody,
   StepConnector,
-  StepFootBar,
+  EdgeFootBar,
   type StepWidth,
 } from '@/components/ui/flow-chrome';
 import { PageGround } from '@/components/ui/flow-frame';
@@ -113,10 +113,10 @@ export function SetupStep({
         <Section aria-labelledby={headingId}>{children}</Section>
       </StepBody>
       {back || next ? (
-        <StepFootBar width={width}>
+        <EdgeFootBar width={width}>
           {back ?? <span />}
           <span className="flex justify-end">{next}</span>
-        </StepFootBar>
+        </EdgeFootBar>
       ) : null}
     </div>
   );

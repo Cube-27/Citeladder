@@ -76,13 +76,24 @@ export function StepBody({ width, children }: Readonly<{ width: StepWidth; child
   );
 }
 
-export function StepFootBar({
+const FOOT_SURFACE = { ground: 'bg-ground', panel: 'bg-panel' } as const;
+
+const FOOT_ALIGN = { between: 'justify-between gap-3', end: 'justify-end gap-2' } as const;
+
+export function EdgeFootBar({
+  surface = 'ground',
+  align = 'between',
   width,
   children,
-}: Readonly<{ width: StepWidth; children: ReactNode }>) {
+}: Readonly<{
+  surface?: keyof typeof FOOT_SURFACE;
+  align?: keyof typeof FOOT_ALIGN;
+  width?: StepWidth;
+  children: ReactNode;
+}>) {
   return (
-    <footer className="border-rule bg-ground z-raised sticky bottom-0 border-t">
-      <div className={cn(STEP_COLUMN[width], 'flex items-center justify-between gap-3 py-3')}>
+    <footer className={cn('border-rule z-raised sticky bottom-0 border-t', FOOT_SURFACE[surface])}>
+      <div className={cn(width && STEP_COLUMN[width], 'flex items-center py-3', FOOT_ALIGN[align])}>
         {children}
       </div>
     </footer>
