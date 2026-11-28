@@ -4,20 +4,17 @@ import { LineMark } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
-import { Value } from '@/components/ui/value';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
-import { formatCount, formatMean } from '@/lib/format';
+import { formatCount } from '@/lib/format';
 import { holderCaption } from '@/lib/products/product-columns';
+
+import { meanValue } from './product-values';
 import { productHref, type ProductScopeFilters } from '@/lib/products/product-filters';
 
 const emptyWhen = (rows: readonly unknown[], message: string) =>
   rows.length ? undefined : ({ kind: 'empty', inline: true, message } as const);
 
 const runs = { key: 'runs', label: 'Prompt runs', kind: 'number' } as const;
-
-const mean = (value: number | null) => (
-  <Value value={value === null ? null : formatMean(value)} absent="unavailable" />
-);
 
 const COMPETING_COLUMNS: readonly DataTableColumn[] = [
   { key: 'product', label: 'Product', kind: 'identity' },
@@ -60,7 +57,7 @@ export function CompetingProducts({
           </TableCell>
           <TableCell numeric>{formatCount(row.shared)}</TableCell>
           <TableCell numeric>{formatCount(row.ahead)}</TableCell>
-          <TableCell numeric>{mean(row.position)}</TableCell>
+          <TableCell numeric>{meanValue(row.position)}</TableCell>
         </TableRow>
       ))}
     </DataTable>

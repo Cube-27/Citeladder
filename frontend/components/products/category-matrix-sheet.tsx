@@ -1,6 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
 
-import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
@@ -13,6 +12,7 @@ import { useGenerateBuyerPrompts } from '@/lib/products/use-generate-buyer-promp
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
 import type { BuyerPrompt } from '@citeladder/contracts/commerce-suite';
 import { Notice } from '@/components/ui/notice';
+import { PromptApproval } from './prompt-approval';
 
 function matrixCoverage(rows: readonly BuyerPrompt[]) {
   const organic = rows.filter((row) => !row.branded && row.context && row.buyer_stage);
@@ -50,18 +50,13 @@ export function CategoryMatrixSheet({
   const busy = generate.isPending || decide.isPending;
   const canRun = useWorkspaceCapability('run');
   const canWrite = useWorkspaceCapability('write');
-  const toggle = (row: BuyerPrompt) =>
-    canWrite ? (
-      <Button
-        variant="secondary"
-        disabled={busy}
-        onClick={() => decide.mutate({ id: row.id, approved: !row.enabled })}
-      >
-        {row.enabled ? 'Disable' : 'Approve'}
-      </Button>
-    ) : (
-      <Tag>{row.enabled ? 'Approved' : 'Not approved'}</Tag>
-    );
+  const toggle = (row: BuyerPrompt) => (
+    <PromptApproval
+      enabled={row.enabled}
+      disabled={busy}
+      onDecide={canWrite ? (approved) => decide.mutate({ id: row.id, approved }) : undefined}
+    />
+  );
   const list = (title: string, items: readonly BuyerPrompt[]) =>
     items.length ? (
       <Section>

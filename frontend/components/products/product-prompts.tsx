@@ -6,9 +6,8 @@ import { Inline } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
-import { Value } from '@/components/ui/value';
-import { formatCount, formatMean } from '@/lib/format';
-import { formatRate } from '@/lib/products/product-columns';
+import { formatCount } from '@/lib/format';
+import { meanValue, rateValue } from './product-values';
 import type {
   ProductPromptOutcomes,
   ProductRun,
@@ -23,13 +22,6 @@ const OUTCOME_TONE: Record<ProductRun['outcome'], StatusTone> = {
 };
 
 const outcomeLabel = (run: ProductRun) => (run.rank === null ? 'Unranked' : `#${run.rank}`);
-
-const mean = (value: number | null) => (
-  <Value value={value === null ? null : formatMean(value)} absent="unavailable" />
-);
-const rate = (value: number | null) => (
-  <Value value={value === null ? null : formatRate(value)} absent="unavailable" />
-);
 
 const sampleLabel = ({ shown, total }: ProductPromptOutcomes['runs']) =>
   shown < total ? `Newest ${formatCount(shown)} of ${formatCount(total)} runs` : undefined;
@@ -73,8 +65,8 @@ export function EngineOutcomes({ outcomes }: Readonly<{ outcomes: ProductPromptO
           <TableCell numeric>{formatCount(row.named)}</TableCell>
           <TableCell numeric>{formatCount(row.won)}</TableCell>
           <TableCell numeric>{formatCount(row.lost)}</TableCell>
-          <TableCell numeric>{rate(row.winRate)}</TableCell>
-          <TableCell numeric>{mean(row.position)}</TableCell>
+          <TableCell numeric>{rateValue(row.winRate)}</TableCell>
+          <TableCell numeric>{meanValue(row.position)}</TableCell>
         </TableRow>
       ))}
     </DataTable>
@@ -152,7 +144,7 @@ export function ProductPrompts({ outcomes }: Readonly<{ outcomes: ProductPromptO
             <TableCell>
               <TableCellLines primary={row.text} />
             </TableCell>
-            <TableCell numeric>{rate(row.metrics?.visibility ?? null)}</TableCell>
+            <TableCell numeric>{rateValue(row.metrics?.visibility ?? null)}</TableCell>
             <TableCell numeric>
               {row.metrics ? (
                 `${formatCount(row.metrics.appearances)} of ${formatCount(row.metrics.executions)}`
@@ -160,8 +152,8 @@ export function ProductPrompts({ outcomes }: Readonly<{ outcomes: ProductPromptO
                 <Absence state="unavailable" />
               )}
             </TableCell>
-            <TableCell numeric>{rate(row.metrics?.win_rate ?? null)}</TableCell>
-            <TableCell numeric>{mean(row.metrics?.position ?? null)}</TableCell>
+            <TableCell numeric>{rateValue(row.metrics?.win_rate ?? null)}</TableCell>
+            <TableCell numeric>{meanValue(row.metrics?.position ?? null)}</TableCell>
             {engineKeys.map((engine) => (
               <TableCell key={engine}>
                 <EngineOutcome

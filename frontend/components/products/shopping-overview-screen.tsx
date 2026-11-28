@@ -22,8 +22,7 @@ import { ShoppingBag } from '@/lib/icons';
 import { commerceQueries } from '@/lib/api/commerce';
 import { PRODUCT_WINDOW_DAYS, type ProductWindowDays } from '@/lib/config/commerce';
 import { categoryFilter, windowFilter } from './product-scope-filters';
-import { formatCount, formatMean, pluralCount } from '@/lib/format';
-import { formatRate } from '@/lib/products/product-columns';
+import { formatCount, formatMean, formatPercent, pluralCount } from '@/lib/format';
 import { targetHref } from '@/lib/products/targets';
 import {
   overviewSearch,
@@ -92,10 +91,10 @@ function MetricCells({ row }: Readonly<{ row: CommerceOverviewProduct | Commerce
   return (
     <>
       <TableCell>
-        <Measured value={row.visibility} format={formatRate} />
+        <Measured value={row.visibility} format={formatPercent} />
       </TableCell>
       <TableCell>
-        <Measured value={row.win_rate} format={formatRate} />
+        <Measured value={row.win_rate} format={formatPercent} />
       </TableCell>
       <TableCell>
         <Measured value={row.position} format={formatMean} />
@@ -140,7 +139,7 @@ function RankingTable({
               </TableCell>
               <MetricCells row={row} />
               <TableCell>
-                <Measured value={row.share_of_shelf} format={formatRate} />
+                <Measured value={row.share_of_shelf} format={formatPercent} />
               </TableCell>
             </TableRow>
           ))
@@ -191,7 +190,7 @@ function ProductList({
             <Value value={formatCount(row.appearances)} />
           </TableCell>
           <TableCell>
-            <Measured value={row.visibility} format={formatRate} />
+            <Measured value={row.visibility} format={formatPercent} />
           </TableCell>
         </TableRow>
       ))}
@@ -264,7 +263,7 @@ function FanoutTable({ fanout }: Readonly<{ fanout: Overview['fanout'] }>) {
   );
 }
 
-const shelfPercent = (value: number | null) => (value === null ? null : formatRate(value));
+const shelfPercent = (value: number | null) => (value === null ? null : formatPercent(value));
 
 function CategoryShelf({
   shelf,

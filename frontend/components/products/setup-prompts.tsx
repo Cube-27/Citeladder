@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 
-import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,6 +20,7 @@ import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/proj
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { PromptApproval } from './prompt-approval';
 
 const HERO_COUNT = 3;
 
@@ -240,17 +240,11 @@ function PromptRows({
           key={row.id}
           title={row.text}
           meta={
-            onToggle ? (
-              <Button
-                variant="secondary"
-                disabled={pending}
-                onClick={() => onToggle(row.id, !row.enabled)}
-              >
-                {row.enabled ? 'Disable' : 'Approve'}
-              </Button>
-            ) : (
-              <Tag>{row.enabled ? 'Approved' : 'Not approved'}</Tag>
-            )
+            <PromptApproval
+              enabled={row.enabled}
+              disabled={pending}
+              onDecide={onToggle ? (approved) => onToggle(row.id, approved) : undefined}
+            />
           }
         />
       ))}
