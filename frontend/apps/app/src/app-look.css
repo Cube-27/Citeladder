@@ -15,7 +15,7 @@
   --color-edge-control: var(--ramp-grey-89_4);
   --color-nav-current: var(--color-panel);
   --color-control: var(--ramp-white);
-  --color-table-head: transparent;
+  --color-table-head: var(--color-panel);
   --color-tray: var(--ramp-grey-97_3);
   --color-state-hover: var(--ramp-black-a4);
   --text-color-ink: var(--ramp-grey-19_6);
@@ -31,8 +31,6 @@
   --shadow-nav-current: 0 0 0 0 var(--ramp-black-a4);
   --shadow-segment-thumb: 0 0 0 var(--rule-width) var(--color-edge-control);
   --spacing-shell-inset: 0px;
-  --spacing-masthead: 56px;
-  --spacing-control-sm: 28px;
   --spacing-sidebar-pad: 12px;
   --spacing-nav-row-x: 10px;
   --spacing-nav-icon: 16px;
@@ -109,8 +107,19 @@
   background-image: linear-gradient(var(--color-primary-from), var(--color-primary-to));
   box-shadow: var(--shadow-raised-primary);
 }
+:root:not([data-public-surface])
+  [data-button-variant='secondary']:is(
+    [aria-pressed='true'],
+    [data-state='open'],
+    :active:not(:disabled)
+  ) {
+  background: var(--color-field-hover);
+}
 @media (hover: hover) {
-  :root:not([data-public-surface]) [data-button-variant='secondary']:hover:not(:disabled) {
+  :root:not([data-public-surface])
+    [data-button-variant='secondary']:not(
+      [data-state-offer] [data-button-variant]:first-child
+    ):hover:not(:disabled) {
     background: var(--color-field-hover);
   }
   :root:not([data-public-surface]) [data-button-variant='primary']:hover:not(:disabled) {
@@ -202,7 +211,7 @@
 :root:not([data-public-surface]) .table-frame thead th + th::before {
   display: none;
 }
-:root:not([data-public-surface]) .table-frame tbody td {
+:root:not([data-public-surface]) .table-frame tbody td:not([data-tone]) {
   color: var(--text-color-ink-soft);
 }
 :root:not([data-public-surface]) .table-frame :is(thead, tbody) > tr > :not(:last-child) {
@@ -277,6 +286,13 @@
   border-top-width: 0;
 }
 
+@media (min-width: 900px) and (pointer: fine), (min-width: 900px) and (pointer: none) {
+  :root:not([data-public-surface]) {
+    --spacing-masthead: 56px;
+    --spacing-control-sm: 28px;
+  }
+}
+
 @media (min-resolution: 2dppx) {
   :root:not([data-public-surface]) {
     --rule-width: 0.5px;
@@ -287,7 +303,6 @@
   --card-edge: var(--color-edge-card);
   --card-frame: 0px;
   position: relative;
-  overflow-clip-margin: border-box;
   box-shadow: none;
 }
 :root:not([data-public-surface]) :is([data-panel='card'], [data-panel-frame])::after {

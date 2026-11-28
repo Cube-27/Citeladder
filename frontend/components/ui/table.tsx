@@ -218,6 +218,7 @@ export function TableCell({
   return (
     <td
       {...props}
+      data-tone={tone}
       className={cn(
         cellClasses({ numeric, desktopOnly }),
         nested === true && 'ps-[calc(var(--spacing-cell-x)_+_var(--spacing-indent))] cell-indent',
