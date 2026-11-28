@@ -39,7 +39,10 @@ export function mergeRoles(sheets) {
 
 export function renderMergeRoles(roles) {
   const body = Object.entries(roles)
-    .map(([group, names]) => `  ${group}: [${names.map((name) => `'${name}'`).join(', ')}],`)
+    .map(([group, names]) => {
+      const list = names.map((name) => `'${name}'`).join(', ');
+      return `  ${group}: [${list}],`;
+    })
     .join('\n');
   return `export const MERGE_ROLES = {\n${body}\n} as const;\n`;
 }

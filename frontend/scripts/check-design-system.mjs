@@ -42,7 +42,8 @@ for (const path of files(root)) {
   if (!sourceExtensions.has(extension)) continue;
   const source = readFileSync(path, 'utf8');
   const label = relative(root, path);
-  if (!/^scripts\/|\.test\.|\.gen\.ts$/.test(label)) readers.push(source);
+  const generated = label.includes('.test.') || label.endsWith('.gen.ts');
+  if (!label.startsWith('scripts/') && !generated) readers.push(source);
   if (extension === '.css' && !label.startsWith('scripts')) sheets.push({ label, css: source });
   if (extension === '.css') violations.push(...cssValueFindings(label, source));
   if (extension === '.astro') {
@@ -61,18 +62,15 @@ violations.push(...styleBlockFindings(bootShell, bootSource));
 
 const appCssPath = join(root, 'apps', 'app', 'src', 'app.css');
 const appCss = readFileSync(appCssPath, 'utf8');
-violations.push(...textContrast(root), ...appSourceViolations(appCss, scriptSources));
-
-violations.push(
-  ...tokenOwners.flatMap((owner) =>
-    ancestorRuleFindings(relative(root, owner), readFileSync(owner, 'utf8')),
-  ),
-);
-
 const bundleOf = (label) => /marketing|apps\/docs|packages\//.exec(label)?.[0] ?? 'app';
 const bundles = Map.groupBy(sheets, ({ label }) => bundleOf(label));
 violations.push(
-  ...[...bundles.values()].flatMap(duplicateTokenFindings),
+  ...textContrast(root),
+  ...appSourceViolations(appCss, scriptSources),
+  ...tokenOwners.flatMap((owner) =>
+    ancestorRuleFindings(relative(root, owner), readFileSync(owner, 'utf8')),
+  ),
+  ...[...bundles.values()].flatMap((group) => duplicateTokenFindings(group)),
   ...unreadTokenFindings({ sheets, sources: readers }),
   ...sheets
     .filter(({ label }) => !label.includes('marketing'))

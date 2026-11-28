@@ -35,7 +35,7 @@ export function duplicateTokenFindings(sheets) {
   return findings;
 }
 
-const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
 const NAMESPACES =
   /^--(?:text-color|transition-duration|transition-property|grid-template-columns|font-weight|z-index|[a-z]+)-/;
@@ -57,14 +57,14 @@ export function unreadTokenFindings({ sheets, sources }) {
   }
   const text = sources.join('\n');
   const used = (pattern) => new RegExp(pattern).test(text);
-  const usage = text.replace(/--[\w-]+\s*:/g, '');
+  const usage = text.replace(/--[\w-]+:/g, '');
   const read = (prop) => {
     const base = prop.split(/(?<=\w)--/)[0];
     if (EXTERNAL_READ.test(base)) return true;
-    if (used(`${escape(base)}(?![\\w-])(?!\\s*:)`)) return true;
+    if (used(String.raw`${escape(base)}(?![\w-])(?!\s*:)`)) return true;
     if (!themed.has(base)) return false;
     const name = base.replace(NAMESPACES, '');
-    return new RegExp(`(?:[-@'"\`])${escape(name)}(?![\\w-])`).test(usage);
+    return new RegExp(String.raw`(?:[-@'"\`])${escape(name)}(?![\w-])`).test(usage);
   };
   const findings = [...declared]
     .filter(([prop]) => !read(prop))
@@ -72,8 +72,8 @@ export function unreadTokenFindings({ sheets, sources }) {
   for (const [name, at] of utilities) {
     const stem = name.replace(/-\*$/, '-');
     const pattern = name.endsWith('-*')
-      ? `(?<![\\w-])${escape(stem)}`
-      : `(?<![\\w-])${escape(name)}(?![\\w-])`;
+      ? String.raw`(?<![\w-])${escape(stem)}`
+      : String.raw`(?<![\w-])${escape(name)}(?![\w-])`;
     const uses = text.match(new RegExp(pattern, 'g'))?.length ?? 0;
     if (uses < 2) findings.push(`${at}: @utility ${name} is never used; delete it`);
   }

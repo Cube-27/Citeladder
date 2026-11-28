@@ -6,20 +6,20 @@ import { MERGE_ROLES } from '@/lib/merge-roles.gen';
 const twMerge = extendTailwindMerge({
   extend: {
     theme: {
-      radius: [...MERGE_ROLES.radius],
-      spacing: [...MERGE_ROLES.spacing],
-      container: [...MERGE_ROLES.container],
-      ease: [...MERGE_ROLES.ease],
+      radius: MERGE_ROLES.radius,
+      spacing: MERGE_ROLES.spacing,
+      container: MERGE_ROLES.container,
+      ease: MERGE_ROLES.ease,
     },
     classGroups: {
-      duration: [{ duration: [...MERGE_ROLES.duration] }],
-      transition: [{ transition: [...MERGE_ROLES.transition] }],
-      opacity: [{ opacity: [...MERGE_ROLES.opacity] }],
-      z: [{ z: [...MERGE_ROLES.z] }],
-      'grid-cols': [{ 'grid-cols': [...MERGE_ROLES.gridCols] }],
-      'font-weight': [{ font: [...MERGE_ROLES.fontWeight] }],
-      'font-family': [{ font: [...MERGE_ROLES.fontFamily] }],
-      'font-size': [{ text: [...MERGE_ROLES.fontSize] }],
+      duration: [{ duration: MERGE_ROLES.duration }],
+      transition: [{ transition: MERGE_ROLES.transition }],
+      opacity: [{ opacity: MERGE_ROLES.opacity }],
+      z: [{ z: MERGE_ROLES.z }],
+      'grid-cols': [{ 'grid-cols': MERGE_ROLES.gridCols }],
+      'font-weight': [{ font: MERGE_ROLES.fontWeight }],
+      'font-family': [{ font: MERGE_ROLES.fontFamily }],
+      'font-size': [{ text: MERGE_ROLES.fontSize }],
     },
   },
 });

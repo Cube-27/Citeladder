@@ -4,11 +4,11 @@
   "budgets": {
     "apps/app": {
       "comment": "Entry chunk + transitive STATIC imports + entry CSS. Lazy route chunks are excluded: they are paid on navigation, not on boot. Includes the route loader that resolves the shell's opening decision before first paint — it costs ~4.6 KB gzip and removes three full-viewport paints from a cold load, which is a trade worth making explicitly. React, React Router and Zod are split into vendor chunks: that costs ~600 B gzip in boundary overhead and buys cache stability, since an edit under lib/api used to invalidate React Router for every returning reader.",
-      "css_comment": "CSS limits (owner rule, 18 Nov 2026): each eager_css limit is the value measured after a debt audit plus a 10% buffer, rounded up. When a change exhausts the buffer, first audit and remove eager CSS debt (rules nothing renders, duplicate keyframes or transitions, hand-written CSS an emitted utility replaces, CSS only lazy routes use, which moves to their chunk), then re-measure and reset both limits to measured + 10%, with the before, after and new limits in the PR. Never raise a limit any other way. Current: JS raw limit 903100 raised by the owner (2026-11-27, PR #1285) from a CI measurement of 902017; CSS limits reset by the owner (2026-11-28, PR #1304) to measured + 10% after the flat panel look and the dead sidebar fade removal, from a CI measurement of 153676 raw and 28616 gzip; JS gzip limit unchanged from the 20 Nov 2026 reset (PR #1082).",
-      "eager_js_raw": 903100,
+      "css_comment": "CSS limits (owner rule, 18 Nov 2026): each eager_css limit is the value measured after a debt audit plus a 10% buffer, rounded up. When a change exhausts the buffer, first audit and remove eager CSS debt (rules nothing renders, duplicate keyframes or transitions, hand-written CSS an emitted utility replaces, CSS only lazy routes use, which moves to their chunk), then re-measure and reset both limits to measured + 10%, with the before, after and new limits in the PR. Never raise a limit any other way. Current: JS raw limit 904402 raised by the owner (2026-11-28, PR #1308) from a CI measurement of 904402: Section's tray detection and the preload entries for component CSS moved off the entry, which buy 11194 B less eager CSS; CSS limits reset (2026-11-28, PR #1308) to measured + 10% after app-look.css was folded into the tokens and lazy-only rules moved to their chunks, from a CI measurement of 142482 raw and 27183 gzip (before: 153676 raw, 28616 gzip); JS gzip limit unchanged from the 20 Nov 2026 reset (PR #1082).",
+      "eager_js_raw": 904402,
       "eager_js_gzip": 281643,
-      "eager_css_raw": 169100,
-      "eager_css_gzip": 31500
+      "eager_css_raw": 156731,
+      "eager_css_gzip": 29902
     }
   }
 }
