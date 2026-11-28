@@ -6,7 +6,7 @@ import type {
   SiteHealthEntitlement,
 } from '@citeladder/contracts';
 import type { PagesSort } from '@/lib/api/site-health';
-import type { RunStatusValue, StatusValue } from '@/components/ui/status-mark';
+import type { RunStatusValue, StatusTone } from '@/components/ui/status-mark';
 import { checksRunSchema, type InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 import type { z } from 'zod';
 import { CRAWL_POLL_MS, CRAWL_VIEW_REFRESH_MS } from '@/lib/config/operational';
@@ -203,17 +203,17 @@ export function crawlDisplayStatus(
     : crawl.status;
 }
 
-export function pageStatusBadgeValue(status: PageAnalysisStatus): StatusValue {
+export function pageStatusBadgeValue(status: PageAnalysisStatus): StatusTone {
   switch (status) {
     case 'completed':
-      return 'success';
+      return 'positive';
     case 'partially_completed':
       return 'warning';
     case 'failed':
     case 'error':
     case 'blocked':
     case 'cancelled':
-      return 'danger';
+      return 'negative';
     case 'not_selected':
     case 'not_measured':
     case 'pending':

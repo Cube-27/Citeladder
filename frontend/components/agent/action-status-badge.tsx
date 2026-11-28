@@ -8,8 +8,6 @@ export function ActionStatusBadge({ status }: Readonly<{ status: ActionStatus }>
   return tone === 'neutral' ? (
     <StatusMark tone="neutral">{label}</StatusMark>
   ) : (
-    <StatusMark variant="status" value={tone}>
-      {label}
-    </StatusMark>
+    <StatusMark tone={tone}>{label}</StatusMark>
   );
 }

@@ -143,7 +143,7 @@ export function PagesTable({
               </Stack>
             </TableCell>
             <TableCell className="whitespace-nowrap">
-              <StatusMark variant="status" value={pageStatusBadgeValue(page.analysis_status)}>
+              <StatusMark tone={pageStatusBadgeValue(page.analysis_status)}>
                 {statusLabel(page.analysis_status)}
               </StatusMark>
             </TableCell>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { Checkbox } from '@/components/ui/checkbox';
-import type { StateDotTone } from '@/components/ui/state-dot';
+import type { ProgressValue } from '@/components/ui/status-mark';
 import { StatusMark } from '@/components/ui/status-mark';
 import { WorkRow, WorkRows, WorkRowsMore } from '@/components/ui/work-rows';
 import { actionTarget } from '@/lib/agent/action-title';
@@ -25,7 +25,7 @@ const SCOPE_BY_KIND: Readonly<Record<string, string>> = {
   category: '1 category',
 };
 
-export const ACTION_STATUS_TONE: Record<ActionStatus, StateDotTone> = {
+export const ACTION_PROGRESS: Record<ActionStatus, ProgressValue> = {
   open: 'open',
   in_progress: 'active',
   done: 'done',

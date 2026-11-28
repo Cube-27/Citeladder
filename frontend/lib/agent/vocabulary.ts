@@ -93,10 +93,10 @@ export const ACTION_STATUS_LABEL: Record<ActionStatus, string> = {
   dismissed: 'Declined',
 };
 
-export const ACTION_STATUS_TONE: Record<ActionStatus, 'neutral' | 'info' | 'success'> = {
+export const ACTION_STATUS_TONE: Record<ActionStatus, 'neutral' | 'info' | 'positive'> = {
   open: 'neutral',
   in_progress: 'info',
-  done: 'success',
+  done: 'positive',
   dismissed: 'neutral',
 };
 

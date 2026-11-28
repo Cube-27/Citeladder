@@ -37,32 +37,16 @@ function StatusBadge({
   compact: boolean;
 }>) {
   if (group.engines.some((engine) => engine.state === 'connected')) {
-    return (
-      <StatusMark variant="status" value="success">
-        Connected
-      </StatusMark>
-    );
+    return <StatusMark tone="positive">Connected</StatusMark>;
   }
   if (group.engines.some((engine) => engine.pause)) {
-    return (
-      <StatusMark variant="status" value="warning">
-        Paused
-      </StatusMark>
-    );
+    return <StatusMark tone="warning">Paused</StatusMark>;
   }
   if (group.engines.some((engine) => engine.state === 'failed')) {
-    return (
-      <StatusMark variant="status" value="danger">
-        Failed
-      </StatusMark>
-    );
+    return <StatusMark tone="negative">Failed</StatusMark>;
   }
   if (isConfigured(connection)) {
-    return (
-      <StatusMark variant="status" value="warning">
-        Not verified
-      </StatusMark>
-    );
+    return <StatusMark tone="warning">Not verified</StatusMark>;
   }
   return compact ? null : <StatusMark>Not connected</StatusMark>;
 }

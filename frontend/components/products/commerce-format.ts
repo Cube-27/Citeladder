@@ -1,6 +1,6 @@
 import type { CompetitorCandidate } from '@citeladder/contracts/commerce-suite';
 
-import type { StatusValue } from '@/components/ui/status-mark';
+import type { StatusTone } from '@/components/ui/status-mark';
 
 const FAILURES: Record<string, (kind: string) => string> = {
   unusable_target: (kind) => `This ${kind} needs a clearer name before competitors can be found.`,
@@ -26,15 +26,13 @@ export function competitorHost(url: string): string {
   }
 }
 
-const COMPETITOR_STATES: Record<
-  CompetitorCandidate['state'],
-  { tone: StatusValue; label: string }
-> = {
-  approved: { tone: 'success', label: 'Approved' },
-  rejected: { tone: 'danger', label: 'Rejected' },
-  excluded: { tone: 'danger', label: 'Excluded' },
-  pending: { tone: 'info', label: 'Needs review' },
-};
+const COMPETITOR_STATES: Record<CompetitorCandidate['state'], { tone: StatusTone; label: string }> =
+  {
+    approved: { tone: 'positive', label: 'Approved' },
+    rejected: { tone: 'negative', label: 'Rejected' },
+    excluded: { tone: 'negative', label: 'Excluded' },
+    pending: { tone: 'info', label: 'Needs review' },
+  };
 
 export function competitorState(state: CompetitorCandidate['state']) {
   return COMPETITOR_STATES[state];

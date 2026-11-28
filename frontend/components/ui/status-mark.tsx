@@ -82,13 +82,6 @@ type Glyph = 'dot' | 'live' | Readonly<{ bars: 1 | 2 | 3 }>;
 type Mark = Readonly<{ tone: StatusTone; glyph: Glyph }>;
 const mark = (tone: StatusTone, glyph: Glyph = 'dot'): Mark => ({ tone, glyph });
 
-const statusMarks = {
-  success: mark('positive'),
-  warning: mark('warning'),
-  danger: mark('negative'),
-  info: mark('info'),
-} as const satisfies Record<string, Mark>;
-
 const sentimentMarks = {
   positive: mark('positive'),
   neutral: mark('neutral'),
@@ -126,7 +119,6 @@ const severityMarks = {
   info: mark('neutral'),
 } as const satisfies Record<string, Mark>;
 
-export type StatusValue = keyof typeof statusMarks;
 export type PriorityValue = keyof typeof priorityMarks;
 export type SentimentValue = keyof typeof sentimentMarks;
 export type ClassificationValue = keyof typeof classificationMarks;
@@ -137,7 +129,6 @@ export type StatusMarkProps = {
   children: ReactNode;
   full?: boolean;
 } & (
-  | { variant: 'status'; value: StatusValue }
   | { variant: 'severity'; value: SeverityValue }
   | { variant: 'sentiment'; value: SentimentValue }
   | { variant: 'classification'; value: ClassificationValue }
@@ -149,8 +140,6 @@ export type StatusMarkProps = {
 
 function markOf(props: StatusMarkProps): Mark {
   switch (props.variant) {
-    case 'status':
-      return statusMarks[props.value];
     case 'severity':
       return severityMarks[props.value];
     case 'sentiment':
@@ -168,6 +157,35 @@ function markOf(props: StatusMarkProps): Mark {
       return unreachable;
     }
   }
+}
+
+const progressMarks = {
+  open: { tone: 'neutral', fill: 0 },
+  active: { tone: 'warning', fill: 0 },
+  done: { tone: 'positive', fill: 1 },
+  declined: { tone: 'negative', fill: 0.15 },
+} as const satisfies Record<string, Readonly<{ tone: StatusTone; fill: number }>>;
+
+export type ProgressValue = keyof typeof progressMarks;
+
+const PROGRESS_RADIUS = 5.25;
+
+export function ProgressGlyph({ value }: Readonly<{ value: ProgressValue }>) {
+  const { tone, fill } = progressMarks[value];
+  return (
+    <svg aria-hidden viewBox="0 0 12 12" className={cn('size-3 shrink-0', TONE_INK[tone])}>
+      <circle
+        cx={MARK_RADIUS}
+        cy={MARK_RADIUS}
+        r={PROGRESS_RADIUS}
+        fill="currentColor"
+        fillOpacity={fill}
+        stroke="currentColor"
+        strokeWidth={MARK_STROKE}
+      />
+      {value === 'active' ? <path d="M6 .75a5.25 5.25 0 0 1 0 10.5z" fill="currentColor" /> : null}
+    </svg>
+  );
 }
 
 function ToneGlyph({ tone, size = 'sm' }: Readonly<{ tone: StatusTone; size?: 'sm' | 'md' }>) {

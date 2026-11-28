@@ -107,12 +107,7 @@ function StatusBadge({ execution }: Readonly<{ execution: Execution }>) {
   const engines = useEngineCatalog();
   const label = executionStatusLabel(execution.status, engines.label(execution.logical_engine));
   return (
-    <StatusMark
-      variant="status"
-      value={EXECUTION_STATES[execution.status].badge}
-      full
-      title={label}
-    >
+    <StatusMark tone={EXECUTION_STATES[execution.status].badge} full title={label}>
       <span className="min-w-0 truncate">{label}</span>
     </StatusMark>
   );

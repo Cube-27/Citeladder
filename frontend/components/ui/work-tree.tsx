@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { Pressable, type PressableProps } from '@/components/ui/pressable';
 import { SkeletonBlock } from '@/components/ui/skeleton-block';
-import { StateDot, type StateDotTone } from '@/components/ui/state-dot';
+import { ProgressGlyph, type ProgressValue } from '@/components/ui/status-mark';
 
 import { ChevronDown } from '@/lib/icons';
 import { formatCount } from '@/lib/format';
@@ -25,15 +25,15 @@ type ToggleProps = Omit<PressableProps, 'children' | 'tone'> & { open: boolean }
 
 export function TreeStatusRow({
   open,
-  tone,
+  progress,
   name,
   count,
   ...props
-}: Readonly<ToggleProps & { tone: StateDotTone; name: string; count: string }>) {
+}: Readonly<ToggleProps & { progress: ProgressValue; name: string; count: string }>) {
   return (
     <Pressable {...props} data-tree-row="" aria-expanded={open} text="label" look="tree-row">
       <TreeChevron open={open} />
-      <StateDot tone={tone} />
+      <ProgressGlyph value={progress} />
       {name}
       <CountText>{count}</CountText>
     </Pressable>

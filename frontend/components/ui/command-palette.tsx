@@ -12,7 +12,8 @@ import {
   useSelectProject,
 } from '@/lib/navigation/project-destination';
 import { PALETTE_LAUNCHER } from '@/components/ui/command-palette-launcher';
-import { returnTargetFor, SCRIM } from '@/components/ui/dialog';
+import { SCRIM } from '@/components/ui/dialog';
+import { returnTargetFor } from '@/components/ui/return-focus';
 import { pluralCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';

@@ -112,7 +112,7 @@ export function DeclarationStatus({
   );
 }
 
-const CHECK_TONE = { met: 'success', unmet: 'danger', unavailable: 'warning' } as const;
+const CHECK_TONE = { met: 'positive', unmet: 'negative', unavailable: 'warning' } as const;
 
 function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][number] }>) {
   const tone = check.state === 'waiting' ? null : CHECK_TONE[check.state];
@@ -124,9 +124,7 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
       <Inline as="span" wrap>
         <Text variant="body">{checkKindLabel(check.kind)}</Text>
         {tone ? (
-          <StatusMark variant="status" value={tone}>
-            {checkStateLabel(check)}
-          </StatusMark>
+          <StatusMark tone={tone}>{checkStateLabel(check)}</StatusMark>
         ) : (
           <Tag>{checkStateLabel(check)}</Tag>
         )}

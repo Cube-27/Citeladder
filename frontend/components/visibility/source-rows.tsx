@@ -198,7 +198,7 @@ export function DomainTable({
 
 function standingTone(standing: SourceItem['standing']) {
   if (standing === 'gap') return 'warning';
-  if (standing === 'listed') return 'success';
+  if (standing === 'listed') return 'positive';
   return null;
 }
 
@@ -211,9 +211,7 @@ function PageStandingCell({
   return (
     <Inline as="span" gap="item" nowrap>
       {tone ? (
-        <StatusMark variant="status" value={tone}>
-          {label}
-        </StatusMark>
+        <StatusMark tone={tone}>{label}</StatusMark>
       ) : (
         <ClampText lines={1} text="caption">
           {label}

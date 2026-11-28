@@ -169,7 +169,7 @@ function PageKindTable({
       title="Page kinds"
       description={why || undefined}
       actions={
-        <StatusMark variant="status" value={coverage === 'complete' ? 'success' : 'warning'}>
+        <StatusMark tone={coverage === 'complete' ? 'positive' : 'warning'}>
           {COVERAGE_LABELS[coverage]}
         </StatusMark>
       }

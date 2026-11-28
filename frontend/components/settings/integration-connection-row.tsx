@@ -248,11 +248,7 @@ function ConnectionStatus({
   if (actionError) {
     return (
       <MarkLine
-        mark={
-          <StatusMark variant="status" value="danger">
-            Failed
-          </StatusMark>
-        }
+        mark={<StatusMark tone="negative">Failed</StatusMark>}
         text={humanizeApiError(actionError, "Couldn't update the connection. Try again.").message}
       />
     );
@@ -261,7 +257,7 @@ function ConnectionStatus({
     return (
       <MarkLine
         mark={
-          <StatusMark variant="status" value={testState.ok ? 'success' : 'danger'}>
+          <StatusMark tone={testState.ok ? 'positive' : 'negative'}>
             {testState.ok ? 'Test passed' : 'Test failed'}
           </StatusMark>
         }
@@ -269,12 +265,7 @@ function ConnectionStatus({
       />
     );
   if (activeRun) return <RunSummary run={activeRun} runActive={runActive} />;
-  if (!grantConnected)
-    return (
-      <StatusMark variant="status" value="warning">
-        Reconnect to sync
-      </StatusMark>
-    );
+  if (!grantConnected) return <StatusMark tone="warning">Reconnect to sync</StatusMark>;
   return <StatusMark>Ready to sync</StatusMark>;
 }
 

@@ -1,12 +1,7 @@
 import { FactList, type Fact } from '@/components/ui/facts';
 import { TitledSection } from '@/components/ui/section';
-import {
-  ACTION_STATUS_TONE,
-  Impact,
-  scopeLabel,
-  sourceLabel,
-} from '@/components/agent/actions-rows';
-import { StateDot } from '@/components/ui/state-dot';
+import { ACTION_PROGRESS, Impact, scopeLabel, sourceLabel } from '@/components/agent/actions-rows';
+import { ProgressGlyph } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import {
   ACTION_GOAL_LABEL,
@@ -28,7 +23,7 @@ function StatusValue({
     action.declaration.checks.length > 0;
   return (
     <>
-      <StateDot tone={ACTION_STATUS_TONE[action.status]} />
+      <ProgressGlyph value={ACTION_PROGRESS[action.status]} />
       {ACTION_STATUS_LABEL[action.status]}
       {action.status === 'done' && action.measurement && checked ? (
         <Tag>{ACTION_MEASUREMENT_LABEL[action.measurement]}</Tag>

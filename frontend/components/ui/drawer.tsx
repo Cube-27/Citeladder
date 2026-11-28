@@ -2,7 +2,8 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import type { ReactNode, RefObject } from 'react';
 
 import { ButtonEmphasis, IconButton } from '@/components/ui/button';
-import { SCRIM, useReturnFocus } from '@/components/ui/dialog';
+import { OverlayFooter, SCRIM } from '@/components/ui/dialog';
+import { useReturnFocus } from '@/components/ui/return-focus';
 import { X } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { SurfaceContext } from '@/components/ui/section';
@@ -119,11 +120,7 @@ export function Drawer({
             >
               <SurfaceContext value="surface">{children}</SurfaceContext>
             </div>
-            {footer ? (
-              <footer className="border-rule px-modal flex items-center justify-end gap-2 border-t py-3">
-                {footer}
-              </footer>
-            ) : null}
+            {footer ? <OverlayFooter>{footer}</OverlayFooter> : null}
           </DialogPrimitive.Content>
         </ButtonEmphasis>
       </DialogPrimitive.Portal>

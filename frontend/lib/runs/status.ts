@@ -4,7 +4,7 @@ import type {
   CitationClassification,
   ExecutionStatus,
 } from '@citeladder/contracts';
-import type { ClassificationValue, RunStatusValue, StatusValue } from '@/components/ui/status-mark';
+import type { ClassificationValue, RunStatusValue, StatusTone } from '@/components/ui/status-mark';
 import { ACTIVE_RUN_POLL_MS } from '@/lib/config/operational';
 import { pollWhileActive, type JobStates } from '@/lib/jobs/poll';
 import { formatDisplayDate } from '@/lib/format';
@@ -45,14 +45,14 @@ export const EXECUTION_STATES = {
   queued: { label: 'Queued', badge: 'info', active: true },
   leased: { label: 'Leased', badge: 'info', active: true },
   running: { label: 'Running', badge: 'info', active: true },
-  succeeded: { label: 'Succeeded', badge: 'success', active: false },
+  succeeded: { label: 'Succeeded', badge: 'positive', active: false },
   retry_wait: { label: 'Retry Wait', badge: 'warning', active: true },
   capacity_wait: { label: 'Capacity Wait', badge: 'warning', active: true },
   awaiting_provider_result: { label: 'Waiting for the provider', badge: 'info', active: true },
   submission_uncertain: { label: 'Reconciling', badge: 'warning', active: true },
-  failed: { label: 'Failed', badge: 'danger', active: false },
-  cancelled: { label: 'Cancelled', badge: 'danger', active: false },
-} as const satisfies JobStates<ExecutionStatus, StatusValue>;
+  failed: { label: 'Failed', badge: 'negative', active: false },
+  cancelled: { label: 'Cancelled', badge: 'negative', active: false },
+} as const satisfies JobStates<ExecutionStatus, StatusTone>;
 
 export function executionStatusLabel(status: ExecutionStatus, engine?: string): string {
   if (status === 'awaiting_provider_result' && engine) return `Waiting for ${engine}`;

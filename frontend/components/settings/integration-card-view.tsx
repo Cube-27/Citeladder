@@ -11,7 +11,7 @@ import {
   type GrantFamily,
   type GrantModel,
 } from '@/components/settings/grant-model';
-import { StatusMark } from '@/components/ui/status-mark';
+import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { GlyphMark } from '@/components/ui/engine-mark';
@@ -27,16 +27,12 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice } from '@/components/ui/notice';
 
 type GrantStatus = IntegrationConnection['grant_status'];
-type GrantBadge =
-  | { variant: 'status'; value: 'success' | 'warning' | 'danger' }
-  | { variant: 'neutral' };
-
-const GRANT_STATUS_BADGE: Record<GrantStatus, GrantBadge> = {
-  connected: { variant: 'status', value: 'success' },
-  needs_reauth: { variant: 'status', value: 'warning' },
-  pending_revocation: { variant: 'status', value: 'warning' },
-  error: { variant: 'status', value: 'danger' },
-  revoked: { variant: 'neutral' },
+const GRANT_STATUS_TONE: Record<GrantStatus, StatusTone> = {
+  connected: 'positive',
+  needs_reauth: 'warning',
+  pending_revocation: 'warning',
+  error: 'negative',
+  revoked: 'neutral',
 };
 
 const GRANT_STATUS_LABEL: Record<GrantStatus, string> = {
@@ -63,14 +59,13 @@ function GrantStatus({
   family,
   grant,
 }: Readonly<{ family: GrantFamily; grant: GrantModel | null }>) {
-  const badge = grant ? GRANT_STATUS_BADGE[grant.status] : { variant: 'neutral' as const };
-  const label = grant ? GRANT_STATUS_LABEL[grant.status] : 'Not connected';
-  return badge.variant === 'status' ? (
-    <StatusMark variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
-      {label}
+  return (
+    <StatusMark
+      tone={grant ? GRANT_STATUS_TONE[grant.status] : 'neutral'}
+      data-testid={`grant-status-${family}`}
+    >
+      {grant ? GRANT_STATUS_LABEL[grant.status] : 'Not connected'}
     </StatusMark>
-  ) : (
-    <StatusMark data-testid={`grant-status-${family}`}>{label}</StatusMark>
   );
 }
 

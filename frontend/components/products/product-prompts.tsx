@@ -4,7 +4,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { EngineBrandMark } from '@/components/ui/engine-mark';
 import { Inline } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
-import { StatusMark, type StatusValue } from '@/components/ui/status-mark';
+import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Value } from '@/components/ui/value';
 import { formatCount, formatMean } from '@/lib/format';
@@ -16,9 +16,9 @@ import type {
 } from '@/lib/products/prompt-outcomes';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
-const OUTCOME_TONE: Record<ProductRun['outcome'], StatusValue> = {
-  won: 'success',
-  lost: 'danger',
+const OUTCOME_TONE: Record<ProductRun['outcome'], StatusTone> = {
+  won: 'positive',
+  lost: 'negative',
   unranked: 'info',
 };
 
@@ -117,9 +117,7 @@ function EngineOutcome({
       aria-label={`Open the latest ${engine} run for ${prompt}: ${outcomeLabel(latest)}, ${tally}`}
       onClick={() => onOpen(latest)}
     >
-      <StatusMark variant="status" value={OUTCOME_TONE[latest.outcome]}>
-        {outcomeLabel(latest)}
-      </StatusMark>
+      <StatusMark tone={OUTCOME_TONE[latest.outcome]}>{outcomeLabel(latest)}</StatusMark>
     </Pressable>
   );
 }

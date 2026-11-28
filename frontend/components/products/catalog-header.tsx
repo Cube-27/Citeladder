@@ -72,14 +72,10 @@ function crawlSegments(read: CrawlRead): FigureSegment[] {
 function projectionBadge(projection: CommerceProjection | undefined) {
   if (!projection) return null;
   if (projection.in_flight)
-    return (
-      <StatusMark variant="status" value="info">
-        {projection.in_flight} projecting
-      </StatusMark>
-    );
+    return <StatusMark tone="info">{projection.in_flight} projecting</StatusMark>;
   if (projection.failed)
     return (
-      <StatusMark variant="status" value="danger">
+      <StatusMark tone="negative">
         {pluralCount(projection.failed, 'page')} not projected
       </StatusMark>
     );

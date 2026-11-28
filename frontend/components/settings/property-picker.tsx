@@ -106,12 +106,7 @@ export function SelectedPropertyMark({
     );
   if (mappings.isError) return <Absence state="unavailable" label="Property unavailable" />;
   const selected = activeMappingFor(mappings.data, activeProject?.id ?? null)?.property_ref ?? '';
-  if (!selected)
-    return (
-      <StatusMark variant="status" value="warning">
-        No property selected
-      </StatusMark>
-    );
+  if (!selected) return <StatusMark tone="warning">No property selected</StatusMark>;
   return (
     <ClampText text="code" tone="ink-2">
       {selected}
