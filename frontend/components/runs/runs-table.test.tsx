@@ -21,7 +21,11 @@ const TABLE: RunsTablePage = {
   sort: { key: 'created', descending: true },
   onSort: () => undefined,
   pageSize: 10,
-  pager: pageNumberControls(1, 1, () => undefined),
+  pager: {
+    ...pageNumberControls(1, 1, () => undefined),
+    range: { from: 1, to: 1, total: 1, noun: 'runs' },
+    pageSize: { value: 10, onChange: () => undefined },
+  },
 };
 
 function renderTable(audits: Audit[]) {

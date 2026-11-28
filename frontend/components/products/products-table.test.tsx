@@ -113,7 +113,14 @@ function Harness({
       checked={checked}
       onCheck={onCheck}
       pageSize={10}
-      pager={{ canPrev: false, canNext: false, onPrev: vi.fn(), onNext: vi.fn() }}
+      pager={{
+        canPrev: false,
+        canNext: false,
+        onPrev: vi.fn(),
+        onNext: vi.fn(),
+        range: { from: 1, to: 10, cursor: true, noun: 'products' },
+        pageSize: { value: 10, onChange: vi.fn() },
+      }}
     />
   );
 }

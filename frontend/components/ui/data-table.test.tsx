@@ -149,6 +149,7 @@ describe('DataTable', () => {
       onPrev: () => undefined,
       onNext: () => undefined,
       range: { from: 0, to: 0, total: 0, noun: 'signals' },
+      pageSize: { value: 10, onChange: () => undefined },
     };
     const table = (paged: boolean) => (
       <DataTable
@@ -215,7 +216,7 @@ describe('DataTable', () => {
           canNext: false,
           onPrev: () => undefined,
           onNext: () => undefined,
-          range: { from: 1, to: 3, noun: 'pages' },
+          range: { from: 1, to: 3, cursor: true, noun: 'pages' },
           pageSize: { value: pageSize, onChange: () => undefined },
         }}
       >
@@ -275,6 +276,7 @@ describe('DataTable', () => {
         ]}
         pager={{
           range: { from: 1, to: 1, total: 2, noun: 'pages' },
+          pageSize: { value: 10, onChange: () => undefined },
           canPrev: false,
           canNext: true,
           onPrev: () => undefined,

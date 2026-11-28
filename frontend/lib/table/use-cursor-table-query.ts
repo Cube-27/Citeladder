@@ -29,7 +29,7 @@ type CursorTableQueryOptions<TPage extends CursorPage, TKey extends QueryKey> = 
   loading: string;
   subject: string;
   empty: (page: TPage) => DataTableState;
-  fixedPageSize?: number;
+  pageSizes?: readonly [number, ...number[]];
   enabled?: boolean;
   total?: (page: TPage | undefined) => number | undefined;
 }>;
@@ -43,12 +43,12 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
   loading,
   subject,
   empty,
-  fixedPageSize,
+  pageSizes,
   enabled = true,
   total: totalOf,
 }: CursorTableQueryOptions<TPage, TKey>) {
-  const cursor = useCursorTable(JSON.stringify([workspaceId, scopeId, scope]));
-  const pageSize = fixedPageSize ?? cursor.pageSize;
+  const cursor = useCursorTable(JSON.stringify([workspaceId, scopeId, scope]), pageSizes);
+  const pageSize = cursor.pageSize;
   const query = useQuery({
     ...pageQuery({ cursor: cursor.cursor, limit: pageSize }),
     enabled: enabled && workspaceId !== null,
@@ -69,6 +69,11 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
     empty: (data) => (data.items.length === 0 ? empty(data) : undefined),
   });
   const total = totalOf?.(page);
+  const shown = pageRange(
+    cursor.page,
+    pageSize,
+    shownRows({ query, total, page: cursor.page, pageSize }),
+  );
   const table: CursorTableProps = {
     pageSize,
     state,
@@ -77,19 +82,9 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
     pager:
       total !== undefined || (page && (page.items.length > 0 || cursor.canPrev))
         ? {
-            range: {
-              ...pageRange(
-                cursor.page,
-                pageSize,
-                shownRows({ query, total, page: cursor.page, pageSize }),
-              ),
-              total,
-              noun,
-            },
-            pageSize:
-              fixedPageSize === undefined
-                ? { value: cursor.pageSize, onChange: cursor.setPageSize }
-                : undefined,
+            range:
+              total === undefined ? { ...shown, cursor: true, noun } : { ...shown, total, noun },
+            pageSize: { value: pageSize, onChange: cursor.setPageSize, options: pageSizes },
             ...cursorControls(cursor, page?.next_cursor),
             busy: query.isFetching,
           }

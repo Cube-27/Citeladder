@@ -285,11 +285,9 @@ function DataTableFoot({
 
 function hasMorePages(pager: DataTablePager): boolean {
   if (pager.canPrev || pager.canNext) return true;
-  if (pager.pageSize === undefined) return false;
-  const smallest = Math.min(...TABLE_PAGE_SIZE_OPTIONS);
+  const smallest = Math.min(...(pager.pageSize.options ?? TABLE_PAGE_SIZE_OPTIONS));
   if (pager.pageSize.value > smallest) return true;
-  const total = pager.range?.total;
-  return total !== undefined && total > smallest;
+  return 'total' in pager.range && pager.range.total > smallest;
 }
 
 function pagingLayout(

@@ -19,7 +19,8 @@ import { TableGroupRow } from '@/components/ui/table';
 import { statusLabel } from '@/lib/site-health/status';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { ICONS } from '@/lib/icons';
-import { ISSUE_OCCURRENCE_LIMIT, ISSUE_PAGE_LIMIT } from '@/lib/config/site-health';
+import { ISSUE_PAGE_LIMIT } from '@/lib/config/site-health';
+import { pageRange } from '@/lib/table/use-cursor-table';
 import type { IssueSort, SiteIssue } from '@citeladder/contracts';
 import {
   ISSUE_SEVERITY_CHOICES,
@@ -38,24 +39,26 @@ function useIssuesCatalogQueries({
   filters,
   cursor,
   selectedGroupId,
-  occurrenceCursor,
+  pageSize,
+  occurrences,
 }: Readonly<{
   workspaceId: string;
   crawlId: string;
   filters: IssueFilters;
   cursor: string | null;
   selectedGroupId: string | null;
-  occurrenceCursor: string | undefined;
+  pageSize: number;
+  occurrences: Readonly<{ cursor: string | undefined; pageSize: number }>;
 }>) {
   const params = useMemo(
-    () => ({ ...issueCatalogParams(filters, cursor), section: undefined }),
-    [filters, cursor],
+    () => ({ ...issueCatalogParams(filters, cursor, pageSize), section: undefined }),
+    [filters, cursor, pageSize],
   );
   const issuesQuery = useQuery(siteHealthQueries.issues(workspaceId, crawlId, params));
   const detailQuery = useQuery({
     ...siteHealthQueries.issue(workspaceId, crawlId, selectedGroupId ?? '', {
-      cursor: occurrenceCursor,
-      limit: ISSUE_OCCURRENCE_LIMIT,
+      cursor: occurrences.cursor,
+      limit: occurrences.pageSize,
       page_kind: filters.page_kind || undefined,
     }),
     enabled: selectedGroupId !== null,
@@ -80,15 +83,24 @@ export function IssuesCatalog({
 }>) {
   const catalog = useIssueFilters();
   const { filters, cursor, selectedGroupId, updateFilters } = catalog;
+  const [pageSize, setPageSize] = useState<number>(ISSUE_PAGE_LIMIT);
   const { issuesQuery, detailQuery, rows, open } = useIssuesCatalogQueries({
     workspaceId,
     crawlId,
     filters,
     cursor,
     selectedGroupId,
-    occurrenceCursor: catalog.occurrenceCursor,
+    pageSize,
+    occurrences: catalog.occurrences,
   });
-  const pager = useCatalogPager(cursor, issuesQuery.data?.next_cursor ?? null, catalog.goToPage);
+  const pager = useCatalogPager({
+    cursor,
+    nextCursor: issuesQuery.data?.next_cursor ?? null,
+    shown: rows.length,
+    pageSize,
+    onPageSize: setPageSize,
+    onGo: catalog.goToPage,
+  });
 
   if (selectedGroupId !== null) {
     const close = () => catalog.selectIssue(null);
@@ -99,12 +111,7 @@ export function IssuesCatalog({
         crawlId={crawlId}
         pageKind={filters.page_kind}
         detailQuery={detailQuery}
-        canPrevious={catalog.canPageOccurrencesBack}
-        onPrevious={catalog.previousOccurrences}
-        onNext={() => {
-          const next = detailQuery.data?.next_cursor;
-          if (next) catalog.nextOccurrences(next);
-        }}
+        occurrences={catalog.occurrences}
         onClose={close}
       />
     ) : (
@@ -139,7 +146,7 @@ export function IssuesCatalog({
           filters: catalogFilters(filters, rows, updateFilters),
         }}
         {...tableState(issuesQuery)}
-        pageSize={ISSUE_PAGE_LIMIT}
+        pageSize={pageSize}
         pager={pager}
         busy={{ active: issuesQuery.isFetching, label: 'Updating issues' }}
       >
@@ -272,14 +279,37 @@ function ruleFilterTitle(rows: readonly SiteIssue[], ruleId: string): string {
   return row ? issueTitle(row) : 'one issue';
 }
 
-function useCatalogPager(
-  cursor: string | null,
-  nextCursor: string | null,
-  onGo: (cursor: string | null) => void,
-): DataTablePager {
+function useCatalogPager({
+  cursor,
+  nextCursor,
+  shown,
+  pageSize,
+  onPageSize,
+  onGo,
+}: Readonly<{
+  cursor: string | null;
+  nextCursor: string | null;
+  shown: number;
+  pageSize: number;
+  onPageSize: (size: number) => void;
+  onGo: (cursor: string | null) => void;
+}>): DataTablePager {
   const [trail, setTrail] = useState<(string | null)[]>([]);
   const followed = cursor ? trail : [];
   return {
+    range: {
+      ...pageRange(followed.length + 1, pageSize, shown),
+      cursor: true,
+      noun: 'issues',
+    },
+    pageSize: {
+      value: pageSize,
+      onChange: (size) => {
+        onPageSize(size);
+        setTrail([]);
+        onGo(null);
+      },
+    },
     canPrev: Boolean(cursor),
     canNext: Boolean(nextCursor),
     onFirst: () => {

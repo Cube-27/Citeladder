@@ -226,7 +226,7 @@ it('reads Past answers under the strip filters, keeping an unreported search apa
   expect(listPromptExecutions).toHaveBeenCalledWith(
     expect.objectContaining({ projectId: PROJECT }),
     PROMPT,
-    { engine: 'claude', brand: 'Globex', cited: true, search: 'used', limit: 25 },
+    { engine: 'claude', brand: 'Globex', cited: true, search: 'used', limit: 10 },
     expect.anything(),
   );
   for (const set of [/^Brand named: /, 'Cited: Cited', 'Search used: Yes'])

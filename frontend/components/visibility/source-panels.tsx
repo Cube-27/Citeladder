@@ -26,7 +26,7 @@ export function sourcePager({
     range: {
       from,
       to,
-      total: data ? total : undefined,
+      total,
       noun: dimension === 'url' || domain ? 'URLs' : 'domains',
     },
     pageSize: { value: pageSize, onChange: onPageSizeChange },

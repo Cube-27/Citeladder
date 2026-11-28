@@ -1,5 +1,4 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 
 import type { FirstNamed, PromptAnswer, PromptAnswerPage } from '@citeladder/contracts';
 import type { ProjectMarket } from '@citeladder/contracts/markets';
@@ -22,8 +21,7 @@ import { formatDisplayDate } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useEngineCatalog } from '@/lib/providers/engines';
-
-const PAGE_SIZE = 25;
+import { cursorControls, pageRange, useCursorTable } from '@/lib/table/use-cursor-table';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'run', label: 'Run', kind: 'date', order: 'descending' },
@@ -55,41 +53,39 @@ export function PromptPastAnswers({
   const scope = useProjectScope();
   const engines = useEngineCatalog();
   const timeZone = useDisplayTimeZone();
-  const [cursors, setCursors] = useState<readonly string[]>([]);
+  const cursor = useCursorTable(JSON.stringify([promptId, params]));
   const answerDialog = useAnswerDialog();
   const openAnswer = (id: string) =>
     answerDialog.open({ id, prompt_text: promptText, prompt_id: promptId });
   const read = useQuery({
     ...runsQueries.promptExecutions(scope, promptId, {
       ...params,
-      cursor: cursors.at(-1),
-      limit: PAGE_SIZE,
+      cursor: cursor.cursor,
+      limit: cursor.pageSize,
     }),
     placeholderData: keepPreviousData,
   });
   const page = read.data;
   const marketCode =
     markets.find((option) => option.id === (page?.market_id ?? null))?.country_code ?? null;
-  const from = cursors.length * PAGE_SIZE + 1;
   return (
     <>
       <DataTable
         title="Past answers"
         columns={COLUMNS}
-        pageSize={PAGE_SIZE}
+        pageSize={cursor.pageSize}
         {...tableState(read)}
         busy={{ active: read.isPlaceholderData, label: 'Loading answers…' }}
         pager={
           page?.items.length
             ? {
-                range: { from, to: from + page.items.length - 1, noun: 'answers' },
-                canPrev: cursors.length > 0,
-                canNext: page.next_cursor !== null,
-                onPrev: () => setCursors((stack) => stack.slice(0, -1)),
-                onNext: () => {
-                  const next = page.next_cursor;
-                  if (next) setCursors((stack) => [...stack, next]);
+                range: {
+                  ...pageRange(cursor.page, cursor.pageSize, page.items.length),
+                  cursor: true,
+                  noun: 'answers',
                 },
+                pageSize: { value: cursor.pageSize, onChange: cursor.setPageSize },
+                ...cursorControls(cursor, page.next_cursor),
                 busy: read.isPlaceholderData,
               }
             : undefined

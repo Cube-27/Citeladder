@@ -1,10 +1,13 @@
 import { useCallback, useState } from 'react';
 
-import { TABLE_DEFAULT_PAGE_SIZE, type TablePageSize, isTablePageSize } from '@/lib/config/tables';
+import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
 
-export function useCursorTable(scopeKey: string) {
+export function useCursorTable(
+  scopeKey: string,
+  sizes: readonly [number, ...number[]] = TABLE_PAGE_SIZE_OPTIONS,
+) {
   const [stack, setStack] = useState<readonly string[]>([]);
-  const [pageSizeState, setPageSizeState] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
+  const [pageSizeState, setPageSizeState] = useState(sizes[0]);
   const [stackScope, setStackScope] = useState(scopeKey);
   if (stackScope !== scopeKey) {
     setStackScope(scopeKey);
@@ -23,10 +26,13 @@ export function useCursorTable(scopeKey: string) {
   const pop = useCallback(() => setStack((prev) => prev.slice(0, -1)), []);
   const reset = useCallback(() => setStack([]), []);
 
-  const setPageSize = useCallback((value: number) => {
-    setPageSizeState(isTablePageSize(value) ? value : TABLE_DEFAULT_PAGE_SIZE);
-    setStack([]);
-  }, []);
+  const setPageSize = useCallback(
+    (value: number) => {
+      setPageSizeState(sizes.includes(value) ? value : sizes[0]);
+      setStack([]);
+    },
+    [sizes],
+  );
 
   return { cursor, canPrev, page, pageSize: pageSizeState, push, pop, reset, setPageSize };
 }

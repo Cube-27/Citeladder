@@ -15,7 +15,7 @@ import {
   TableRow,
   TableSelectCell,
 } from '@/components/ui/table';
-import { pageNumberControls, useTablePage } from '@/components/ui/pager';
+import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager';
 import { Absence } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
@@ -56,8 +56,6 @@ export type PromptRowActions = Readonly<{
   onSetStatus: (prompt: Prompt, status: PromptStatus) => void;
 }>;
 
-const PAGE_SIZE = 10;
-
 function emptyState(rows: number, onClearFilters?: () => void): DataTableState | undefined {
   if (rows > 0) return undefined;
   const heading = 'No prompts match your search or filters';
@@ -97,11 +95,10 @@ export function PromptTable({
   );
   const shelf = prompts.some((prompt) => commerceSetIds?.has(prompt.prompt_set_id));
   const measuredColumns = hasRun ? measuredColumnsFor({ compared, shelf }) : [];
-  const { page, setPage, pageCount, from, to } = useTablePage(prompts.length, {
-    pageSize: PAGE_SIZE,
-    resetKey,
-    urlKey: 'page',
-  });
+  const { page, setPage, pageCount, from, to, pageSize, pageSizeControl } = useResizableTablePage(
+    prompts.length,
+    { resetKey, urlKey: 'page' },
+  );
   const pagedPrompts = prompts.slice(from - 1, to);
   const pageIds = pagedPrompts.map((prompt) => prompt.id);
   const navigate = useNavigate();
@@ -112,7 +109,7 @@ export function PromptTable({
       label="Prompts"
       toolbar={toolbar}
       columns={promptColumns(measuredColumns, actions !== undefined)}
-      pageSize={PAGE_SIZE}
+      pageSize={pageSize}
       selection={
         selection
           ? {
@@ -125,6 +122,7 @@ export function PromptTable({
       state={emptyState(prompts.length, onClearFilters)}
       pager={{
         range: { from, to, total: prompts.length, noun: 'prompts' },
+        pageSize: pageSizeControl,
         ...pageNumberControls(page, pageCount, setPage),
       }}
     >

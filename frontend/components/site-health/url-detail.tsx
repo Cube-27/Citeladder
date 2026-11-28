@@ -27,8 +27,6 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { DrawerPane } from '@/components/ui/drawer';
 import { StateBlock } from '@/components/ui/state-block';
 
-const HISTORY_LIMIT = 25;
-
 export function UrlDetail({
   crawlId,
   siteUrlId,
@@ -167,7 +165,6 @@ function IssueHistory({ workspaceId, crawlId, siteUrlId }: HistoryTarget) {
       headingLevel: 3,
       heading: current.current_analysis_finalized ? 'No resolved issues' : 'Analysis not finished',
     }),
-    fixedPageSize: HISTORY_LIMIT,
   });
 
   return (

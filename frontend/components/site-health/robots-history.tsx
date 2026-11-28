@@ -15,7 +15,7 @@ import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp, pluralCount } from '@/lib/format';
 import { crawlerPolicyLabels, robotsStatusLabels } from '@/lib/site-health/site-facts';
-import { ROBOTS_HISTORY_PAGE_SIZE } from '@/lib/config/site-health';
+import { ROBOTS_HISTORY_PAGE_SIZES } from '@/lib/config/site-health';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
 type RobotsHistoryPage = z.infer<typeof robotsHistoryPageSchema>;
@@ -45,7 +45,7 @@ export function RobotsHistory({
       headingLevel: 3,
       heading: 'No robots.txt observations are available',
     }),
-    fixedPageSize: ROBOTS_HISTORY_PAGE_SIZE,
+    pageSizes: ROBOTS_HISTORY_PAGE_SIZES,
   });
   const pageKey = cursor.cursor ?? 'first';
   const [selection, setSelection] = useState<Selection>({ page: pageKey, before: '', after: '' });

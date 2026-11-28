@@ -125,7 +125,7 @@ export function NearMissTable({
         range: {
           from: shown ? 1 : 0,
           to: shown,
-          total: query.data ? shown : undefined,
+          total: shown,
           noun: 'pages',
         },
         pageSize: { value: pageSize, onChange: onPageSizeChange },
