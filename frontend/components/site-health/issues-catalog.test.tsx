@@ -284,6 +284,32 @@ describe('IssuesCatalog', () => {
     await findSetFilter('Severity', 'Medium');
   });
 
+  it('keeps the page range and Previous on the page Back returns to', async () => {
+    const next: Record<string, string | null> = { first: 'p2', p2: 'p3', p3: null };
+    mswServer.use(
+      http.get(ISSUES, ({ request }) =>
+        HttpResponse.json({
+          items: [issue()],
+          next_cursor: next[new URL(request.url).searchParams.get('cursor') ?? 'first'],
+          summary,
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+    await screen.findByRole('button', { name: 'WebSite schema is missing' });
+
+    await user.click(screen.getByRole('button', { name: 'Next page' }));
+    await waitFor(() => expect(currentUrl()).toContain('cursor=p2'));
+    await user.click(await screen.findByRole('button', { name: 'Next page' }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('51–51 issues'));
+    act(() => window.history.back());
+
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('26–26 issues'));
+    await user.click(screen.getByRole('button', { name: 'Previous page' }));
+    await waitFor(() => expect(currentUrl()).not.toContain('cursor='));
+  });
+
   it('drops a filter-bound cursor while preserving unknown URL params', async () => {
     window.history.replaceState(null, '', '/issues?cursor=page-two&campaign=overview');
     serveIssues();

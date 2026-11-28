@@ -294,11 +294,16 @@ function useCatalogPager({
   onPageSize: (size: number) => void;
   onGo: (cursor: string | null) => void;
 }>): DataTablePager {
-  const [trail, setTrail] = useState<(string | null)[]>([]);
-  const followed = cursor ? trail : [];
+  const [visited, setVisited] = useState<readonly (string | null)[]>([null]);
+  const at = visited.indexOf(cursor);
+  const reached = at === -1 ? [cursor] : visited.slice(0, at + 1);
+  const restart = () => {
+    setVisited([null]);
+    onGo(null);
+  };
   return {
     range: {
-      ...pageRange(followed.length + 1, pageSize, shown),
+      ...pageRange(reached.length, pageSize, shown),
       cursor: true,
       noun: 'issues',
     },
@@ -306,23 +311,16 @@ function useCatalogPager({
       value: pageSize,
       onChange: (size) => {
         onPageSize(size);
-        setTrail([]);
-        onGo(null);
+        restart();
       },
     },
     canPrev: Boolean(cursor),
     canNext: Boolean(nextCursor),
-    onFirst: () => {
-      setTrail([]);
-      onGo(null);
-    },
-    onPrev: () => {
-      setTrail(followed.slice(0, -1));
-      onGo(followed.at(-1) ?? null);
-    },
+    onFirst: restart,
+    onPrev: () => onGo(reached.at(-2) ?? null),
     onNext: () => {
       if (!nextCursor) return;
-      setTrail([...followed, cursor]);
+      setVisited([...reached, nextCursor]);
       onGo(nextCursor);
     },
   };
