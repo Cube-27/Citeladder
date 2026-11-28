@@ -74,7 +74,7 @@ export function useProbeControls(view: ProbeView | null) {
   };
 }
 
-export type ProbeControls = ReturnType<typeof useProbeControls>;
+type ProbeControls = ReturnType<typeof useProbeControls>;
 
 export function PerceptionProbe({
   view,

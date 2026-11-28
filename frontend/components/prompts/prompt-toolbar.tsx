@@ -210,7 +210,7 @@ export type AddPromptsHandlers = Readonly<{
   onGenerate: () => void;
 }>;
 
-export type AddTopicsHandlers = Readonly<{ onAdd: () => void; onManage: () => void }>;
+type AddTopicsHandlers = Readonly<{ onAdd: () => void; onManage: () => void }>;
 
 export function PromptActions({
   add,

@@ -11,7 +11,7 @@ import { SettingField, SettingRows, SettingsGroup } from '@/components/ui/settin
 import { StateBlock } from '@/components/ui/state-block';
 import type { PromptFormLimits } from '@citeladder/contracts';
 
-export type BusinessStepLimits = Pick<
+type BusinessStepLimits = Pick<
   PromptFormLimits,
   'context_list_max_entries' | 'run_context_max_chars'
 >;

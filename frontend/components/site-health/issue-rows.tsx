@@ -9,7 +9,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { absent, formatCount, type Formatted } from '@/lib/format';
 import { issueTitle } from '@/lib/site-health/issues';
 
-export type IssueRowFacts = Pick<
+type IssueRowFacts = Pick<
   SiteIssue,
   | 'group_id'
   | 'rule_id'

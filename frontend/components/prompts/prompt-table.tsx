@@ -49,7 +49,7 @@ export type PromptMeasurement = PromptMentions & {
   answer: PromptAnswerRef;
 };
 
-export type PromptRowActions = Readonly<{
+type PromptRowActions = Readonly<{
   onEdit: (prompt: Prompt) => void;
   onDelete: (prompt: Prompt) => void;
   onToggleEnabled: (prompt: Prompt) => void;

@@ -49,7 +49,7 @@ import { useProjectContext } from '@/lib/project/project-context';
 
 import { hasConfirmedIcp } from './icp-confirmation';
 
-export type OnboardingStep = 0 | 1 | 2;
+type OnboardingStep = 0 | 1 | 2;
 
 function selectedDomains(domains: ReviewDomain[]): string[] {
   return domains.flatMap((item) => (item.selected ? [item.domain] : []));

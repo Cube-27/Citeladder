@@ -2,7 +2,7 @@ import { SearchX } from '@/lib/icons';
 import type { DataTableState } from '@/components/ui/data-table';
 import { Text } from '@/components/ui/typography';
 
-export type FanoutSummary = Readonly<{
+type FanoutSummary = Readonly<{
   distinctQueries: number | null;
   eventCount: number | null;
   matchedQueries: number | null;

@@ -20,7 +20,7 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/u;
 
 type BacklinkFigures = SearchIntelligenceReadiness['backlink_figures'][number];
 
-export type SearchMetric = Readonly<{
+type SearchMetric = Readonly<{
   label: string;
   value: unknown;
   fetched: boolean;

@@ -29,7 +29,7 @@ export function useCandidateSelection(candidates: readonly PromptCandidate[]) {
   return { picked, setPicked, selected };
 }
 
-export type CandidateSelection = ReturnType<typeof useCandidateSelection>;
+type CandidateSelection = ReturnType<typeof useCandidateSelection>;
 
 export function CandidateReview({
   candidates,

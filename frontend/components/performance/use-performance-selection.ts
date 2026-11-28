@@ -65,7 +65,7 @@ const metricsCodec: UrlCodec<readonly PerformanceMetricKey[]> = {
   },
 };
 
-export type PerformanceSelection = {
+type PerformanceSelection = {
   selection: RangeSelection;
   setSelection: (selection: RangeSelection) => void;
   granularity: PerformanceGranularity;

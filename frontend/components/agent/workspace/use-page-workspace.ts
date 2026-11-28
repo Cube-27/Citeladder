@@ -18,7 +18,7 @@ import { useMediaQuery } from '@/lib/use-media-query';
 
 export const RAIL_TABS = ['suggestions', 'chat', 'outline', 'seo'] as const;
 export type RailTab = (typeof RAIL_TABS)[number];
-export type StackTab = 'page' | RailTab;
+type StackTab = 'page' | RailTab;
 
 const EDIT_CONFLICT =
   'The page changed since you started editing, so your edits were not saved. Copy what you need, then discard them to see the latest version.';
