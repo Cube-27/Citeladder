@@ -73,7 +73,7 @@ function ProjectDeletionControls() {
   return (
     <>
       <SettingsGroup title="Delete project">
-        <Notice kind="mutation" error={deleteMutation.error} act={'delete the project'} />
+        <Notice kind="mutation" error={deleteMutation.error} act="delete the project" />
         {activeProject ? (
           <SettingRows>
             <SettingRow

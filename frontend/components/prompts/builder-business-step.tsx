@@ -55,7 +55,7 @@ export function BuilderBusinessStep({
   };
   return (
     <SectionStack>
-      <Notice kind="mutation" error={business.save.error} act={'save your business details'} />
+      <Notice kind="mutation" error={business.save.error} act="save your business details" />
       <SuggestionsNotice {...editor} />
       <OfferingsGrid {...editor} saved={map} />
       <BusinessFacts {...editor} context={profile.business_context} />

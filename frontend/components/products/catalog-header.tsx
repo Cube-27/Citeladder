@@ -241,7 +241,7 @@ function CatalogNotices({
     <Notice
       kind="mutation"
       error={refreshError}
-      act={'refresh Site health progress'}
+      act="refresh Site health progress"
       recovery={
         <Button type="button" variant="secondary" onClick={onRefresh}>
           Refresh again

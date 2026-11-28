@@ -88,7 +88,7 @@ export function SetupPrompts({
       >
         <SectionTitle level={level}>Prompts that measure it</SectionTitle>
       </SectionHeader>
-      <Notice kind="mutation" error={generate.error} act={'generate the prompts'} />
+      <Notice kind="mutation" error={generate.error} act="generate the prompts" />
       {failed ? <Notice tone="negative">The buyer-prompt update failed. Try again.</Notice> : null}
       {shortfall !== null ? (
         <Notice tone="info">

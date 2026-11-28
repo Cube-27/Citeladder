@@ -75,7 +75,7 @@ export function PlanChanges({
   return (
     <CardGroup id="change-plan" title="Change plan">
       {controls.downgradeError ? (
-        <Notice kind="mutation" error={controls.downgradeError} act={'schedule the downgrade'} />
+        <Notice kind="mutation" error={controls.downgradeError} act="schedule the downgrade" />
       ) : null}
       <CardRow>
         {cards.map(({ plan, option }) => (

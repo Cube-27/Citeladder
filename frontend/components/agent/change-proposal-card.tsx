@@ -37,7 +37,7 @@ function Refusal({
   error,
   refusal,
 }: Readonly<{ error: Error | null; refusal: ChangeProposal['refusal'] }>) {
-  if (error) return <Notice kind="mutation" error={error} act={'make this change'} />;
+  if (error) return <Notice kind="mutation" error={error} act="make this change" />;
   if (!refusal) return null;
   return (
     <Text as="p" variant="caption">

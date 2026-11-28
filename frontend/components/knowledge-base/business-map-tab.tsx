@@ -51,7 +51,7 @@ export function BusinessMapTab({
   };
   return (
     <SectionStack>
-      <Notice kind="mutation" error={business.save.error} act={'save the business map'} />
+      <Notice kind="mutation" error={business.save.error} act="save the business map" />
       {mayEdit ? <SuggestionsNotice {...editor} /> : null}
       <OfferingsGrid {...editor} saved={map} />
       <BusinessFacts {...editor} context={profile.business_context} />

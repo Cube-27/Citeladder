@@ -150,7 +150,7 @@ export function useCrawlSchedule(
       <Notice
         kind="mutation"
         error={mutation.error}
-        act={'save the crawl schedule'}
+        act="save the crawl schedule"
         onRetry={retry}
       />
     ) : null,

@@ -92,8 +92,8 @@ export function SetupCompetitors({
           </Notice>
         ),
       )}
-      <Notice kind="mutation" error={discovery.discover.error} act={'start competitor discovery'} />
-      <Notice kind="mutation" error={decide.error} act={'save the competitor decision'} />
+      <Notice kind="mutation" error={discovery.discover.error} act="start competitor discovery" />
+      <Notice kind="mutation" error={decide.error} act="save the competitor decision" />
       <CompetitorRows
         query={query}
         rows={rows}

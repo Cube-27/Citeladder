@@ -234,7 +234,7 @@ function ScheduleForm({
       <Notice
         kind="mutation"
         error={createMutation.error}
-        act={'schedule the audit'}
+        act="schedule the audit"
         onRetry={createSchedule}
       />
     </Section>
@@ -355,5 +355,5 @@ function ScheduleRow({
 
 function ResumeNotice({ error, onRetry }: Readonly<{ error: Error | null; onRetry: () => void }>) {
   if (!error) return null;
-  return <Notice kind="mutation" error={error} act={'resume the schedule'} onRetry={onRetry} />;
+  return <Notice kind="mutation" error={error} act="resume the schedule" onRetry={onRetry} />;
 }

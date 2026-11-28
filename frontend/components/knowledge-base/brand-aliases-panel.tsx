@@ -26,7 +26,7 @@ export function BrandAliasesPanel({
   return (
     <>
       <SettingsGroup title="Aliases">
-        <Notice kind="mutation" error={save.error} act={'save the aliases'} />
+        <Notice kind="mutation" error={save.error} act="save the aliases" />
         <SettingRows label="Aliases">
           {aliases.map((alias, index) => (
             <EditableNameRow

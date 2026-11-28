@@ -83,7 +83,7 @@ function PromptPicker({
     return <StateBlock kind="empty" inline message="No active prompts in this project." />;
   return (
     <>
-      <Notice kind="mutation" error={save.error} act={'save the prompts'} />
+      <Notice kind="mutation" error={save.error} act="save the prompts" />
       <Stack gap="workspace">
         {byTopic(list.prompts).map(([topic, prompts]) => (
           <Stack key={topic ?? ''} gap="compact">

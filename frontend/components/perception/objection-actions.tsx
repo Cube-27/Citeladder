@@ -92,7 +92,7 @@ export function ObjectionActions({
           </>
         }
       >
-        <Notice kind="mutation" error={rename.error} act={'rename the objection'} />
+        <Notice kind="mutation" error={rename.error} act="rename the objection" />
         <Input
           aria-label="Objection name"
           value={renaming ?? ''}

@@ -71,7 +71,7 @@ export function ProviderConnectionFields({
         <ApiKeyField state={state} />
       )}
 
-      <Notice kind="mutation" error={saveMutation.error} act={'save the connection'} />
+      <Notice kind="mutation" error={saveMutation.error} act="save the connection" />
 
       {testResult ? (
         <Notice tone={testResult.status === 'ok' ? 'positive' : 'negative'}>

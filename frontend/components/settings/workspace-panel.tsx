@@ -45,7 +45,7 @@ export function WorkspacePanel() {
       {mayManage ? <MemberSettings mayInvite={mayInvite} /> : null}
 
       <SettingsGroup title="Leave workspace">
-        <Notice kind="mutation" error={leave.error} act={'leave the workspace'} />
+        <Notice kind="mutation" error={leave.error} act="leave the workspace" />
         <SettingRows>
           <SettingRow
             label={activeWorkspace.name}

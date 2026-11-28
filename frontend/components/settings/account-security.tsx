@@ -164,7 +164,7 @@ function ConnectGoogle({
 function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Error | null>> }>) {
   return Object.entries(errors).map(([name, error]) =>
     error ? (
-      <Notice kind="mutation" key={name} error={error} act={'update your sign-in settings'} />
+      <Notice kind="mutation" key={name} error={error} act="update your sign-in settings" />
     ) : null,
   );
 }

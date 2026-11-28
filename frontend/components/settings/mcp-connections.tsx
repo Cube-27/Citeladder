@@ -168,7 +168,7 @@ function RevokeDialog({
       pending={revoke.isPending}
       onCancel={close}
     >
-      <Notice kind="mutation" error={revoke.error} act={'revoke the connection'} />
+      <Notice kind="mutation" error={revoke.error} act="revoke the connection" />
     </ConfirmDialog>
   );
 }

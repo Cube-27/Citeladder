@@ -93,7 +93,7 @@ export function AgentInstructionsCard({
         <Notice
           kind="mutation"
           error={saveError}
-          act={'save the instructions'}
+          act="save the instructions"
           onRetry={instructions.retry}
         />
       ) : null}

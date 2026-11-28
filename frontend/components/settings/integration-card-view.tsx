@@ -1,6 +1,10 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import {
+  CONNECT_ADMIN_ONLY,
+  ConnectProviderButton,
+} from '@/components/settings/connect-provider-button';
 import { ConnectionRow } from '@/components/settings/integration-connection-row';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import {
@@ -11,7 +15,6 @@ import {
   type GrantModel,
 } from '@/components/settings/grant-model';
 import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
-import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { GlyphMark } from '@/components/ui/engine-mark';
 import { SectionBleed } from '@/components/ui/section';
@@ -81,14 +84,15 @@ function ConnectButton({
   workspaceId,
   family,
 }: Readonly<{ workspaceId: string; family: GrantFamily }>) {
-  const meta = FAMILY_META[family];
-  const start = () =>
-    hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId));
-  if (family === 'google') return <ActionButton action="connectGoogle" onClick={start} />;
   return (
-    <Button variant="secondary" onClick={start}>
-      Connect {meta.title}
-    </Button>
+    <ConnectProviderButton
+      family={family}
+      onConnect={() =>
+        hardNavigate(
+          integrationsApi.oauthStartUrl(FAMILY_META[family].connectProvider, workspaceId),
+        )
+      }
+    />
   );
 }
 
@@ -107,7 +111,7 @@ function ConnectCard({
       >
         {canManage ? null : (
           <SettingRows>
-            <SettingRow label="Owner or Admin only." />
+            <SettingRow label={CONNECT_ADMIN_ONLY} />
           </SettingRows>
         )}
       </SettingsGroup>
@@ -156,7 +160,7 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
         pending={disconnect.isPending}
         onCancel={() => setOpen(false)}
       >
-        <Notice kind="mutation" error={disconnect.error} act={'disconnect the integration'} />
+        <Notice kind="mutation" error={disconnect.error} act="disconnect the integration" />
       </ConfirmDialog>
     </>
   );

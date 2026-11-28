@@ -69,7 +69,7 @@ export function CrawlLogSetup({
         {fields}
       </Columns>
       {mutation.isError && mutation.variables.kind === 'create' ? (
-        <Notice kind="mutation" error={mutation.error} act={'set up the crawl-log source'} />
+        <Notice kind="mutation" error={mutation.error} act="set up the crawl-log source" />
       ) : null}
       {setup === 'upload' ? <UploadForm model={model} /> : null}
     </>
@@ -287,7 +287,7 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
         <Notice
           kind="mutation"
           error={upload.error}
-          act={'upload the log file'}
+          act="upload the log file"
           recovery={
             progress ? (
               <Button variant="secondary" onClick={() => upload.mutate(progress.uploadId)}>

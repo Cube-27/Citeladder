@@ -179,7 +179,7 @@ function ResumeNotice({
         <Notice
           kind="mutation"
           error={cancellation.resumeError}
-          act={'resume the plan'}
+          act="resume the plan"
           onRetry={cancellation.resume}
         />
       ) : null}
@@ -261,7 +261,7 @@ function CancelDialog({
       pending={cancellation.pending}
       onCancel={() => cancellation.setOpen(false)}
     >
-      <Notice kind="mutation" error={cancellation.error} act={'schedule the cancellation'} />
+      <Notice kind="mutation" error={cancellation.error} act="schedule the cancellation" />
     </ConfirmDialog>
   );
 }

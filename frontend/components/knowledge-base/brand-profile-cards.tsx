@@ -24,8 +24,7 @@ import type { BrandProfileForm } from './use-brand-profile-form';
 import { Notice } from '@/components/ui/notice';
 
 function ProfileSaveNotices({ form }: Readonly<{ form: BrandProfileForm }>) {
-  if (form.error)
-    return <Notice kind="mutation" error={form.error} act={'save the brand profile'} />;
+  if (form.error) return <Notice kind="mutation" error={form.error} act="save the brand profile" />;
   return form.notice ? <Notice tone="positive">{form.notice}</Notice> : null;
 }
 

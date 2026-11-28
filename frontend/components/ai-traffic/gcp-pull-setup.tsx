@@ -104,7 +104,7 @@ export function GcpSourceSetup({
         <Notice
           kind="mutation"
           error={verify.error}
-          act={'verify the subscription'}
+          act="verify the subscription"
           onRetry={() => verify.mutate(source.id)}
         />
       ) : null}
@@ -169,7 +169,7 @@ function SinkFilterUpdate({
         <Notice
           kind="mutation"
           error={confirmFilter.error}
-          act={'confirm the sink filter'}
+          act="confirm the sink filter"
           onRetry={() => confirmFilter.mutate(source.id)}
         />
       ) : null}

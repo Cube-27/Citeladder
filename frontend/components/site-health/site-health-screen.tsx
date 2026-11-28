@@ -296,7 +296,7 @@ function SiteHealthNotices({
         <Notice
           kind="mutation"
           error={screen.createMutation.error}
-          act={'start a crawl'}
+          act="start a crawl"
           onRetry={screen.retryStart}
         />
       ) : null}
@@ -304,7 +304,7 @@ function SiteHealthNotices({
         <Notice
           kind="mutation"
           error={screen.cancelMutation.error}
-          act={'stop the crawl'}
+          act="stop the crawl"
           onRetry={screen.cancelCrawl}
         />
       ) : null}

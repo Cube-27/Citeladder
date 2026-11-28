@@ -194,7 +194,7 @@ function TrafficStatus({ model }: Readonly<{ model: ReturnType<typeof useTraffic
     <Notice
       kind="mutation"
       error={exporting.error}
-      act={'export AI traffic'}
+      act="export AI traffic"
       onRetry={() => exporting.mutate()}
     />
   ) : null;

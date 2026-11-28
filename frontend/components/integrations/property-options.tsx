@@ -119,5 +119,5 @@ export function PropertyOptions({
 
 export function PropertySaveFailure({ error }: Readonly<{ error: Error | null }>) {
   if (!error) return null;
-  return <Notice kind="mutation" error={error} act={'save the property'} />;
+  return <Notice kind="mutation" error={error} act="save the property" />;
 }

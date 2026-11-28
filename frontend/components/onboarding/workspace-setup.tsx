@@ -98,7 +98,7 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
             )}
           </Field>
         </form>
-        <Notice kind="mutation" error={create.error} act={'create the workspace'} />
+        <Notice kind="mutation" error={create.error} act="create the workspace" />
       </SetupStep>
     </SetupPage>
   );

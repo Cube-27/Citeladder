@@ -83,7 +83,7 @@ function ProductEditDrawer({
       }
     >
       {invalid ? <Notice tone="negative">{invalid}</Notice> : null}
-      <Notice kind="mutation" error={save.error} act={'save the product'} />
+      <Notice kind="mutation" error={save.error} act="save the product" />
       <form
         noValidate
         onSubmit={(event) => {
@@ -150,7 +150,7 @@ function AddToTrackingButton({
       >
         {approve.isPending ? 'Adding…' : 'Add to tracking'}
       </Button>
-      <Notice kind="mutation" error={approve.error} act={'add the product to tracking'} />
+      <Notice kind="mutation" error={approve.error} act="add the product to tracking" />
     </Stack>
   );
 }

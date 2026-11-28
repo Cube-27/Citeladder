@@ -74,7 +74,7 @@ function MemberFailure({
     <Notice
       kind="mutation"
       error={failure.error}
-      act={'change workspace members'}
+      act="change workspace members"
       onRetry={() => {
         failure.reset();
         onRetry();

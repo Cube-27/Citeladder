@@ -94,7 +94,7 @@ export function BrandFactDialog({
         </>
       }
     >
-      <Notice kind="mutation" error={mutation.error} act={'save the fact'} />
+      <Notice kind="mutation" error={mutation.error} act="save the fact" />
       <Stack gap="workspace">
         <Field label="Topic">
           {(props) => (

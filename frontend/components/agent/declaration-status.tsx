@@ -242,7 +242,7 @@ function RunCrawl({ workspaceId }: Readonly<{ workspaceId: string }>) {
         <Notice
           kind="mutation"
           error={start.error}
-          act={'start a crawl'}
+          act="start a crawl"
           onRetry={() => start.mutate({ project_id: activeProjectId })}
         />
       ) : null}

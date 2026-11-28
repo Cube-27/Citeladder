@@ -89,7 +89,7 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
       {topics.preview.error ? (
         <GenerateErrorAlert error={topics.preview.error} action="propose topics" />
       ) : null}
-      <Notice kind="mutation" error={topics.confirm.error} act={'confirm the topics'} />
+      <Notice kind="mutation" error={topics.confirm.error} act="confirm the topics" />
       {topics.problem ? <Notice tone="warning">{topics.problem}</Notice> : null}
       <Section>
         <Inline wrap justify="end">

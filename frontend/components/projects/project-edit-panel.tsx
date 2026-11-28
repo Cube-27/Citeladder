@@ -150,7 +150,7 @@ export function ProjectEditPanel({
         </>
       }
     >
-      <Notice kind="mutation" error={save.error} act={'save the project'} />
+      <Notice kind="mutation" error={save.error} act="save the project" />
 
       <Stack gap="workspace">
         <Field

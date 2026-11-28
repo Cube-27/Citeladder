@@ -166,7 +166,7 @@ export function useMarkImplemented({
       <Notice
         kind="mutation"
         error={declare.error}
-        act={'declare this Action implemented'}
+        act="declare this Action implemented"
         onRetry={submit}
       />
     </Dialog>
@@ -344,7 +344,7 @@ function TargetChoice({
           Keep with Action
         </Button>
       </Inline>
-      <Notice kind="mutation" error={choose.error} act={'choose where this document belongs'} />
+      <Notice kind="mutation" error={choose.error} act="choose where this document belongs" />
     </Stack>
   );
 }

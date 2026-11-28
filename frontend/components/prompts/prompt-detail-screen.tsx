@@ -141,7 +141,7 @@ function ArchivedNotice({
       >
         Runs no longer ask this prompt.
       </Notice>
-      <Notice kind="mutation" error={restore.error} act={'restore the prompt'} />
+      <Notice kind="mutation" error={restore.error} act="restore the prompt" />
     </Stack>
   );
 }

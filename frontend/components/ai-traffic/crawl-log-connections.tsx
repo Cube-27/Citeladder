@@ -142,7 +142,7 @@ function Connections({
         onClose={() => setRotating(null)}
       />
       {mutation.isError && !open ? (
-        <Notice kind="mutation" error={mutation.error} act={'update the crawl-log source'} />
+        <Notice kind="mutation" error={mutation.error} act="update the crawl-log source" />
       ) : null}
       <Dialog
         open={open}
@@ -224,7 +224,7 @@ function SetupAvailability({ model }: Readonly<{ model: ReturnType<typeof useCra
   if (sources.data.availability === 'available') return <CrawlLogSetup model={model} />;
   return (
     <>
-      <Notice kind="mutation" error={mutation.error} act={'update the crawl-log source'} />
+      <Notice kind="mutation" error={mutation.error} act="update the crawl-log source" />
       <CrawlLogAvailabilityNotice
         availability={sources.data.availability}
         workspaceId={model.workspaceId}
@@ -391,7 +391,7 @@ function RotateToken({ source, projectId, workspaceId, onClose }: RotateTokenPro
         )
       }
     >
-      <Notice kind="mutation" error={rotate.error} act={'rotate the token'} />
+      <Notice kind="mutation" error={rotate.error} act="rotate the token" />
       {rotate.isSuccess ? <IssuedToken issued={{ ...rotate.data, setup: source.setup }} /> : null}
     </Dialog>
   );

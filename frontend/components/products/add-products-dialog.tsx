@@ -218,7 +218,7 @@ function SourceStep({
         </TabPanel>
       </Tabs>
       {readError ? <Notice tone="negative">{readError}</Notice> : null}
-      {stageError ? <Notice kind="mutation" error={stageError} act={'read the products'} /> : null}
+      {stageError ? <Notice kind="mutation" error={stageError} act="read the products" /> : null}
     </>
   );
 }
@@ -322,7 +322,7 @@ export function AddProductsDialog({
     body = (
       <>
         <CategoryReview stage={staged} unticked={unticked} onToggle={toggle} />
-        <Notice kind="mutation" error={apply.error} act={'import the products'} />
+        <Notice kind="mutation" error={apply.error} act="import the products" />
       </>
     );
     footer = (

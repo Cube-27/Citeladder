@@ -95,7 +95,7 @@ export function SearchIntelligenceCitationMatcher({
     );
   return (
     <>
-      <Notice kind="mutation" error={derive.error} act={'compare the cited sources'} />
+      <Notice kind="mutation" error={derive.error} act="compare the cited sources" />
       {lists.length > 1 ? (
         <Select
           ariaLabel="Website"

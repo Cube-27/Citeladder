@@ -285,7 +285,7 @@ export function CreateKeyDialog({
               error={expiry.kind === 'invalid' ? expiry.message : undefined}
             />
           </Stack>
-          <Notice kind="mutation" error={create.error} act={'create the API key'} />
+          <Notice kind="mutation" error={create.error} act="create the API key" />
         </>
       )}
     </Dialog>
